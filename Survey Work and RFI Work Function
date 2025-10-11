@@ -1,0 +1,5357 @@
+//v8
+// ===== Survey Work Functions =====
+// เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
+/**
+ * อัปเดต doGet() เพื่อเพิ่มหน้า Survey Work
+ */
+function doGet(e) {
+  const page = e.parameter.page;
+  
+  if (page === 'qc') {
+    return HtmlService.createHtmlOutputFromFile('qc')
+      .setTitle('QC RFI System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'qc_edit') {
+    return HtmlService.createHtmlOutputFromFile('qc_edit')
+      .setTitle('QC - แก้ไข RFI')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'qc_postpone') {
+    return HtmlService.createHtmlOutputFromFile('qc_postpone')
+      .setTitle('QC - เลื่อนตรวจ RFI')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'survey_work') {
+    // ⭐ เพิ่มเส้นทางสำหรับ Survey Work
+    return HtmlService.createHtmlOutputFromFile('survey_work')
+      .setTitle('Survey Work Requirement System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('RFI Requirement System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+}
+
+/**
+ * ✅ UPDATED: เพิ่มเมนู Test Logging
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu('🔧 RFI System')
+    .addItem('📋 ดูข้อมูลทีมงาน', 'viewResourcesInfo')
+    .addItem('➕ สร้าง Sheet Resources (พร้อมตัวอย่าง)', 'createResourcesSheet')
+    .addSeparator()
+    .addItem('📊 เปิดหน้าจอง RFI (User)', 'openRFIForm')
+    .addItem('🌿 เปิดหน้าจอง Survey Work', 'openSurveyWorkForm')
+    .addItem('📝 เปิดหน้าจอง RFI (QC)', 'openQCRFIForm')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📊 Dashboard & Analytics')
+      .addItem('📊 สร้าง Dashboard', 'createPerformanceDashboard')
+      .addItem('📈 ดูสถิติการใช้งาน', 'viewUsageStats')
+      .addItem('🔄 Refresh Dashboard', 'createPerformanceDashboard'))
+    .addSubMenu(ui.createMenu('📝 Logging & Errors')
+      .addItem('📊 ดูสถานะ Logging', 'viewLoggingStatus')
+      .addSeparator()
+      .addItem('📝 ดู Performance Logs', 'viewPerformanceLogs')
+      .addItem('🐛 ดู Error Logs', 'viewErrorLogs')
+      .addItem('👥 ดู Team Assignment Logs', 'viewTeamLogs')
+      .addSeparator()
+      .addItem('⚙️ ดูการตั้งค่า Logging', 'viewLoggingSettings')
+      .addItem('🔄 เปิด/ปิด Logging', 'toggleLogging')
+      .addItem('🐛 เปิด/ปิด Error Tracking', 'toggleErrorTracking')
+      .addItem('⚡ เปิด/ปิด Performance Tracking', 'togglePerformanceTracking')
+      .addItem('🐌 ตั้งค่า Slow Query Threshold', 'setSlowQueryThreshold')
+      .addSeparator()
+      .addItem('🔄 Reset เป็นค่าเริ่มต้น', 'resetLoggingConfig')
+      .addItem('🧹 ล้าง Logs ทั้งหมด', 'clearAllLogs'))
+    // ⭐ เพิ่มเมนู Test Logging
+    .addSubMenu(ui.createMenu('🧪 Test Logging System')
+      .addItem('▶️ ทดสอบทั้งหมด (Comprehensive)', 'runComprehensiveLoggingTest')
+      .addSeparator()
+      .addItem('📝 Test Performance Logging', 'testPerformanceLogging')
+      .addItem('🐛 Test Error Logging', 'testErrorLogging')
+      .addItem('👥 Test Team Assignment Logging', 'testTeamAssignmentLogging')
+      .addItem('⚙️ Test Config Management', 'testConfigManagement')
+      .addItem('🧹 Test Cleanup System', 'testLogCleanup')
+      .addItem('🐌 Test Slow Query Detection', 'testSlowQueryDetection')
+      .addSeparator()
+      .addItem('📧 Test Admin Email (จะส่งจริง!)', 'testAdminEmailNotification')
+      .addItem('❌ Test Logging เมื่อปิด', 'testLoggingWhenDisabled')
+      .addSeparator()
+      .addItem('📊 ดูสถานะ Logging System', 'viewLoggingStatus'))
+    .addSubMenu(ui.createMenu('📊 Column AN Management')
+      .addItem('🔍 ตรวจสอบ Column AN', 'testColumnAN')
+      .addItem('🔄 อัปเดตข้อมูลเก่า', 'updateOldRecordsColumnAN')
+      .addItem('📈 สร้าง Report ตาม Column AN', 'createColumnANReport'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🧪 Test RFI System')
+      .addItem('▶️ รัน Test ทั้งหมด', 'runAllTests')
+      .addItem('⚡ Test Optimized Functions', 'testOptimizedFunctions')
+      .addSeparator()
+      .addItem('1️⃣ Test จองทีมเดียว', 'testSingleTeamBooking')
+      .addItem('2️⃣ Test จองหลายทีม', 'testMultipleTeamBooking')
+      .addItem('3️⃣ Test ทีมไม่ว่าง', 'testNoAvailableTeam')
+      .addItem('4️⃣ Test เวลาทับซ้อน', 'testOverlappingTime')
+      .addItem('5️⃣ Test จัดทีมอัตโนมัติ', 'testAutoTeamAssignment')
+      .addItem('6️⃣ Test Available Time Slots', 'testAvailableTimeSlots')
+      .addSeparator()
+      .addItem('🗑️ ลบข้อมูล Test', 'clearTestData'))
+    .addToUi();
+}
+/**
+ * ⭐ สร้าง Report แยกตาม Column AN
+ */
+function createColumnANReport() {
+  try {
+    console.log('========== Creating Column AN Report ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      SpreadsheetApp.getUi().alert('❌ ไม่พบ RFI_List sheet');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      SpreadsheetApp.getUi().alert('❌ ไม่มีข้อมูล');
+      return;
+    }
+    
+    // ดึงข้อมูล: Column A (ID), O (Status), AN (Type)
+    const idData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const statusData = sheet.getRange(2, 15, lastRow - 1, 1).getValues();
+    const typeData = sheet.getRange(2, 40, lastRow - 1, 1).getValues();
+    
+    // สรุปข้อมูล
+    let rfiWorkCount = 0;
+    let surveyWorkCount = 0;
+    let emptyCount = 0;
+    
+    const rfiStatusCount = {};
+    const surveyStatusCount = {};
+    
+    for (let i = 0; i < idData.length; i++) {
+      const status = String(statusData[i][0] || '').trim();
+      const type = String(typeData[i][0] || '').trim();
+      
+      if (type === 'RFI Work') {
+        rfiWorkCount++;
+        rfiStatusCount[status] = (rfiStatusCount[status] || 0) + 1;
+      } else if (type === 'Survey Work') {
+        surveyWorkCount++;
+        surveyStatusCount[status] = (surveyStatusCount[status] || 0) + 1;
+      } else {
+        emptyCount++;
+      }
+    }
+    
+    // สร้าง Report Sheet
+    let reportSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Column_AN_Report');
+    
+    if (reportSheet) {
+      SpreadsheetApp.getActiveSpreadsheet().deleteSheet(reportSheet);
+    }
+    
+    reportSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet('Column_AN_Report');
+    
+    // Header
+    reportSheet.getRange(1, 1).setValue('📊 Column AN Report');
+    reportSheet.getRange(1, 1).setFontSize(16).setFontWeight('bold');
+    
+    reportSheet.getRange(2, 1).setValue('Generated: ' + new Date().toLocaleString('th-TH'));
+    reportSheet.getRange(2, 1).setFontSize(10).setFontColor('#666666');
+    
+    // Summary
+    let row = 4;
+    reportSheet.getRange(row, 1).setValue('📋 Summary').setFontWeight('bold').setFontSize(14);
+    row++;
+    
+    reportSheet.getRange(row, 1).setValue('Total Records:');
+    reportSheet.getRange(row, 2).setValue(lastRow - 1);
+    row++;
+    
+    reportSheet.getRange(row, 1).setValue('📋 RFI Work:');
+    reportSheet.getRange(row, 2).setValue(rfiWorkCount);
+    reportSheet.getRange(row, 1, 1, 2).setBackground('#dbeafe');
+    row++;
+    
+    reportSheet.getRange(row, 1).setValue('🌿 Survey Work:');
+    reportSheet.getRange(row, 2).setValue(surveyWorkCount);
+    reportSheet.getRange(row, 1, 1, 2).setBackground('#d1fae5');
+    row++;
+    
+    if (emptyCount > 0) {
+      reportSheet.getRange(row, 1).setValue('⚠️ Empty/Other:');
+      reportSheet.getRange(row, 2).setValue(emptyCount);
+      reportSheet.getRange(row, 1, 1, 2).setBackground('#fef3c7');
+      row++;
+    }
+    
+    // RFI Work by Status
+    row += 2;
+    reportSheet.getRange(row, 1).setValue('📋 RFI Work by Status').setFontWeight('bold').setFontSize(14);
+    row++;
+    
+    reportSheet.getRange(row, 1).setValue('Status');
+    reportSheet.getRange(row, 2).setValue('Count');
+    reportSheet.getRange(row, 1, 1, 2).setFontWeight('bold').setBackground('#1877f2').setFontColor('white');
+    row++;
+    
+    Object.keys(rfiStatusCount).sort().forEach(function(status) {
+      reportSheet.getRange(row, 1).setValue(status);
+      reportSheet.getRange(row, 2).setValue(rfiStatusCount[status]);
+      row++;
+    });
+    
+    // Survey Work by Status
+    row += 2;
+    reportSheet.getRange(row, 1).setValue('🌿 Survey Work by Status').setFontWeight('bold').setFontSize(14);
+    row++;
+    
+    reportSheet.getRange(row, 1).setValue('Status');
+    reportSheet.getRange(row, 2).setValue('Count');
+    reportSheet.getRange(row, 1, 1, 2).setFontWeight('bold').setBackground('#16a34a').setFontColor('white');
+    row++;
+    
+    Object.keys(surveyStatusCount).sort().forEach(function(status) {
+      reportSheet.getRange(row, 1).setValue(status);
+      reportSheet.getRange(row, 2).setValue(surveyStatusCount[status]);
+      row++;
+    });
+    
+    // Format columns
+    reportSheet.setColumnWidth(1, 250);
+    reportSheet.setColumnWidth(2, 100);
+    
+    // Auto-fit
+    reportSheet.autoResizeColumn(1);
+    reportSheet.autoResizeColumn(2);
+    
+    console.log('✅ Report created successfully');
+    
+    SpreadsheetApp.getUi().alert(
+      'สร้าง Report สำเร็จ! ✅',
+      'สร้าง Sheet "Column_AN_Report" แล้ว\n\n' +
+      'สรุป:\n' +
+      '📋 RFI Work: ' + rfiWorkCount + ' records\n' +
+      '🌿 Survey Work: ' + surveyWorkCount + ' records\n' +
+      (emptyCount > 0 ? '⚠️ Empty: ' + emptyCount + ' records\n' : '') +
+      '\nกรุณาไปดูที่ Sheet "Column_AN_Report"',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+    // เปิด Report Sheet
+    SpreadsheetApp.setActiveSheet(reportSheet);
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    
+    SpreadsheetApp.getUi().alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถสร้าง Report ได้\n\n' +
+      'Error: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+
+/**
+ * เปิดหน้าจอง RFI ในหน้าต่างใหม่
+ */
+function openRFIForm() {
+  const html = HtmlService.createHtmlOutputFromFile('index')
+    .setWidth(600)
+    .setHeight(800);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'RFI Requirement System');
+}
+
+// ===== Utility Functions =====
+function formatDate(date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+function formatTime(timeValue) {
+  if (!timeValue) return '';
+  
+  if (typeof timeValue === 'string') {
+    return timeValue;
+  }
+  
+  if (timeValue instanceof Date) {
+    const hours = String(timeValue.getHours()).padStart(2, '0');
+    const minutes = String(timeValue.getMinutes()).padStart(2, '0');
+    return hours + ':' + minutes;
+  }
+  
+  if (typeof timeValue === 'number') {
+    const totalMinutes = Math.round(timeValue * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+  }
+  
+  return timeValue.toString();
+}
+
+function formatDateThai(dateString) {
+  if (!dateString) return '';
+  
+  const months = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  
+  const date = new Date(dateString + 'T00:00:00');
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear() + 543;
+  
+  return day + ' ' + month + ' ' + year;
+}
+
+function timeToMinutes(timeString) {
+  if (!timeString) return 0;
+  const parts = timeString.split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+
+// ===== Work Type Functions =====
+function getWorkTypeList() {
+  try {
+    const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
+    
+    if (!workSheet) {
+      console.log('Work sheet not found');
+      return [];
+    }
+    
+    const lastRow = workSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No work types found');
+      return [];
+    }
+    
+    const data = workSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    const workTypes = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const workType = String(data[i][0] || '').trim();
+      if (workType) {
+        workTypes.push(workType);
+      }
+    }
+    
+    console.log('Found work types:', workTypes.length);
+    return workTypes;
+    
+  } catch (error) {
+    console.error('Error getting work type list:', error);
+    return [];
+  }
+}
+
+// ===== Team/Resource Management Functions =====
+function getTeamsByCategory(category) {
+  try {
+    console.log('Getting teams for category:', category);
+    
+    const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!resourceSheet) {
+      console.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = resourceSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No resources found');
+      return [];
+    }
+    
+    // แยก categories ถ้ามีหลายหมวด (comma separated)
+    // เช่น "Survey,Inspector" → ["Survey", "Inspector"]
+    const categories = category.split(',').map(function(c) {
+      return c.trim().toLowerCase();
+    });
+    
+    console.log('Categories to search (lowercase):', categories);
+    
+    // ดึงข้อมูล: A (Resource_ID), B (Resource_Name), C (Sub_Type), D (Team No.), E (Status)
+    const data = resourceSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const teams = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const resourceId = String(row[0] || '').trim();
+      const resourceName = String(row[1] || '').trim();
+      const subType = String(row[2] || '').trim();
+      const teamNo = row[3];
+      const status = String(row[4] || '').trim();
+      
+      // เช็คว่า Status = Activated และมีข้อมูลครบ
+      if (status === 'Activated' && resourceId && subType) {
+        // เช็คว่า subType ของทีมนี้อยู่ใน categories ที่เลือกหรือไม่
+        // เช่น ถ้าเลือก "Survey,Inspector" จะหาทีมที่มี Sub_Type = "Survey" หรือ "Inspector"
+        const subTypeLower = subType.toLowerCase();
+        
+        if (categories.indexOf(subTypeLower) !== -1) {
+          teams.push({
+            resourceId: resourceId,
+            resourceName: resourceName,
+            subType: subType,
+            teamNo: teamNo || 999
+          });
+          console.log('Found team:', resourceId, resourceName, subType, 'Team No:', teamNo);
+        }
+      }
+    }
+    
+    // เรียงตาม Team No. จากน้อยไปมาก
+    teams.sort(function(a, b) {
+      return a.teamNo - b.teamNo;
+    });
+    
+    console.log('Total teams found:', teams.length);
+    console.log('Teams sorted by Team No:', teams.map(function(t) { 
+      return t.resourceName + ' (No.' + t.teamNo + ')'; 
+    }).join(', '));
+    
+    return teams;
+    
+  } catch (error) {
+    console.error('Error getting teams:', error);
+    return [];
+  }
+}
+
+/**
+ * ✨ เช็คว่า Status ถือว่า "ไม่ใช้ทีม" หรือไม่
+ * (ใช้ร่วมกันได้ทั้ง RFI และ Survey Work)
+ */
+function isStatusInactive(status) {
+  if (!status) return false;
+  
+  const statusLower = status.toLowerCase();
+  
+  // ✅ Status ที่ถือว่าไม่ใช้ทีมแล้ว (ยกเว้นไม่ต้องเช็ค)
+  const inactiveStatuses = [
+    'cancel',           // ยกเลิก (EN)
+    'cancelled',        // ยกเลิก (EN - สะกดต่าง)
+    'ยกเลิก',           // ยกเลิก (TH)
+    'completed',        // เสร็จสิ้นแล้ว
+    'เสร็จสิ้น',         // เสร็จสิ้น (TH)
+    'closed',           // ปิดงานแล้ว
+    'ปิดงาน',           // ปิดงาน (TH)
+    'rejected',         // ปฏิเสธ
+    'ปฏิเสธ',           // ปฏิเสธ (TH)
+    'archived',         // เก็บถาวร
+    'void',             // โมฆะ
+    'deleted'           // ลบแล้ว
+  ];
+  
+  // เช็คว่า status มีคำใดคำหนึ่งในนั้นหรือไม่
+  return inactiveStatuses.some(function(inactive) {
+    return statusLower.includes(inactive);
+  });
+}
+
+/**
+ * ✨ เช็คว่าทีมว่างหรือไม่ (RFI System - มี buffer ±30 นาที)
+ * (ปรับปรุงจากเดิม)
+ */
+function isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    if (!sheet) return true;
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return true;
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    
+    const requestStartMinutes = timeToMinutes(startTime);
+    const requestEndMinutes = timeToMinutes(endTime);
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rfiId = String(row[0] || '').trim();              // Column A - ID
+      const rfiDate = formatDate(new Date(row[4]));           // Column E - Request_Date
+      const rfiStartTime = formatTime(row[5]);                // Column F - Start_Time
+      const rfiEndTime = formatTime(row[6]);                  // Column G - End_Time
+      const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
+      const status = String(row[14] || '').trim();            // Column O - Status
+      
+      // ⭐ ข้าม RFI ที่กำลังแก้ไข
+      if (excludeRfiId && rfiId === excludeRfiId) {
+        console.log('Skipping RFI being edited:', rfiId);
+        continue;
+      }
+      
+      // ✅ ข้าม Status ที่ไม่ใช้ทีมแล้ว
+      if (isStatusInactive(status)) {
+        console.log('Skipping inactive status:', status, '(RFI:', rfiId + ')');
+        continue;
+      }
+      
+      if (rfiDate === date) {
+        const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+        if (!resourceSheet) continue;
+        
+        const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+        
+        const nameToId = {};
+        for (let j = 0; j < resourceData.length; j++) {
+          const rid = String(resourceData[j][0] || '').trim();
+          const rname = String(resourceData[j][1] || '').trim();
+          if (rid && rname) {
+            nameToId[rname] = rid;
+          }
+        }
+        
+        const teamNamesList = assignedTeams.split(',').map(function(name) {
+          return name.trim();
+        });
+        
+        let isThisTeamAssigned = false;
+        for (let k = 0; k < teamNamesList.length; k++) {
+          const teamName = teamNamesList[k];
+          if (nameToId[teamName] === resourceId) {
+            isThisTeamAssigned = true;
+            break;
+          }
+        }
+        
+        if (!isThisTeamAssigned) {
+          continue;
+        }
+        
+        const existingStartMinutes = timeToMinutes(rfiStartTime);
+        const existingEndMinutes = timeToMinutes(rfiEndTime);
+        
+        // Buffer ±30 นาที (25 นาทีในโค้ด)
+        const bufferedExistingStart = existingStartMinutes - 25;
+        const bufferedExistingEnd = existingEndMinutes + 25;
+        
+        const isAvailable = (requestEndMinutes < bufferedExistingStart) || 
+                           (requestStartMinutes > bufferedExistingEnd);
+        
+        if (!isAvailable) {
+          console.log('Team ' + resourceId + ' is NOT available (RFI: ' + rfiId + ', Status: ' + status + ')');
+          return false;
+        }
+      }
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error checking team availability:', error);
+    return false;
+  }
+}
+
+/**
+ * ✨ เช็คว่าทีม Survey ว่างหรือไม่ (Survey Work - ไม่มี buffer)
+ * (ปรับปรุงจากเดิม)
+ */
+function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    if (!sheet) return true;
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return true;
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    
+    const requestStartMinutes = timeToMinutes(startTime);
+    const requestEndMinutes = timeToMinutes(endTime);
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rfiId = String(row[0] || '').trim();              // Column A - ID
+      const rfiDate = formatDate(new Date(row[4]));           // Column E - Request_Date
+      const rfiStartTime = formatTime(row[5]);                // Column F - Start_Time
+      const rfiEndTime = formatTime(row[6]);                  // Column G - End_Time
+      const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
+      const status = String(row[14] || '').trim();            // Column O - Status
+      
+      // ✅ ข้าม Status ที่ไม่ใช้ทีมแล้ว
+      if (isStatusInactive(status)) {
+        console.log('Skipping inactive status:', status, '(RFI:', rfiId + ')');
+        continue;
+      }
+      
+      if (rfiDate === date) {
+        const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+        if (!resourceSheet) continue;
+        
+        const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+        
+        const nameToId = {};
+        for (let j = 0; j < resourceData.length; j++) {
+          const rid = String(resourceData[j][0] || '').trim();
+          const rname = String(resourceData[j][1] || '').trim();
+          if (rid && rname) {
+            nameToId[rname] = rid;
+          }
+        }
+        
+        const teamNamesList = assignedTeams.split(',').map(function(name) {
+          return name.trim();
+        });
+        
+        let isThisTeamAssigned = false;
+        for (let k = 0; k < teamNamesList.length; k++) {
+          const teamName = teamNamesList[k];
+          if (nameToId[teamName] === resourceId) {
+            isThisTeamAssigned = true;
+            break;
+          }
+        }
+        
+        if (!isThisTeamAssigned) {
+          continue;
+        }
+        
+        const existingStartMinutes = timeToMinutes(rfiStartTime);
+        const existingEndMinutes = timeToMinutes(rfiEndTime);
+        
+        // ⭐ ไม่มี buffer - เช็คแค่เวลาทับซ้อน
+        const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
+                           (requestStartMinutes >= existingEndMinutes);
+        
+        if (!isAvailable) {
+          console.log('Survey Team ' + resourceId + ' is NOT available (RFI: ' + rfiId + ', Status: ' + status + ')');
+          return false;
+        }
+      }
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error checking Survey team availability:', error);
+    return false;
+  }
+}
+function testViewAllStatuses() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('❌ ไม่พบ RFI_List sheet');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('❌ ไม่มีข้อมูล');
+      return;
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    const statusCount = {};
+    const statusExamples = {};
+    
+    for (let i = 0; i < data.length; i++) {
+      const rfiId = String(data[i][0] || '').trim();
+      const status = String(data[i][14] || '').trim();
+      
+      if (status) {
+        // นับจำนวน
+        statusCount[status] = (statusCount[status] || 0) + 1;
+        
+        // เก็บตัวอย่าง RFI ID
+        if (!statusExamples[status]) {
+          statusExamples[status] = [];
+        }
+        if (statusExamples[status].length < 3) {
+          statusExamples[status].push(rfiId);
+        }
+      }
+    }
+    
+    console.log('========== Status Summary ==========');
+    console.log('Total RFI Records:', lastRow - 1);
+    console.log('');
+    
+    // เรียงตามจำนวน
+    const sortedStatuses = Object.keys(statusCount).sort(function(a, b) {
+      return statusCount[b] - statusCount[a];
+    });
+    
+    sortedStatuses.forEach(function(status) {
+      const isInactive = isStatusInactive(status);
+      const icon = isInactive ? '✅ (IGNORED)' : '🔴 (BLOCKS TEAM)';
+      
+      console.log(icon + ' ' + status + ': ' + statusCount[status] + ' records');
+      console.log('   Examples: ' + statusExamples[status].join(', '));
+      console.log('');
+    });
+    
+    console.log('====================================');
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  }
+}
+
+
+function testSpecificStatus() {
+  const testStatuses = [
+    'Draft',
+    'RFI Request Submitted',
+    'Survey Work Request Submitted',
+    'Cancelled',
+    'Cancel',
+    'ยกเลิก',
+    'Completed',
+    'เสร็จสิ้น',
+    'Closed',
+    'Rejected',
+    'In Progress',
+    'Approved'
+  ];
+  
+  console.log('========== Status Test ==========');
+  testStatuses.forEach(function(status) {
+    const isInactive = isStatusInactive(status);
+    const result = isInactive ? '✅ IGNORED (ไม่นับว่าทีมถูกจอง)' : '🔴 BLOCKS TEAM (นับว่าทีมถูกจอง)';
+    console.log(status + ': ' + result);
+  });
+  console.log('=================================');
+}
+
+function assignTeamAutomatically(category, date, startTime, endTime) {
+  try {
+    console.log('Auto-assigning team for category:', category);
+    
+    // แยกหมวดงาน
+    const categories = category.split(',').map(function(c) {
+      return c.trim();
+    });
+    
+    console.log('Categories:', categories);
+    
+    // ถ้าเลือกหมวดเดียว
+    if (categories.length === 1) {
+      const teams = getTeamsByCategory(category);
+      
+      if (teams.length === 0) {
+        const categoryDisplay = category.replace(/,/g, ', ');
+        return {
+          success: false,
+          message: 'ไม่พบทีมงานในหมวด ' + categoryDisplay
+        };
+      }
+      
+      // หาทีมที่ว่าง
+      for (let i = 0; i < teams.length; i++) {
+        const team = teams[i];
+        
+        if (isTeamAvailable(team.resourceId, date, startTime, endTime)) {
+          return {
+            success: true,
+            assignedTeams: [team.resourceName], // เก็บเป็น array
+            teamNames: team.resourceName,
+            resourceIds: team.resourceId,
+            teamNo: team.teamNo
+          };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'ไม่มีทีมว่างในหมวด ' + category + ' สำหรับวันและเวลาที่เลือก'
+      };
+    }
+    
+    // ถ้าเลือกหลายหมวด - ต้องหาทีมที่ว่างพร้อมกัน
+    return assignMultipleTeams(categories, date, startTime, endTime);
+    
+  } catch (error) {
+    console.error('Error in assignTeamAutomatically:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
+    };
+  }
+}
+
+
+/**
+ * ⚡ UPDATED: จัดหลายทีม (Optimized)
+ * ✅ รักษา function signature เดิม
+ */
+function assignMultipleTeams(categories, date, startTime, endTime) {
+  try {
+    console.log('Assigning multiple teams for:', categories);
+    
+    const teamsByCategory = {};
+    
+    // ดึงทีมแต่ละหมวด
+    for (let i = 0; i < categories.length; i++) {
+      const cat = categories[i];
+      const teams = getTeamsByCategory(cat);
+      
+      if (teams.length === 0) {
+        return {
+          success: false,
+          message: 'ไม่พบทีมในหมวด ' + cat
+        };
+      }
+      
+      teamsByCategory[cat] = teams;
+      console.log('Category ' + cat + ': ' + teams.length + ' teams');
+    }
+    
+    // ⚡ จำกัด combinations: เอาแค่ 3 ทีมแรกของแต่ละหมวด
+    const MAX_TEAMS_PER_CATEGORY = 3;
+    
+    Object.keys(teamsByCategory).forEach(function(cat) {
+      if (teamsByCategory[cat].length > MAX_TEAMS_PER_CATEGORY) {
+        teamsByCategory[cat] = teamsByCategory[cat].slice(0, MAX_TEAMS_PER_CATEGORY);
+        console.log('⚡ Limited ' + cat + ' to ' + MAX_TEAMS_PER_CATEGORY + ' teams for performance');
+      }
+    });
+    
+    // ⚡ Cache team availability
+    const teamAvailability = {};
+    Object.keys(teamsByCategory).forEach(function(cat) {
+      teamsByCategory[cat].forEach(function(team) {
+        teamAvailability[team.resourceId] = isTeamAvailable(
+          team.resourceId, date, startTime, endTime
+        );
+      });
+    });
+    
+    const availableCombinations = [];
+    
+    // สร้างชุดค่าผสมทีมทั้งหมด
+    function generateCombinations(index, currentCombo) {
+      if (index === categories.length) {
+        // ⚡ เช็คจาก cache
+        let allAvailable = true;
+        let totalTeamNo = 0;
+        
+        for (let i = 0; i < currentCombo.length; i++) {
+          const team = currentCombo[i];
+          
+          if (!teamAvailability[team.resourceId]) {
+            allAvailable = false;
+            break;
+          }
+          
+          totalTeamNo += team.teamNo;
+        }
+        
+        if (allAvailable) {
+          availableCombinations.push({
+            teams: currentCombo.slice(),
+            totalTeamNo: totalTeamNo
+          });
+        }
+        
+        return;
+      }
+      
+      const cat = categories[index];
+      const teams = teamsByCategory[cat];
+      
+      for (let i = 0; i < teams.length; i++) {
+        currentCombo.push(teams[i]);
+        generateCombinations(index + 1, currentCombo);
+        currentCombo.pop();
+      }
+    }
+    
+    generateCombinations(0, []);
+    
+    console.log('Found ' + availableCombinations.length + ' available combinations');
+    
+    if (availableCombinations.length === 0) {
+      return {
+        success: false,
+        message: 'ไม่มีชุดทีมที่ว่างพร้อมกันสำหรับหมวด ' + categories.join(', ')
+      };
+    }
+    
+    // เลือกชุดที่มี Team No. รวมน้อยที่สุด
+    availableCombinations.sort(function(a, b) {
+      return a.totalTeamNo - b.totalTeamNo;
+    });
+    
+    const bestCombo = availableCombinations[0];
+    const teamNames = bestCombo.teams.map(function(t) {
+      return t.resourceName;
+    });
+    
+    const resourceIds = bestCombo.teams.map(function(t) {
+      return t.resourceId;
+    });
+    
+    console.log('Selected teams:', teamNames.join(', '));
+    
+    return {
+      success: true,
+      assignedTeams: bestCombo.teams,
+      teamNames: teamNames.join(','),
+      resourceIds: resourceIds.join(','),
+      totalTeamNo: bestCombo.totalTeamNo
+    };
+    
+  } catch (error) {
+    console.error('Error in assignMultipleTeams:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการจัดหลายทีม: ' + error.toString()
+    };
+  }
+}
+
+// ===== User Management Functions =====
+function validateAndGetUser(email, name) {
+  try {
+    console.log('Validating user:', email, name);
+    
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      console.log('User sheet not found, creating...');
+      createUserSheet();
+      return addNewUser(email, name);
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return addNewUser(email, name);
+    }
+    
+    const data = userSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const userEmail = String(row[1] || '').trim().toLowerCase();
+      const displayName = String(row[2] || '').trim();
+      const role = String(row[3] || '').trim();
+      const status = String(row[4] || '').trim();
+      
+      if (userEmail === email.toLowerCase()) {
+        if (role === 'Requester' && status === 'Activated') {
+          console.log('Found existing active user:', displayName, userEmail);
+          return {
+            success: true,
+            email: userEmail,
+            name: displayName,
+            exists: true
+          };
+        } else {
+          return {
+            success: false,
+            message: 'อีเมลนี้ไม่มีสิทธิ์ใช้งานระบบ RFI (Role: ' + role + ', Status: ' + status + ')'
+          };
+        }
+      }
+    }
+    
+    return addNewUser(email, name);
+    
+  } catch (error) {
+    console.error('Error in validateAndGetUser:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการตรวจสอบผู้ใช้: ' + error.toString()
+    };
+  }
+}
+
+function addNewUser(email, name) {
+  try {
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    const lastRow = userSheet.getLastRow();
+    const nextRow = lastRow + 1;
+    
+    const userId = nextRow - 1;
+    
+    const newUserData = [
+      userId,
+      email,
+      name,
+      'Requester',
+      'Activated'
+    ];
+    
+    userSheet.getRange(nextRow, 1, 1, 5).setValues([newUserData]);
+    
+    console.log('Added new user:', userId, name, email);
+    
+    return {
+      success: true,
+      email: email,
+      name: name,
+      exists: false,
+      userId: userId
+    };
+    
+  } catch (error) {
+    console.error('Error adding new user:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการเพิ่มผู้ใช้ใหม่: ' + error.toString()
+    };
+  }
+}
+
+function createUserSheet() {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = spreadsheet.getSheetByName('User');
+    
+    if (sheet) {
+      console.log('User sheet already exists');
+      return sheet;
+    }
+    
+    sheet = spreadsheet.insertSheet('User');
+    
+    const headers = ['ID_User', 'UserEmail', 'DisplayName', 'Role', 'Status'];
+    sheet.getRange(1, 1, 1, 5).setValues([headers]);
+    
+    const headerRange = sheet.getRange(1, 1, 1, 5);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#1877f2');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setHorizontalAlignment('center');
+    
+    sheet.setColumnWidth(1, 100);
+    sheet.setColumnWidth(2, 250);
+    sheet.setColumnWidth(3, 200);
+    sheet.setColumnWidth(4, 150);
+    sheet.setColumnWidth(5, 120);
+    
+    sheet.setFrozenRows(1);
+    
+    const roleRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Admin', 'QC Reviewer', 'QC', 'Requester', 'Manager'], true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(2, 4, 1000, 1).setDataValidation(roleRule);
+    
+    const statusRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Activated', 'Deactivated'], true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(2, 5, 1000, 1).setDataValidation(statusRule);
+    
+    console.log('User sheet created successfully');
+    return sheet;
+    
+  } catch (error) {
+    console.error('Error creating User sheet:', error);
+    throw error;
+  }
+}
+
+// ===== ID Generation Functions =====
+function generateUniqueId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = '';
+  
+  for (let i = 0; i < 8; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  if (isIdExists(id)) {
+    return generateUniqueId();
+  }
+  
+  return id;
+}
+
+function isIdExists(id) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    if (!sheet) return false;
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return false;
+    
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    
+    for (let i = 0; i < ids.length; i++) {
+      if (ids[i][0] === id) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking ID existence:', error);
+    return false;
+  }
+}
+
+// ===== Email Functions =====
+function getQCEmailList() {
+  try {
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      console.log('User sheet not found');
+      return [];
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No data in User sheet');
+      return [];
+    }
+    
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    const emailList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      if ((role === 'QC Reviewer' || role === 'QC') && 
+          status === 'Activated' && 
+          email && email.includes('@')) {
+        emailList.push({
+          email: email,
+          role: role
+        });
+      }
+    }
+    
+    console.log('Found QC emails:', emailList.length);
+    return emailList;
+    
+  } catch (error) {
+    console.error('Error getting QC email list:', error);
+    return [];
+  }
+}
+
+function checkEmailQuota() {
+  try {
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+    console.log('Remaining email quota:', remainingQuota);
+    return remainingQuota;
+  } catch (error) {
+    console.error('Error checking email quota:', error);
+    return 0;
+  }
+}
+
+function safeSendEmail(emailParams) {
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      console.log('Email quota exceeded, skipping email');
+      return false;
+    }
+    
+    MailApp.sendEmail(emailParams);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
+}
+
+function sendRFINotificationEmail(data, rfiId) {
+  try {
+    console.log('========== START: sendRFINotificationEmail ==========');
+    
+    const quota = checkEmailQuota();
+    if (quota <= 1) {
+      console.log('Email quota too low:', quota);
+      return false;
+    }
+    
+    const emailList = getQCEmailList();
+    
+    if (emailList.length === 0) {
+      console.log('No QC email recipients found');
+      return false;
+    }
+    
+    const recipients = emailList.map(function(e) { return e.email; });
+    
+    // ✅ เพิ่ม Requester Email
+    if (data.requesterEmail && 
+        data.requesterEmail.includes('@') && 
+        !recipients.includes(data.requesterEmail)) {
+      recipients.push(data.requesterEmail);
+    }
+    
+    // ✅ เพิ่ม Team Emails
+    if (data.assignedTeam) {
+      const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
+      teamEmails.forEach(function(teamMember) {
+        if (!recipients.includes(teamMember.email)) {
+          recipients.push(teamMember.email);
+          console.log('Added team member:', teamMember.name, '->', teamMember.email);
+        }
+      });
+    }
+    
+    console.log('Sending to:', recipients.length, 'recipients');
+    
+    const emailHtml = createRFIEmailHTML(data, rfiId);
+    
+    const sent = safeSendEmail({
+      to: recipients.join(','),
+      subject: '📋 RFI Request ใหม่ [ID: ' + rfiId + ']',
+      htmlBody: emailHtml,
+      name: 'RFI Requirement System'
+    });
+    
+    console.log('Email result:', sent);
+    return sent;
+    
+  } catch (error) {
+    console.error('Error in sendRFINotificationEmail:', error);
+    return false;
+  }
+}
+
+function createRFIEmailHTML(data, rfiId) {
+  const categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
+  const teamInfo = data.assignedTeam ? 
+    '<tr><th>ทีมที่จัดให้</th><td><strong>' + data.assignedTeam + '</strong> (' + categoryDisplay + ')</td></tr>' : '';
+  
+  const emailBody = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+h2 { color: #1877f2; }
+.id-badge { 
+  display: inline-block;
+  background: #1877f2;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #f0f2f5; }
+.status-badge {
+  display: inline-block;
+  background: #ffc107;
+  color: #000;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+<h2>📋 แจ้ง RFI Request ใหม่</h2>
+<div class="id-badge">RFI ID: ${rfiId}</div>
+<p>เรียน ทีม QC</p>
+<p>มี RFI Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ</p>
+
+<h3>รายละเอียด RFI</h3>
+<table>
+<tr><th>RFI ID</th><td><strong>${rfiId}</strong></td></tr>
+<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
+<tr><th>สถานที่</th><td>${data.location}</td></tr>
+<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
+<tr><th>เวลา</th><td>${data.startTime} - ${data.endTime} น.</td></tr>
+${teamInfo}
+<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
+${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
+<tr><th>สถานะ</th><td><span class="status-badge">RFI Request Submitted</span></td></tr>
+</table>
+
+<p>⚠️ กรุณาตรวจสอบและดำเนินการ RFI Request นี้ในระบบ</p>
+
+<hr>
+<p><small>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</small></p>
+<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
+</body>
+</html>`;
+  
+  return emailBody;
+}
+
+/**
+ * ⚡ UPDATED: ดึง Available Time Slots (Optimized)
+ * ✅ รักษา function signature เดิม
+ */
+function getAvailableTimeSlots(date, category) {
+  try {
+    if (!date) return [];
+    
+    const now = new Date();
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    // สร้าง all slots
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    let filteredSlots = allSlots.slice();
+    
+    // กรองเวลาที่ผ่านไป (วันนี้)
+    if (selectedDateOnly.getTime() === today.getTime()) {
+      const minTime = new Date(now.getTime() + (30 * 60 * 1000));
+      
+      filteredSlots = allSlots.filter(function(slot) {
+        const slotTime = new Date(selectedDate);
+        const timeParts = slot.split(':');
+        slotTime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+        return slotTime > minTime;
+      });
+    } else if (selectedDateOnly < today) {
+      return [];
+    }
+    
+    // ถ้าไม่มี category ให้ return slots ที่กรองตามเวลาแล้ว
+    if (!category) {
+      return filteredSlots;
+    }
+    
+    const availableTeams = getTeamsByCategory(category);
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    // ⚡ Cache blocked slots ครั้งเดียว (Performance Optimization)
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    
+    const availableSlots = [];
+    
+    for (let i = 0; i < filteredSlots.length; i++) {
+      const startSlot = filteredSlots[i];
+      
+      // คำนวณ end time (default +1 ชั่วโมง)
+      const startParts = startSlot.split(':');
+      const startHour = parseInt(startParts[0]);
+      const startMin = parseInt(startParts[1]);
+      const endHour = startMin === 30 ? startHour + 1 : startHour;
+      const endMin = startMin === 30 ? 0 : 30;
+      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
+      
+      const requestStartMinutes = timeToMinutes(startSlot);
+      const requestEndMinutes = timeToMinutes(endSlot);
+      
+      // ⚡ เช็คจาก cached data แทนการ loop ซ้ำ
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          // Buffer ±25 นาที
+          const bufferedStart = block.start - 25;
+          const bufferedEnd = block.end + 25;
+          
+          if (!(requestEndMinutes < bufferedStart || requestStartMinutes > bufferedEnd)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableSlots.push(startSlot);
+      }
+    }
+    
+    return availableSlots;
+    
+  } catch (error) {
+    console.error('Error in getAvailableTimeSlots:', error);
+    return [];
+  }
+}
+
+/**
+ * ⚡ UPDATED: ดึง Available End Times (Optimized)
+ * ✅ รักษา function signature เดิม
+ */
+function getAvailableEndTimes(date, startTime, category) {
+  try {
+    if (!startTime || !date) return [];
+    
+    const allEndSlots = [];
+    for (let hour = 9; hour <= 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 9 && minute === 0) continue;
+        if (hour === 20 && minute > 0) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allEndSlots.push(time);
+      }
+    }
+    
+    const startMinutes = timeToMinutes(startTime);
+    
+    // ถ้าไม่มี category ใช้วิธีเดิม (เช็คจาก RFI ในวันนั้น)
+    if (!category) {
+      const existingRFI = getRFIByDate(date);
+      
+      let nextRFIMinutes = Infinity;
+      existingRFI.forEach(function(rfi) {
+        const rfiStartMinutes = timeToMinutes(rfi.startTime);
+        if (rfiStartMinutes > startMinutes && rfiStartMinutes < nextRFIMinutes) {
+          nextRFIMinutes = rfiStartMinutes;
+        }
+      });
+      
+      const availableEndTimes = allEndSlots.filter(function(slot) {
+        const slotMinutes = timeToMinutes(slot);
+        if (slotMinutes <= startMinutes) return false;
+        if (nextRFIMinutes !== Infinity && slotMinutes > nextRFIMinutes) return false;
+        return true;
+      });
+      
+      return availableEndTimes;
+    }
+    
+    // ดึงทีมทั้งหมดในหมวดที่เลือก
+    const availableTeams = getTeamsByCategory(category);
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    // ⚡ Cache blocked slots ครั้งเดียว
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    
+    const availableEndTimes = [];
+    
+    for (let i = 0; i < allEndSlots.length; i++) {
+      const endSlot = allEndSlots[i];
+      const endMinutes = timeToMinutes(endSlot);
+      
+      if (endMinutes <= startMinutes) continue;
+      
+      // ⚡ เช็คจาก cached data
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          // Buffer ±25 นาที
+          const bufferedStart = block.start - 25;
+          const bufferedEnd = block.end + 25;
+          
+          if (!(endMinutes < bufferedStart || startMinutes > bufferedEnd)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableEndTimes.push(endSlot);
+      } else {
+        // ถ้าไม่มีทีมว่างแล้ว ให้หยุดเช็คต่อ (เพราะถัดไปก็จะไม่ว่างแน่นอน)
+        break;
+      }
+    }
+    
+    return availableEndTimes;
+    
+  } catch (error) {
+    console.error('Error in getAvailableEndTimes:', error);
+    return [];
+  }
+}
+
+/**
+ * ✅ UPDATED: ดึงรายการ RFI ตามวันที่ (ปรับปรุงแล้ว)
+ */
+function getRFIByDate(date) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    if (!sheet) return [];
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return [];
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    const rfiList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rfiId = row[0];
+      const requestDate = formatDate(new Date(row[4]));
+      const status = String(row[14] || '').trim();  // ✅ เพิ่ม String() และ trim()
+      
+      // ✅ ใช้ isStatusInactive() แทนการเช็คแบบเดิม
+      if (isStatusInactive(status)) {
+        continue;  // ข้าม RFI ที่ไม่ใช้ทีมแล้ว
+      }
+      
+      if (requestDate === date) {
+        rfiList.push({
+          id: rfiId,
+          requestDate: requestDate,
+          startTime: formatTime(row[5]),
+          endTime: formatTime(row[6]),
+          assignedTeam: row[7] || '',
+          description: row[2],
+          location: row[3]
+        });
+      }
+    }
+    
+    return rfiList;
+  } catch (error) {
+    console.error('Error getting RFI by date:', error);
+    return [];
+  }
+}
+
+// ===== Core Save Function =====
+function saveRFIRequirement(data) {
+  try {
+    console.log('========== saveRFIRequirement START ==========');
+    console.log('Input data:', JSON.stringify(data));
+    
+    // Validation
+    if (!data.requestDate || !data.startTime || !data.endTime || 
+        !data.workType || !data.description || !data.location || 
+        !data.requesterName || !data.requesterEmail || !data.teamCategory) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน (รวมประเภททีมงานและอีเมลผู้ขอ)'
+      };
+    }
+    
+    // ตรวจสอบและดึงข้อมูลผู้ใช้จาก User sheet
+    const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
+    
+    if (!userValidation.success) {
+      console.log('User validation failed:', userValidation.message);
+      return {
+        success: false,
+        message: userValidation.message
+      };
+    }
+    
+    console.log('User validation success:', userValidation);
+    
+    const validatedEmail = userValidation.email;
+    const validatedName = userValidation.name;
+    
+    // จัดทีมอัตโนมัติ
+    const teamAssignment = assignTeamAutomatically(
+      data.teamCategory, 
+      data.requestDate, 
+      data.startTime, 
+      data.endTime
+    );
+    
+    if (!teamAssignment.success) {
+      console.log('Team assignment failed:', teamAssignment.message);
+      return {
+        success: false,
+        message: teamAssignment.message
+      };
+    }
+    
+    console.log('Team assigned:', teamAssignment);
+    
+    // สร้าง Unique ID
+    const rfiId = generateUniqueId();
+    console.log('Generated RFI ID:', rfiId);
+    
+    // ดึง Sheet
+    let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('RFI_List sheet not found, creating new one...');
+      sheet = createRFIListSheet();
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const nextRow = lastRow + 1;
+    const currentTime = new Date();
+    
+    console.log('Adding data to sheet at row:', nextRow);
+    
+    const combinedDescription = data.workType + ' - ' + data.description;
+    console.log('Combined description:', combinedDescription);
+    
+    // ⭐ เตรียมข้อมูล 40 columns (รองรับ Column AN)
+    const rowData = [];
+    for (let i = 0; i < 40; i++) {
+      rowData.push('');
+    }
+    
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    
+    rowData[0] = rfiId;                          // A - ID
+    rowData[2] = combinedDescription;            // C - description
+    rowData[3] = data.location;                  // D - Location
+    rowData[4] = formattedDate;                  // E - Request_Date
+    rowData[5] = data.startTime;                 // F - Start_Time
+    rowData[6] = data.endTime;                   // G - End_Time
+    rowData[9] = validatedEmail;                 // J - Requester_Email
+    rowData[10] = validatedName;                 // K - Requester_Name
+    rowData[11] = teamAssignment.teamNames;      // L - Assigned_Inspector (ชื่อทีมที่จัดให้)
+    rowData[14] = 'RFI Request Submitted';       // O - Status
+    rowData[15] = currentTime;                   // P - Created_Timestamp
+    rowData[39] = 'RFI Work';                    // AN - Column AN (index 39) ⭐ เพิ่มบรรทัดนี้
+    
+    console.log('Row data prepared with Column AN = "RFI Work"');
+    
+    // ⭐ บันทึก 40 columns
+    sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
+    console.log('Data added to sheet successfully');
+    
+    // ส่งอีเมล
+    let emailSent = false;
+    try {
+      const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+      const emailData = {
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamNames, // ชื่อทีม เช่น "Survey Team A,Inspector Team B"
+        teamCategory: categoryDisplay
+      };
+      emailSent = sendRFINotificationEmail(emailData, rfiId);
+      console.log('Email sent:', emailSent);
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+    }
+    
+    const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+    let message = 'บันทึก RFI Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
+    message += '\nหมวดงาน: ' + categoryDisplay;
+    message += '\nจัดทีม: ' + teamAssignment.teamNames; // แสดงชื่อทีมทั้งหมด
+    message += '\nประเภท: RFI Work';  // ⭐ เพิ่มบรรทัดนี้
+    if (!userValidation.exists) {
+      message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
+    }
+    if (emailSent) {
+      message += '\nส่งอีเมลแจ้งทีม QC แล้ว';
+    }
+    
+    console.log('========== saveRFIRequirement SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: message,
+      rfiId: rfiId,
+      emailSent: emailSent,
+      userAdded: !userValidation.exists,
+      assignedTeam: teamAssignment.teamNames
+    };
+    
+  } catch (error) {
+    console.error('========== saveRFIRequirement FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+// ===== Sheet Creation Functions =====
+function createRFIListSheet() {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = spreadsheet.getSheetByName('RFI_List');
+    
+    if (sheet) {
+      console.log('RFI_List sheet already exists');
+      return sheet;
+    }
+    
+    sheet = spreadsheet.insertSheet('RFI_List');
+    
+    const headers = [
+      'ID_RFI', '', 'description', 'Location', 'Request_Date',
+      'Start_Time', 'End_Time', 'Assigned_Team', '', 'Requester_Email',
+      'Requester_Name', '', 'Assigned_Inspector', '', 'Status', 'Created_Timestamp'
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#1877f2');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setHorizontalAlignment('center');
+    
+    sheet.setFrozenRows(1);
+    
+    console.log('RFI_List sheet created successfully');
+    return sheet;
+    
+  } catch (error) {
+    console.error('Error creating RFI_List sheet:', error);
+    throw error;
+  }
+}
+
+/**
+ * สร้าง Sheet Resources พร้อมข้อมูลตัวอย่าง
+ * วิธีใช้: เรียกฟังก์ชันนี้จาก Apps Script Editor
+ */
+function createResourcesSheet() {
+  try {
+    console.log('========== Creating Resources Sheet ==========');
+    
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = spreadsheet.getSheetByName('Resources');
+    
+    // เช็คว่ามี sheet อยู่แล้วหรือไม่
+    if (sheet) {
+      console.log('Resources sheet already exists');
+      const ui = SpreadsheetApp.getUi();
+      const response = ui.alert(
+        'Sheet Resources มีอยู่แล้ว',
+        'ต้องการลบและสร้างใหม่หรือไม่?\n\nข้อมูลเดิมทั้งหมดจะถูกลบ',
+        ui.ButtonSet.YES_NO
+      );
+      
+      if (response === ui.Button.YES) {
+        spreadsheet.deleteSheet(sheet);
+        console.log('Deleted existing Resources sheet');
+      } else {
+        console.log('User cancelled - keeping existing sheet');
+        return sheet;
+      }
+    }
+    
+    // สร้าง Sheet ใหม่
+    sheet = spreadsheet.insertSheet('Resources');
+    console.log('Created new Resources sheet');
+    
+    // สร้าง Headers
+    const headers = [
+      'Resource_ID',
+      'Resource_Name',
+      'Sub_Type',
+      'Team No.',
+      'Status',
+      'Contact_Email',
+      'Contact_Phone',
+      'Color Code'
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format Header
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#1877f2');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setHorizontalAlignment('center');
+    headerRange.setVerticalAlignment('middle');
+    
+    console.log('Created headers');
+    
+    // เพิ่มข้อมูลตัวอย่าง 6 ทีม
+    const sampleData = [
+      ['T001', 'Survey Team A', 'Survey', 1, 'Activated', 'survey.a@company.com', '02-123-4567', '#FF6B6B'],
+      ['T002', 'Survey Team B', 'Survey', 2, 'Activated', 'survey.b@company.com', '02-123-4568', '#4ECDC4'],
+      ['T003', 'Lab Team A', 'Lab', 1, 'Activated', 'lab.a@company.com', '02-123-4569', '#45B7D1'],
+      ['T004', 'Lab Team B', 'Lab', 2, 'Activated', 'lab.b@company.com', '02-123-4570', '#96CEB4'],
+      ['T005', 'Inspector Team A', 'Inspector', 1, 'Activated', 'inspector.a@company.com', '02-123-4571', '#FFEAA7'],
+      ['T006', 'Inspector Team B', 'Inspector', 2, 'Activated', 'inspector.b@company.com', '02-123-4572', '#DFE6E9']
+    ];
+    
+    sheet.getRange(2, 1, sampleData.length, sampleData[0].length).setValues(sampleData);
+    console.log('Added ' + sampleData.length + ' sample teams');
+    
+    // ตั้งค่าความกว้างคอลัมน์
+    sheet.setColumnWidth(1, 120);  // Resource_ID
+    sheet.setColumnWidth(2, 200);  // Resource_Name
+    sheet.setColumnWidth(3, 120);  // Sub_Type
+    sheet.setColumnWidth(4, 100);  // Team No.
+    sheet.setColumnWidth(5, 100);  // Status
+    sheet.setColumnWidth(6, 200);  // Contact_Email
+    sheet.setColumnWidth(7, 150);  // Contact_Phone
+    sheet.setColumnWidth(8, 100);  // Color Code
+    
+    // Freeze header row
+    sheet.setFrozenRows(1);
+    
+    // เพิ่ม Data Validation สำหรับ Sub_Type
+    const subTypeRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Survey', 'Lab', 'Inspector'], true)
+      .setAllowInvalid(false)
+      .setHelpText('เลือก: Survey, Lab, หรือ Inspector')
+      .build();
+    sheet.getRange(2, 3, 100, 1).setDataValidation(subTypeRule);
+    
+    // เพิ่ม Data Validation สำหรับ Status
+    const statusRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Activated', 'Deactivated'], true)
+      .setAllowInvalid(false)
+      .setHelpText('เลือก: Activated หรือ Deactivated')
+      .build();
+    sheet.getRange(2, 5, 100, 1).setDataValidation(statusRule);
+    
+    // เพิ่ม Number Validation สำหรับ Team No.
+    const teamNoRule = SpreadsheetApp.newDataValidation()
+      .requireNumberGreaterThan(0)
+      .setAllowInvalid(false)
+      .setHelpText('ใส่ตัวเลขมากกว่า 0')
+      .build();
+    sheet.getRange(2, 4, 100, 1).setDataValidation(teamNoRule);
+    
+    console.log('Set up data validations');
+    
+    // Format ข้อมูล
+    const dataRange = sheet.getRange(2, 1, sampleData.length, sampleData[0].length);
+    dataRange.setVerticalAlignment('middle');
+    
+    // Format Team No. ให้เป็นตัวเลข
+    sheet.getRange(2, 4, 100, 1).setNumberFormat('0');
+    
+    console.log('========== Resources Sheet Created Successfully ==========');
+    
+    // แสดง Dialog แจ้งผลสำเร็จ
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'สร้าง Sheet Resources สำเร็จ! ✅',
+      'เพิ่มทีมตัวอย่าง 6 ทีม:\n\n' +
+      '✓ Survey Team A, B (Team No. 1, 2)\n' +
+      '✓ Lab Team A, B (Team No. 1, 2)\n' +
+      '✓ Inspector Team A, B (Team No. 1, 2)\n\n' +
+      'สามารถแก้ไขหรือเพิ่มทีมได้ที่ Sheet "Resources"',
+      ui.ButtonSet.OK
+    );
+    
+    return sheet;
+    
+  } catch (error) {
+    console.error('Error creating Resources sheet:', error);
+    
+    // แสดง Error Dialog
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถสร้าง Sheet Resources ได้\n\n' +
+      'Error: ' + error.toString(),
+      ui.ButtonSet.OK
+    );
+    
+    throw error;
+  }
+}
+
+/**
+ * ตรวจสอบและแสดงข้อมูล Resources
+ * วิธีใช้: เรียกฟังก์ชันนี้เพื่อดูทีมที่มีในระบบ
+ */
+function viewResourcesInfo() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!sheet) {
+      const ui = SpreadsheetApp.getUi();
+      const response = ui.alert(
+        'ไม่พบ Sheet Resources',
+        'ต้องการสร้าง Sheet Resources พร้อมข้อมูลตัวอย่างหรือไม่?',
+        ui.ButtonSet.YES_NO
+      );
+      
+      if (response === ui.Button.YES) {
+        createResourcesSheet();
+      }
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      const ui = SpreadsheetApp.getUi();
+      ui.alert(
+        'Sheet Resources ว่างเปล่า',
+        'กรุณาเพิ่มข้อมูลทีมใน Sheet Resources\n\n' +
+        'หรือลบ Sheet แล้วรัน createResourcesSheet() ใหม่',
+        ui.ButtonSet.OK
+      );
+      return;
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    
+    let message = 'ทีมงานทั้งหมด (' + (lastRow - 1) + ' ทีม):\n\n';
+    let activatedCount = 0;
+    
+    const teamsByType = {
+      'Survey': [],
+      'Lab': [],
+      'Inspector': []
+    };
+    
+    data.forEach(function(row) {
+      const resourceId = String(row[0] || '').trim();
+      const resourceName = String(row[1] || '').trim();
+      const subType = String(row[2] || '').trim();
+      const teamNo = row[3];
+      const status = String(row[4] || '').trim();
+      
+      if (status === 'Activated' && resourceId && subType) {
+        activatedCount++;
+        
+        if (teamsByType[subType]) {
+          teamsByType[subType].push({
+            id: resourceId,
+            name: resourceName,
+            teamNo: teamNo
+          });
+        }
+      }
+    });
+    
+    // แสดงทีมแยกตามประเภท
+    ['Survey', 'Lab', 'Inspector'].forEach(function(type) {
+      if (teamsByType[type].length > 0) {
+        message += type + ' (' + teamsByType[type].length + ' ทีม):\n';
+        
+        teamsByType[type].sort(function(a, b) {
+          return a.teamNo - b.teamNo;
+        });
+        
+        teamsByType[type].forEach(function(team) {
+          message += '  • ' + team.id + ' - ' + team.name + ' (Team No.' + team.teamNo + ')\n';
+        });
+        
+        message += '\n';
+      }
+    });
+    
+    message += 'ทีมที่ใช้งานได้: ' + activatedCount + ' ทีม';
+    
+    const ui = SpreadsheetApp.getUi();
+    ui.alert('ข้อมูลทีมงาน', message, ui.ButtonSet.OK);
+    
+    console.log(message);
+    
+  } catch (error) {
+    console.error('Error viewing resources info:', error);
+    
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถแสดงข้อมูล Resources ได้\n\n' +
+      'Error: ' + error.toString(),
+      ui.ButtonSet.OK
+    );
+  }
+}
+
+function updateAvailableSlots() {
+  const date = document.getElementById('requestDate').value;
+  const startTimeSelect = document.getElementById('startTime');
+  const endTimeSelect = document.getElementById('endTime');
+  
+  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
+  resetEndTimeSelect();
+  
+  if (date) {
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date();
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    if (selectedDateOnly <= todayDateOnly) {
+      startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+      startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
+      startTimeSelect.disabled = true;
+      showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
+      return;
+    }
+    
+    // ส่ง category ไปด้วย
+    const category = selectedTeamCategory;
+    
+    google.script.run
+      .withSuccessHandler(function(availableSlots) {            
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '';
+        
+        if (!availableSlots || availableSlots.length === 0) {
+          startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
+          startTimeSelect.disabled = true;
+          showMessage('ไม่มีเวลาว่างสำหรับวันที่ที่เลือก', 'warning');
+        } else {
+          startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+          
+          availableSlots.forEach(function(slot) {
+            const option = document.createElement('option');
+            option.value = slot;
+            option.textContent = slot + ' น.';
+            startTimeSelect.appendChild(option);
+          });
+          
+          startTimeSelect.disabled = false;
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Error getting available slots:', error);
+        
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        startTimeSelect.disabled = true;
+        
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
+      })
+      .getAvailableTimeSlots(date, category);  // ส่ง category ไปด้วย
+  } else {
+    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+    startTimeSelect.disabled = true;
+  }
+}
+
+function updateEndTimeSlots() {
+  const date = document.getElementById('requestDate').value;
+  const startTime = document.getElementById('startTime').value;
+  const endTimeSelect = document.getElementById('endTime');
+  
+  if (!startTime) {
+    resetEndTimeSelect();
+    return;
+  }
+  
+  setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
+  
+  if (date && startTime) {
+    const category = selectedTeamCategory;  // เพิ่มบรรทัดนี้
+    
+    google.script.run
+      .withSuccessHandler(function(availableEndTimes) {
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '';
+        
+        if (!availableEndTimes || availableEndTimes.length === 0) {
+          endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
+          endTimeSelect.disabled = true;
+          showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
+        } else {
+          endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
+          
+          const startHour = parseInt(startTime.split(':')[0]);
+          const startMinute = parseInt(startTime.split(':')[1]);
+          const defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
+                               startMinute.toString().padStart(2, '0');
+          
+          availableEndTimes.forEach(function(time) {
+            const option = document.createElement('option');
+            option.value = time;
+            option.textContent = time + ' น.';
+            if (time === defaultEndTime) {
+              option.selected = true;
+            }
+            endTimeSelect.appendChild(option);
+          });
+          
+          endTimeSelect.disabled = false;
+          
+          if (availableEndTimes.includes(defaultEndTime)) {
+            showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Error getting end times:', error);
+        
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        endTimeSelect.disabled = true;
+        
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
+      })
+      .getAvailableEndTimes(date, startTime, category);  // ส่ง category ไปด้วย
+  }
+}
+
+
+function initTeamCategoryButtons() {
+  const teamButtons = document.querySelectorAll('.team-btn');
+  const multiSelectContainer = document.getElementById('multiSelectContainer');
+  const multiWorkBtn = document.getElementById('multiWorkBtn');
+  
+  teamButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      // ... โค้ดเดิม ...
+      
+      // เพิ่มส่วนนี้: ถ้ามีการเลือกวันที่ไว้แล้ว ให้โหลด time slots ใหม่
+      const requestDate = document.getElementById('requestDate').value;
+      if (requestDate) {
+        updateAvailableSlots();
+      }
+    });
+  });
+}
+
+function updateMultiWorkSelection() {
+  if (!isMultiWork) return;
+  
+  const checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]:checked');
+  const selectedCategories = [];
+  
+  checkboxes.forEach(function(cb) {
+    selectedCategories.push(cb.value);
+  });
+  
+  if (selectedCategories.length > 0) {
+    selectedTeamCategory = selectedCategories.join(',');
+    document.getElementById('teamCategory').value = selectedTeamCategory;
+    showMessage('เลือก: ' + selectedTeamCategory, 'info', 2000);
+    
+    // เพิ่มส่วนนี้: โหลด time slots ใหม่
+    const requestDate = document.getElementById('requestDate').value;
+    if (requestDate) {
+      updateAvailableSlots();
+    }
+  } else {
+    selectedTeamCategory = null;
+    document.getElementById('teamCategory').value = '';
+  }
+}
+
+/**
+ * เปิดหน้า QC RFI Form
+ */
+function openQCRFIForm() {
+  const html = HtmlService.createHtmlOutputFromFile('qc')
+    .setWidth(800)
+    .setHeight(900);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'QC RFI System');
+}
+
+/**
+ * ดึงรายการ Code ทั้งหมด
+ */
+function getCodeList() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Code');
+    
+    if (!sheet) {
+      console.log('Code sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No codes found');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    const codes = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const id = data[i][0];
+      const code = String(data[i][1] || '').trim();
+      const name = String(data[i][2] || '').trim();
+      
+      if (code) {
+        codes.push({
+          id: id,
+          code: code,
+          name: name
+        });
+      }
+    }
+    
+    console.log('Found codes:', codes.length);
+    return codes;
+    
+  } catch (error) {
+    console.error('Error getting code list:', error);
+    return [];
+  }
+}
+
+/**
+ * ดึงรายการ Resources ทั้งหมดที่ Activated
+ */
+function getAllResourcesList() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!sheet) {
+      console.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No resources found');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const resources = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const resourceId = String(data[i][0] || '').trim();
+      const resourceName = String(data[i][1] || '').trim();
+      const subType = String(data[i][2] || '').trim();
+      const teamNo = data[i][3];
+      const status = String(data[i][4] || '').trim();
+      
+      if (status === 'Activated' && resourceId && resourceName) {
+        resources.push({
+          id: resourceId,
+          name: resourceName,
+          subType: subType,
+          teamNo: teamNo
+        });
+      }
+    }
+    
+    // เรียงตาม Team No.
+    resources.sort(function(a, b) {
+      return a.teamNo - b.teamNo;
+    });
+    
+    console.log('Found resources:', resources.length);
+    return resources;
+    
+  } catch (error) {
+    console.error('Error getting resources list:', error);
+    return [];
+  }
+}
+
+/**
+ * ดึงรายการ Requester (Role = Requester, Status = Activated)
+ */
+function getRequesterList() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!sheet) {
+      console.log('User sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No users found');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    const requesters = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim();
+      const name = String(data[i][1] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      if (role === 'Requester' && status === 'Activated' && email && name) {
+        requesters.push({
+          email: email,
+          name: name
+        });
+      }
+    }
+    
+    console.log('Found requesters:', requesters.length);
+    return requesters;
+    
+  } catch (error) {
+    console.error('Error getting requester list:', error);
+    return [];
+  }
+}
+
+/**
+ * ดึง email ของ user ปัจจุบัน
+ */
+function getCurrentUserEmail() {
+  try {
+    return Session.getActiveUser().getEmail();
+  } catch (error) {
+    console.error('Error getting current user email:', error);
+    return '';
+  }
+}
+
+/**
+ * คำนวณ Order_RFI ถัดไป
+ */
+function getNextOrderRFI(code) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      return 1;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return 1;
+    }
+    
+    // ดึง Column H (Order_RFI) และ I (Code)
+    const data = sheet.getRange(2, 8, lastRow - 1, 2).getValues();
+    
+    let maxOrder = 0;
+    
+    for (let i = 0; i < data.length; i++) {
+      const orderRFI = data[i][0];
+      const rfiCode = String(data[i][1] || '').trim();
+      
+      if (rfiCode === code && orderRFI && !isNaN(orderRFI)) {
+        if (orderRFI > maxOrder) {
+          maxOrder = orderRFI;
+        }
+      }
+    }
+    
+    return maxOrder + 1;
+    
+  } catch (error) {
+    console.error('Error getting next order RFI:', error);
+    return 1;
+  }
+}
+
+/**
+ * บันทึก QC RFI
+ */
+function saveQCRFI(data) {
+  try {
+    console.log('========== saveQCRFI START ==========');
+    console.log('Input data:', JSON.stringify(data));
+    
+    // ⭐ ตรวจสอบ Role ก่อนบันทึก
+    const roleValidation = validateQCRole();
+    if (!roleValidation.success) {
+      return {
+        success: false,
+        message: roleValidation.message
+      };
+    }
+    
+    console.log('QC Role validated:', roleValidation.name, roleValidation.role);
+    
+    // Validation
+    if (!data.code || !data.requestDate || !data.startTime || 
+        !data.description || !data.location || !data.assignedInspector || 
+        !data.requesterEmail || !data.requesterName) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    // เวลาสิ้นสุดไม่ required แล้ว - ถ้าไม่ใส่ ใช้เวลาเริ่มต้น +1 ชั่วโมง
+    let endTime = data.endTime;
+    if (!endTime) {
+      const startParts = data.startTime.split(':');
+      const endHour = parseInt(startParts[0]) + 1;
+      endTime = endHour.toString().padStart(2, '0') + ':' + startParts[1];
+      console.log('End time not provided, using default:', endTime);
+    }
+    
+    // ดึง Sheet
+    let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('RFI_List sheet not found, creating new one...');
+      sheet = createRFIListSheet();
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const nextRow = lastRow + 1;
+    const currentTime = new Date();
+    
+    // สร้าง ID (8 ตัวอักษร)
+    const rfiId = generateUniqueId();
+    console.log('Generated RFI ID:', rfiId);
+    
+    // คำนวณ Order_RFI
+    const orderRFI = getNextOrderRFI(data.code);
+    console.log('Order RFI:', orderRFI);
+    
+    // สร้าง RFI_NO = Code + "-RFI-" + Order_RFI (4 หลัก)
+    const orderRFIPadded = String(orderRFI).padStart(4, '0');
+    const rfiNo = data.code + '-RFI-' + orderRFIPadded;
+    console.log('RFI NO:', rfiNo);
+    
+    // Format date
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    
+    console.log('Adding data to sheet at row:', nextRow);
+    
+    // ⭐ เตรียมข้อมูล 40 columns (รองรับ Column AN)
+    const rowData = [];
+    for (let i = 0; i < 40; i++) {
+      rowData.push('');
+    }
+    
+    rowData[0] = rfiId;                          // A - ID
+    rowData[1] = rfiNo;                          // B - RFI_NO (10-RFI-0001)
+    rowData[2] = data.description;               // C - description
+    rowData[3] = data.location;                  // D - Location
+    rowData[4] = formattedDate;                  // E - Request_Date
+    rowData[5] = data.startTime;                 // F - Start_Time
+    rowData[6] = endTime;                        // G - End_Time (ใช้ค่าที่คำนวณแล้ว)
+    rowData[7] = orderRFI;                       // H - Order_RFI
+    rowData[8] = data.code;                      // I - Code
+    rowData[9] = data.requesterEmail;            // J - Requester_Email
+    rowData[10] = data.requesterName;            // K - Requester_Name
+    rowData[11] = data.assignedInspector;        // L - Assigned_Inspector
+    rowData[14] = 'Draft';                       // O - Status
+    rowData[15] = currentTime;                   // P - Created_Timestamp
+    rowData[16] = roleValidation.email;          // Q - Recorded By (ใช้ email จาก validation)
+    rowData[18] = 'Open RFI';                    // S - Type
+    rowData[19] = data.requireSurveyReport || 'None';  // T - Require_Survey_Report
+    rowData[20] = data.requireLabReport || 'None';     // U - Require_Lab_Report
+    rowData[39] = 'RFI Work';                    // AN - Column AN (index 39) ⭐ เพิ่มบรรทัดนี้
+    
+    console.log('Row data prepared with Column AN = "RFI Work"');
+    
+    // ⭐ บันทึก 40 columns
+    sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
+    console.log('Data added to sheet successfully');
+    
+    let message = 'สร้าง RFI เรียบร้อยแล้ว\n';
+    message += 'RFI NO: ' + rfiNo + '\n';
+    message += 'ทีมงาน: ' + data.assignedInspector + '\n';
+    message += 'ผู้ขอ: ' + data.requesterName + '\n';
+    message += 'ประเภท: RFI Work\n';  // ⭐ เพิ่มบรรทัดนี้
+    message += 'บันทึกโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
+    
+    console.log('========== saveQCRFI SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: message,
+      rfiId: rfiId,
+      rfiNo: rfiNo
+    };
+    
+  } catch (error) {
+    console.error('========== saveQCRFI FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+
+/**
+ * ดึงรายการ Resources ที่ว่าง ณ เวลาที่กำหนด (รองรับการยกเว้น RFI)
+ */
+function getAvailableResourcesList(date, startTime, endTime, excludeRfiId) {
+  try {
+    console.log('Getting available resources for:', date, startTime, endTime, 'Exclude RFI:', excludeRfiId);
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!sheet) {
+      console.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No resources found');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const availableResources = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const resourceId = String(data[i][0] || '').trim();
+      const resourceName = String(data[i][1] || '').trim();
+      const subType = String(data[i][2] || '').trim();
+      const teamNo = data[i][3];
+      const status = String(data[i][4] || '').trim();
+      
+      if (status === 'Activated' && resourceId && resourceName) {
+        // ⭐ ส่ง excludeRfiId ไปด้วย
+        if (isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId)) {
+          availableResources.push({
+            id: resourceId,
+            name: resourceName,
+            subType: subType,
+            teamNo: teamNo
+          });
+        }
+      }
+    }
+    
+    availableResources.sort(function(a, b) {
+      return a.teamNo - b.teamNo;
+    });
+    
+    console.log('Found available resources:', availableResources.length);
+    return availableResources;
+    
+  } catch (error) {
+    console.error('Error getting available resources list:', error);
+    return [];
+  }
+}
+
+/**
+ * ตรวจสอบว่า User ที่ใช้งานเป็น QC หรือ QC Reviewer หรือไม่
+ */
+function validateQCRole() {
+  try {
+    const userEmail = Session.getActiveUser().getEmail();
+    console.log('Validating QC role for:', userEmail);
+    
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      return {
+        success: false,
+        message: 'ไม่พบตาราง User'
+      };
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        success: false,
+        message: 'ไม่พบข้อมูลผู้ใช้'
+      };
+    }
+    
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim().toLowerCase();
+      const name = String(data[i][1] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      if (email === userEmail.toLowerCase()) {
+        // เช็คว่า Role เป็น QC หรือ QC Reviewer และ Status = Activated
+        if ((role === 'QC' || role === 'QC Reviewer') && status === 'Activated') {
+          console.log('QC role validated:', name, role);
+          return {
+            success: true,
+            name: name,
+            role: role,
+            email: email
+          };
+        } else {
+          return {
+            success: false,
+            message: 'คุณไม่มีสิทธิ์เข้าถึงระบบ QC (Role: ' + role + ', Status: ' + status + ')'
+          };
+        }
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'ไม่พบข้อมูลผู้ใช้ในระบบ กรุณาติดต่อผู้ดูแลระบบ'
+    };
+    
+  } catch (error) {
+    console.error('Error validating QC role:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * เปิดหน้าแก้ไข QC RFI
+ */
+function openQCEditForm() {
+  const html = HtmlService.createHtmlOutputFromFile('qc_edit')
+    .setWidth(900)
+    .setHeight(900);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'QC - แก้ไข RFI');
+}
+
+/**
+ * ดึงรายการ RFI ที่ Status = Draft หรือ RFI Request Submitted
+ */
+/**
+ * ดึงรายการ RFI ที่ Status = Draft หรือ RFI Request Submitted
+ */
+function getRFIListForQC() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('DEBUG: RFI_List sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    console.log('DEBUG: lastRow =', lastRow);
+    
+    if (lastRow <= 1) {
+      console.log('DEBUG: No data rows');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues();
+    console.log('DEBUG: Total rows =', data.length);
+    
+    const rfiList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[0] || '').trim();
+      const rfiNo = String(row[1] || '').trim();
+      const status = String(row[14] || '').trim();
+      
+      console.log('DEBUG: Row', i, 'ID:', id, 'RFI_NO:', rfiNo, 'Status:', status);
+      
+      if (status === 'Draft' || status === 'RFI Request Submitted') {
+        console.log('DEBUG: -> MATCHED! Adding to list');
+        
+        // ⭐ แปลง Date object เป็น String
+        const createdTimestamp = row[15];
+        let createdDateStr = '';
+        if (createdTimestamp) {
+          try {
+            const d = new Date(createdTimestamp);
+            createdDateStr = d.toISOString();
+          } catch (e) {
+            createdDateStr = String(createdTimestamp);
+          }
+        }
+        
+        rfiList.push({
+          id: id,
+          rfiNo: rfiNo,
+          description: String(row[2] || '').trim(),
+          location: String(row[3] || '').trim(),
+          requestDate: formatDate(new Date(row[4])),
+          startTime: formatTime(row[5]),
+          endTime: formatTime(row[6]),
+          code: String(row[8] || '').trim(),
+          requesterEmail: String(row[9] || '').trim(),
+          requesterName: String(row[10] || '').trim(),
+          assignedInspector: String(row[11] || '').trim(),
+          status: status,
+          createdTimestamp: createdDateStr,  // ⭐ ใช้ string แทน Date object
+          type: String(row[18] || '').trim(),
+          requireSurveyReport: String(row[19] || '').trim(),
+          requireLabReport: String(row[20] || '').trim()
+        });
+      }
+    }
+    
+    // เรียงตามวันที่สร้าง (ล่าสุดก่อน)
+    rfiList.sort(function(a, b) {
+      if (!a.createdTimestamp || !b.createdTimestamp) return 0;
+      return new Date(b.createdTimestamp).getTime() - new Date(a.createdTimestamp).getTime();
+    });
+    
+    console.log('DEBUG: Final list count =', rfiList.length);
+    
+    // ⭐ ลบ JSON.stringify ออก เพราะอาจทำให้เกิด serialization error
+    // console.log('DEBUG: RFI List =', JSON.stringify(rfiList));
+    
+    return rfiList;
+    
+  } catch (error) {
+    console.error('ERROR in getRFIListForQC:', error);
+    console.error('Error stack:', error.stack);
+    return [];
+  }
+}
+
+/**
+ * ดึงข้อมูล RFI ตาม ID (Fixed - รวม Column AJ)
+ */
+function getRFIById(rfiId) {
+  try {
+    console.log('Getting RFI by ID:', rfiId);
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('RFI_List sheet not found');
+      return null;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No data rows');
+      return null;
+    }
+    
+    // ✅ ดึงถึง column AJ (column 36)
+    const data = sheet.getRange(2, 1, lastRow - 1, 36).getValues();
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[0] || '').trim();
+      
+      if (id === rfiId) {
+        console.log('Found RFI:', id);
+        
+        let createdTimestamp = '';
+        if (row[15]) {
+          try {
+            createdTimestamp = new Date(row[15]).toISOString();
+          } catch (e) {
+            createdTimestamp = String(row[15]);
+          }
+        }
+        
+        let requestDate = '';
+        if (row[4]) {
+          try {
+            const d = new Date(row[4]);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            requestDate = year + '-' + month + '-' + day;
+          } catch (e) {
+            requestDate = formatDate(new Date(row[4]));
+          }
+        }
+        
+        const rfiData = {
+          id: id,
+          rfiNo: String(row[1] || '').trim(),
+          description: String(row[2] || '').trim(),
+          location: String(row[3] || '').trim(),
+          requestDate: requestDate,
+          startTime: formatTime(row[5]),
+          endTime: formatTime(row[6]),
+          orderRFI: row[7],
+          code: String(row[8] || '').trim(),
+          requesterEmail: String(row[9] || '').trim(),
+          requesterName: String(row[10] || '').trim(),
+          assignedInspector: String(row[11] || '').trim(),
+          status: String(row[14] || '').trim(),
+          createdTimestamp: createdTimestamp,
+          recordedBy: String(row[16] || '').trim(),
+          type: String(row[18] || '').trim(),
+          requireSurveyReport: String(row[19] || '').trim(),
+          requireLabReport: String(row[20] || '').trim(),
+          postponeReason: String(row[35] || '').trim(),  // ✅ Column AJ (index 35)
+          rowIndex: i + 2
+        };
+        
+        console.log('Returning RFI data with postpone reason:', rfiData.postponeReason);
+        return rfiData;
+      }
+    }
+    
+    console.log('RFI not found');
+    return null;
+    
+  } catch (error) {
+    console.error('Error getting RFI by ID:', error);
+    console.error('Stack:', error.stack);
+    return null;
+  }
+}
+/**
+ * Format date สำหรับ input type="date" (YYYY-MM-DD)
+ */
+function formatDateForInput(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+/**
+ * อัปเดต QC RFI - รองรับการเปลี่ยน Code สำหรับ Status = RFI Request Submitted
+ */
+function updateQCRFI(rfiId, data) {
+  try {
+    console.log('========== updateQCRFI START ==========');
+    console.log('RFI ID:', rfiId);
+    console.log('Update data:', JSON.stringify(data));
+    
+    // ตรวจสอบ Role ก่อนแก้ไข
+    const roleValidation = validateQCRole();
+    if (!roleValidation.success) {
+      return {
+        success: false,
+        message: roleValidation.message
+      };
+    }
+    
+    // Validation
+    if (!rfiId || !data.code || !data.requestDate || !data.startTime || 
+        !data.description || !data.location || !data.assignedInspector || 
+        !data.requesterEmail || !data.requesterName) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'ไม่พบ RFI_List sheet'
+      };
+    }
+    
+    // หา row ที่ต้องอัปเดต
+    const lastRow = sheet.getLastRow();
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 19).getValues(); // ดึง A-S
+    let rowIndex = -1;
+    let currentStatus = '';
+    let currentCode = '';
+    
+    for (let i = 0; i < dataRange.length; i++) {
+      if (String(dataRange[i][0]).trim() === rfiId) { // Column A = ID
+        rowIndex = i + 2;
+        currentStatus = String(dataRange[i][14] || '').trim(); // Column O = Status
+        currentCode = String(dataRange[i][8] || '').trim();    // Column I = Code
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      return {
+        success: false,
+        message: 'ไม่พบ RFI ที่ต้องการแก้ไข'
+      };
+    }
+    
+    // เวลาสิ้นสุดไม่ required - ถ้าไม่ใส่ ให้ใช้เวลาเริ่มต้น +1 ชั่วโมง
+    let endTime = data.endTime;
+    if (!endTime) {
+      const startParts = data.startTime.split(':');
+      const endHour = parseInt(startParts[0]) + 1;
+      endTime = endHour.toString().padStart(2, '0') + ':' + startParts[1];
+    }
+    
+    // Format date
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    
+    const currentTime = new Date();
+    
+    // ✅ ตรวจสอบว่าต้องอัปเดต RFI_NO หรือไม่
+    let needUpdateRFINo = false;
+    let newRFINo = '';
+    
+    if (currentStatus === 'RFI Request Submitted' && data.code !== currentCode) {
+      // ถ้า Status = RFI Request Submitted และมีการเปลี่ยน Code
+      // ต้องสร้าง RFI_NO ใหม่
+      console.log('Code changed from', currentCode, 'to', data.code);
+      const orderRFI = getNextOrderRFI(data.code);
+      const orderRFIPadded = String(orderRFI).padStart(4, '0');
+      newRFINo = data.code + '-RFI-' + orderRFIPadded;
+      needUpdateRFINo = true;
+      
+      console.log('New RFI_NO:', newRFINo, 'Order:', orderRFI);
+    }
+    
+    // อัปเดตข้อมูล
+    sheet.getRange(rowIndex, 3).setValue(data.description);           // C - description
+    sheet.getRange(rowIndex, 4).setValue(data.location);              // D - Location
+    sheet.getRange(rowIndex, 5).setValue(formattedDate);              // E - Request_Date
+    sheet.getRange(rowIndex, 6).setValue(data.startTime);             // F - Start_Time
+    sheet.getRange(rowIndex, 7).setValue(endTime);                    // G - End_Time
+    
+    // ✅ อัปเดต Code และ RFI_NO (ถ้าจำเป็น)
+    if (needUpdateRFINo) {
+      const currentOrderRFI = sheet.getRange(rowIndex, 8).getValue(); // H - Order_RFI เก่า
+      const newOrderRFI = getNextOrderRFI(data.code);
+      
+      sheet.getRange(rowIndex, 2).setValue(newRFINo);               // B - RFI_NO ใหม่
+      sheet.getRange(rowIndex, 8).setValue(newOrderRFI);            // H - Order_RFI ใหม่
+      sheet.getRange(rowIndex, 9).setValue(data.code);              // I - Code ใหม่
+      
+      console.log('Updated: RFI_NO =', newRFINo, ', Order_RFI =', newOrderRFI, ', Code =', data.code);
+    }
+    
+    sheet.getRange(rowIndex, 10).setValue(data.requesterEmail);       // J - Requester_Email
+    sheet.getRange(rowIndex, 11).setValue(data.requesterName);        // K - Requester_Name
+    sheet.getRange(rowIndex, 12).setValue(data.assignedInspector);    // L - Assigned_Inspector
+    sheet.getRange(rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
+    sheet.getRange(rowIndex, 20).setValue(data.requireSurveyReport || 'None');  // T - Require_Survey_Report
+    sheet.getRange(rowIndex, 21).setValue(data.requireLabReport || 'None');     // U - Require_Lab_Report
+    
+    // ดึง RFI_NO ปัจจุบัน (อาจเป็นของใหม่หรือเก่า)
+    const finalRFINo = needUpdateRFINo ? newRFINo : sheet.getRange(rowIndex, 2).getValue();
+    
+    let message = 'แก้ไข RFI เรียบร้อยแล้ว\n';
+    message += 'RFI NO: ' + finalRFINo + '\n';
+    if (needUpdateRFINo) {
+      message += '⚠️ เปลี่ยน Code จาก ' + currentCode + ' → ' + data.code + '\n';
+      message += '📋 RFI NO ใหม่: ' + finalRFINo + '\n';
+    }
+    message += 'ทีมงาน: ' + data.assignedInspector + '\n';
+    message += 'ผู้ขอ: ' + data.requesterName + '\n';
+    message += 'แก้ไขโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
+    
+    console.log('========== updateQCRFI SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: message,
+      rfiId: rfiId,
+      rfiNo: finalRFINo
+    };
+    
+  } catch (error) {
+    console.error('========== updateQCRFI FAILED ==========');
+    console.error('Error:', error);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+function getRFIListForQC() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('DEBUG: RFI_List sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    console.log('DEBUG: lastRow =', lastRow);
+    
+    if (lastRow <= 1) {
+      console.log('DEBUG: No data rows');
+      return [];
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues();
+    console.log('DEBUG: Total rows =', data.length);
+    
+    const rfiList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[0] || '').trim();
+      const rfiNo = String(row[1] || '').trim();
+      const status = String(row[14] || '').trim();
+      
+      console.log('DEBUG: Row', i, 'ID:', id, 'RFI_NO:', rfiNo, 'Status:', status);
+      
+      if (status === 'Draft' || status === 'RFI Request Submitted') {
+        console.log('DEBUG: -> MATCHED! Adding to list');
+        rfiList.push({
+          id: id,
+          rfiNo: rfiNo,
+          description: String(row[2] || '').trim(),
+          location: String(row[3] || '').trim(),
+          requestDate: formatDate(new Date(row[4])),
+          startTime: formatTime(row[5]),
+          endTime: formatTime(row[6]),
+          code: String(row[8] || '').trim(),
+          requesterEmail: String(row[9] || '').trim(),
+          requesterName: String(row[10] || '').trim(),
+          assignedInspector: String(row[11] || '').trim(),
+          status: status,
+          type: String(row[18] || '').trim(),
+          requireSurveyReport: String(row[19] || '').trim(),
+          requireLabReport: String(row[20] || '').trim()
+        });
+      }
+    }
+    
+    rfiList.sort(function(a, b) {
+  if (a.id > b.id) return -1;
+  if (a.id < b.id) return 1;
+  return 0;
+});
+    
+    console.log('DEBUG: Final list count =', rfiList.length);
+    console.log('DEBUG: RFI List =', JSON.stringify(rfiList));
+    
+    return rfiList;
+    
+  } catch (error) {
+    console.error('ERROR in getRFIListForQC:', error);
+    return [];
+  }
+}
+
+/**
+ * ดึงข้อมูลผู้ใช้ปัจจุบัน (อีเมลและชื่อ)
+ */
+function getCurrentUserInfo() {
+  try {
+    const user = Session.getActiveUser();
+    const email = user.getEmail();
+    
+    // พยายามดึงชื่อจาก UserProperties หรือ ContactsApp
+    let displayName = '';
+    
+    // วิธีที่ 1: ลองดึงจาก UserProperties (ถ้าเคยบันทึกไว้)
+    const userProps = PropertiesService.getUserProperties();
+    displayName = userProps.getProperty('displayName') || '';
+    
+    // วิธีที่ 2: ถ้ายังไม่มี ให้ใช้ส่วนหน้าของอีเมล
+    if (!displayName && email) {
+      displayName = email.split('@')[0];
+      // แปลง firstname.lastname เป็น Firstname Lastname
+      displayName = displayName.split('.').map(function(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }).join(' ');
+    }
+    
+    return {
+      success: true,
+      email: email,
+      name: displayName
+    };
+  } catch (error) {
+    console.error('Error getting current user info:', error);
+    return {
+      success: false,
+      email: '',
+      name: '',
+      error: error.toString()
+    };
+  }
+}
+
+// ===== แก้ไขส่วนนี้ใน Code.gs (ใกล้ท้ายไฟล์) =====
+// ⚠️ ปัญหาเดิม: มี /** ที่เปิด multi-line comment แต่ไม่ได้ปิด
+// ทำให้ทุก function หลังจากนี้ถูก comment ออกไป
+
+/**
+ * ดึง email ของ user ปัจจุบัน
+ */
+function getCurrentUserEmail() {
+  try {
+    return Session.getActiveUser().getEmail();
+  } catch (error) {
+    console.error('Error getting current user email:', error);
+    return '';
+  }
+}
+
+/**
+ * ดึงรายการ RFI ที่ Status = Inspection Postponed (รวม Postpone Reason)
+ */
+function getPostponedRFIList() {
+  try {
+    console.log('========== Getting Postponed RFI List ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('RFI_List sheet not found');
+      return [];
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No data rows');
+      return [];
+    }
+    
+    // ✅ ดึงถึง column AJ (column 36)
+    const data = sheet.getRange(2, 1, lastRow - 1, 36).getValues();
+    const postponedList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[0] || '').trim();
+      const status = String(row[14] || '').trim();
+      
+      // กรองเฉพาะ Status = "Inspection Postponed"
+      if (status === 'Inspection Postponed') {
+        let createdTimestamp = '';
+        if (row[15]) {
+          try {
+            createdTimestamp = new Date(row[15]).toISOString();
+          } catch (e) {
+            createdTimestamp = String(row[15]);
+          }
+        }
+        
+        postponedList.push({
+          id: id,
+          rfiNo: String(row[1] || '').trim(),
+          description: String(row[2] || '').trim(),
+          location: String(row[3] || '').trim(),
+          requestDate: formatDate(new Date(row[4])),
+          startTime: formatTime(row[5]),
+          endTime: formatTime(row[6]),
+          code: String(row[8] || '').trim(),
+          requesterEmail: String(row[9] || '').trim(),
+          requesterName: String(row[10] || '').trim(),
+          assignedInspector: String(row[11] || '').trim(),
+          status: status,
+          createdTimestamp: createdTimestamp,
+          postponeReason: String(row[35] || '').trim()  // ✅ Column AJ (index 35)
+        });
+      }
+    }
+    
+    // เรียงตามวันที่สร้าง (ล่าสุดก่อน)
+    postponedList.sort(function(a, b) {
+      if (!a.createdTimestamp || !b.createdTimestamp) return 0;
+      return new Date(b.createdTimestamp).getTime() - new Date(a.createdTimestamp).getTime();
+    });
+    
+    console.log('Found postponed RFI:', postponedList.length);
+    return postponedList;
+    
+  } catch (error) {
+    console.error('Error getting postponed RFI list:', error);
+    return [];
+  }
+}
+
+/**
+ * เลือนตรวจ RFI (รวม Postpone Reason จาก Sheet)
+ */
+function reschedulePostponedRFI(rfiId, data) {
+  try {
+    console.log('========== reschedulePostponedRFI START ==========');
+    console.log('RFI ID:', rfiId);
+    console.log('New schedule:', JSON.stringify(data));
+    
+    // ตรวจสอบ Role ก่อนดำเนินการ
+    const roleValidation = validateQCRole();
+    if (!roleValidation.success) {
+      return {
+        success: false,
+        message: roleValidation.message
+      };
+    }
+    
+    // Validation
+    if (!rfiId || !data.requestDate || !data.startTime || !data.assignedInspector) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'ไม่พบ RFI_List sheet'
+      };
+    }
+    
+    // ✅ ดึงข้อมูล RFI เต็ม (รวม postponeReason จาก Column AJ)
+    const rfiData = getRFIById(rfiId);
+    
+    if (!rfiData) {
+      return {
+        success: false,
+        message: 'ไม่พบ RFI ที่ต้องการเลือนตรวจ'
+      };
+    }
+    
+    // ตรวจสอบว่า Status = "Inspection Postponed" จริงหรือไม่
+    if (rfiData.status !== 'Inspection Postponed') {
+      return {
+        success: false,
+        message: 'RFI นี้ไม่ได้อยู่ในสถานะ Inspection Postponed (สถานะปัจจุบัน: ' + rfiData.status + ')'
+      };
+    }
+    
+    // คำนวณ end time (ถ้าไม่ได้ระบุ ใช้ +1 ชั่วโมง)
+    let endTime = data.endTime;
+    if (!endTime) {
+      const startParts = data.startTime.split(':');
+      const endHour = parseInt(startParts[0]) + 1;
+      endTime = endHour.toString().padStart(2, '0') + ':' + startParts[1];
+    }
+    
+    // Format date
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    
+    const currentTime = new Date();
+    
+    // อัปเดตข้อมูล
+    sheet.getRange(rfiData.rowIndex, 5).setValue(formattedDate);              // E - Request_Date
+    sheet.getRange(rfiData.rowIndex, 6).setValue(data.startTime);             // F - Start_Time
+    sheet.getRange(rfiData.rowIndex, 7).setValue(endTime);                    // G - End_Time
+    sheet.getRange(rfiData.rowIndex, 12).setValue(data.assignedInspector);    // L - Assigned_Inspector
+    sheet.getRange(rfiData.rowIndex, 15).setValue('Rescheduled');             // O - Status เปลี่ยนเป็น "Rescheduled"
+    sheet.getRange(rfiData.rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
+    
+    console.log('Updated RFI at row:', rfiData.rowIndex);
+    
+    // ========== ✅ เรียก Postpone Calendar Function ==========
+    
+    let calendarPostponeResult = null;
+    try {
+      console.log('========== Calling postponeRFIInspection ==========');
+      
+      // ✅ ใช้ postponeReason จาก Sheet (Column AJ)
+      const postponeReasonFromSheet = rfiData.postponeReason || 'เลือนตรวจจากระบบ RFI';
+      console.log('Using postpone reason from sheet:', postponeReasonFromSheet);
+      
+      calendarPostponeResult = postponeRFIInspection(
+        rfiData.rfiNo,                    // RFI Number
+        rfiData.description,              // Description
+        data.requestDate,                 // New Date (YYYY-MM-DD)
+        data.startTime,                   // New Start Time
+        endTime,                          // New End Time
+        postponeReasonFromSheet,          // ✅ Postpone Reason จาก Column AJ
+        rfiData.requesterEmail,           // Requester Email
+        '',                               // Guest Emails (ไม่ใช้)
+        rfiData.location,                 // New Location
+        data.assignedInspector,           // Assigned Inspector (ทีมงาน)
+        true,                             // Send Email = true
+        60                                // Search Days = 60
+      );
+      
+      console.log('========== Postpone Calendar Result ==========');
+      console.log('Success:', calendarPostponeResult.success);
+      console.log('Events Updated:', calendarPostponeResult.rfiEventsUpdated);
+      console.log('Emails Sent:', calendarPostponeResult.emailsSent);
+      
+    } catch (calendarError) {
+      console.error('⌫ Error calling postponeRFIInspection:', calendarError);
+    }
+    
+    // ========== ✅ END: Postpone Calendar Integration ==========
+    
+    let message = 'เลือนตรวจ RFI สำเร็จ\n';
+    message += 'RFI NO: ' + rfiData.rfiNo + '\n';
+    message += 'วันที่ใหม่: ' + formatDateThai(data.requestDate) + '\n';
+    message += 'เวลาใหม่: ' + data.startTime + ' - ' + endTime + ' น.\n';
+    message += 'ทีมงานใหม่: ' + data.assignedInspector + '\n';
+    message += 'สถานะ: Rescheduled';
+    
+    // เพิ่มข้อมูล Calendar Result
+    if (calendarPostponeResult && calendarPostponeResult.success) {
+      message += '\n\n✅ อัปเดต Calendar สำเร็จ:';
+      message += '\n• Events Updated: ' + calendarPostponeResult.rfiEventsUpdated;
+      message += '\n• Emails Sent: ' + (calendarPostponeResult.emailsSent ? 'Yes' : 'No');
+    } else if (calendarPostponeResult) {
+      message += '\n\n⚠️ Calendar Update: ' + (calendarPostponeResult.message || 'ไม่สำเร็จ');
+    }
+    
+    console.log('========== reschedulePostponedRFI SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: message,
+      rfiId: rfiId,
+      rfiNo: rfiData.rfiNo,
+      calendarResult: calendarPostponeResult
+    };
+    
+  } catch (error) {
+    console.error('========== reschedulePostponedRFI FAILED ==========');
+    console.error('Error:', error);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+function checkPostponeIntegration() {
+  try {
+    // ลองเรียก function postponeRFIInspection
+    if (typeof postponeRFIInspection === 'function') {
+      console.log('✅ Postpone Integration: Available');
+      return true;
+    } else {
+      console.log('⚠️ Postpone Integration: Not Found');
+      return false;
+    }
+  } catch (error) {
+    console.log('❌ Postpone Integration: Error -', error.toString());
+    return false;
+  }
+}
+
+// ========== EXAMPLE: การใช้งานจาก qc_postpone.html ==========
+
+/**
+ * ตัวอย่างการเรียกจาก Frontend (qc_postpone.html)
+ */
+function exampleUsageFromFrontend() {
+  // ใน qc_postpone.html หลังจากบันทึกสำเร็จ
+  // function handleRescheduleSubmit() จะเรียก reschedulePostponedRFI()
+  // ซึ่งจะเรียก postponeRFIInspection() อัตโนมัติ
+  
+  const formData = {
+    requestDate: '2025-01-20',
+    startTime: '14:00',
+    endTime: '16:00',
+    assignedInspector: 'Survey Team A,Lab Team B'
+  };
+  
+  // เรียกผ่าน google.script.run
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        console.log('✅ RFI Postponed:', result.message);
+        
+        // ตรวจสอบผล Calendar Update
+        if (result.calendarResult) {
+          console.log('Calendar Events Updated:', result.calendarResult.rfiEventsUpdated);
+          console.log('Emails Sent:', result.calendarResult.emailsSent);
+        }
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error:', error);
+    })
+    .reschedulePostponedRFI(rfiId, formData);
+}
+
+// ========== TEST FUNCTION ==========
+
+/**
+ * ทดสอบ Integration
+ */
+function testPostponeIntegration() {
+  console.log('========== TEST: Postpone Integration ==========');
+  
+  // 1. ตรวจสอบว่ามี function postponeRFIInspection หรือไม่
+  const hasIntegration = checkPostponeIntegration();
+  console.log('Has Integration:', hasIntegration);
+  
+  if (!hasIntegration) {
+    console.log('⚠️ Please add "RFI Calendar Cancel Postpone.gs" file first');
+    return;
+  }
+  
+  // 2. ทดสอบเรียก postponeRFIInspection()
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  try {
+    const result = postponeRFIInspection(
+      "TEST-RFI-001",              // RFI Number
+      "Test Description",          // Description
+      tomorrowStr,                 // New Date
+      "14:00",                     // New Start Time
+      "16:00",                     // New End Time
+      "Testing from RFI System",   // Postpone Reason
+      "test@example.com",          // Requester Email
+      "",                          // Guest Emails
+      "Test Location",             // New Location
+      "Survey Team A",             // Assigned Inspector
+      false,                       // Send Email = false (for testing)
+      30                           // Search Days
+    );
+    
+    console.log('========== TEST RESULT ==========');
+    console.log('Success:', result.success);
+    console.log('Message:', result.message);
+    console.log('Events Found:', result.rfiEventsFound);
+    console.log('Events Updated:', result.rfiEventsUpdated);
+    console.log('Emails Sent:', result.emailsSent);
+    
+  } catch (error) {
+    console.error('❌ Test Error:', error);
+  }
+}
+
+/**
+ * ⭐ เปิดหน้า Survey Work Form
+ */
+function openSurveyWorkForm() {
+  const html = HtmlService.createHtmlOutputFromFile('survey_work')
+    .setWidth(600)
+    .setHeight(800);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Survey Work Requirement System');
+}
+
+/**
+ * ⭐ ดึงทีม Survey ทั้งหมดที่ Activated
+ */
+function getSurveyTeams() {
+  try {
+    console.log('Getting Survey teams');
+    
+    const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!resourceSheet) {
+      console.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = resourceSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No resources found');
+      return [];
+    }
+    
+    // ดึงข้อมูล: A (Resource_ID), B (Resource_Name), C (Sub_Type), D (Team No.), E (Status)
+    const data = resourceSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const teams = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const resourceId = String(row[0] || '').trim();
+      const resourceName = String(row[1] || '').trim();
+      const subType = String(row[2] || '').trim();
+      const teamNo = row[3];
+      const status = String(row[4] || '').trim();
+      
+      // ⭐ กรองเฉพาะ Survey ที่ Activated
+      if (status === 'Activated' && resourceId && subType.toLowerCase() === 'survey') {
+        teams.push({
+          resourceId: resourceId,
+          resourceName: resourceName,
+          subType: subType,
+          teamNo: teamNo || 999
+        });
+        console.log('Found Survey team:', resourceId, resourceName, 'Team No:', teamNo);
+      }
+    }
+    
+    // เรียงตาม Team No.
+    teams.sort(function(a, b) {
+      return a.teamNo - b.teamNo;
+    });
+    
+    console.log('Total Survey teams found:', teams.length);
+    return teams;
+    
+  } catch (error) {
+    console.error('Error getting Survey teams:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ เช็คว่าทีม Survey ว่างหรือไม่ (สำหรับ Survey Work - ไม่มี buffer ±30 นาที)
+ */
+function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    if (!sheet) return true;
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return true;
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    
+    const requestStartMinutes = timeToMinutes(startTime);
+    const requestEndMinutes = timeToMinutes(endTime);
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rfiDate = formatDate(new Date(row[4]));           // Column E - Request_Date
+      const rfiStartTime = formatTime(row[5]);                // Column F - Start_Time
+      const rfiEndTime = formatTime(row[6]);                  // Column G - End_Time
+      const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
+      const status = String(row[14] || '').trim();            // Column O - Status
+      
+      if (status.includes('Cancel') || status.includes('ยกเลิก')) {
+        continue;
+      }
+      
+      if (rfiDate === date) {
+        const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+        if (!resourceSheet) continue;
+        
+        const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+        
+        const nameToId = {};
+        for (let j = 0; j < resourceData.length; j++) {
+          const rid = String(resourceData[j][0] || '').trim();
+          const rname = String(resourceData[j][1] || '').trim();
+          if (rid && rname) {
+            nameToId[rname] = rid;
+          }
+        }
+        
+        const teamNamesList = assignedTeams.split(',').map(function(name) {
+          return name.trim();
+        });
+        
+        let isThisTeamAssigned = false;
+        for (let k = 0; k < teamNamesList.length; k++) {
+          const teamName = teamNamesList[k];
+          if (nameToId[teamName] === resourceId) {
+            isThisTeamAssigned = true;
+            break;
+          }
+        }
+        
+        if (!isThisTeamAssigned) {
+          continue;
+        }
+        
+        const existingStartMinutes = timeToMinutes(rfiStartTime);
+        const existingEndMinutes = timeToMinutes(rfiEndTime);
+        
+        // ⭐ ไม่มี buffer - เช็คแค่เวลาทับซ้อน
+        const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
+                           (requestStartMinutes >= existingEndMinutes);
+        
+        if (!isAvailable) {
+          console.log('Survey Team ' + resourceId + ' is NOT available');
+          return false;
+        }
+      }
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error checking Survey team availability:', error);
+    return false;
+  }
+}
+
+/**
+ * ⭐ จัดทีม Survey อัตโนมัติ
+ */
+function assignSurveyTeamAutomatically(date, startTime, endTime) {
+  try {
+    console.log('Auto-assigning Survey team');
+    
+    const teams = getSurveyTeams();
+    
+    if (teams.length === 0) {
+      return {
+        success: false,
+        message: 'ไม่พบทีม Survey ในระบบ'
+      };
+    }
+    
+    // หาทีมที่ว่าง
+    for (let i = 0; i < teams.length; i++) {
+      const team = teams[i];
+      
+      if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        return {
+          success: true,
+          teamName: team.resourceName,
+          resourceId: team.resourceId,
+          teamNo: team.teamNo
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'ไม่มีทีม Survey ว่างสำหรับวันและเวลาที่เลือก'
+    };
+    
+  } catch (error) {
+    console.error('Error in assignSurveyTeamAutomatically:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⚡ UPDATED: Survey Available Time Slots (Optimized)
+ * ✅ รักษา function signature เดิม
+ */
+function getSurveyAvailableTimeSlots(date) {
+  try {
+    if (!date) return [];
+    
+    const now = new Date();
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    // สร้าง all slots
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    let filteredSlots = allSlots.slice();
+    
+    // กรองเวลาที่ผ่านไป + 30 นาที
+    if (selectedDateOnly.getTime() === today.getTime()) {
+      const minTime = new Date(now.getTime() + (30 * 60 * 1000));
+      
+      filteredSlots = allSlots.filter(function(slot) {
+        const slotTime = new Date(selectedDate);
+        const timeParts = slot.split(':');
+        slotTime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+        return slotTime > minTime;
+      });
+    } else if (selectedDateOnly < today) {
+      return [];
+    }
+    
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    // ⚡ Cache blocked slots
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    
+    const availableSlots = [];
+    
+    for (let i = 0; i < filteredSlots.length; i++) {
+      const startSlot = filteredSlots[i];
+      
+      const startParts = startSlot.split(':');
+      const startHour = parseInt(startParts[0]);
+      const startMin = parseInt(startParts[1]);
+      const endHour = startMin === 30 ? startHour + 1 : startHour;
+      const endMin = startMin === 30 ? 0 : 30;
+      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
+      
+      const requestStartMinutes = timeToMinutes(startSlot);
+      const requestEndMinutes = timeToMinutes(endSlot);
+      
+      // ⚡ เช็คจาก cached data (ไม่มี buffer)
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          // ไม่มี buffer - เช็คแค่เวลาทับซ้อน
+          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableSlots.push(startSlot);
+      }
+    }
+    
+    return availableSlots;
+    
+  } catch (error) {
+    console.error('Error in getSurveyAvailableTimeSlots:', error);
+    return [];
+  }
+}
+
+/**
+ * ⚡ UPDATED: Survey Available End Times (Optimized)
+ * ✅ รักษา function signature เดิม
+ */
+function getSurveyAvailableEndTimes(date, startTime) {
+  try {
+    if (!startTime || !date) return [];
+    
+    const allEndSlots = [];
+    for (let hour = 9; hour <= 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 9 && minute === 0) continue;
+        if (hour === 20 && minute > 0) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allEndSlots.push(time);
+      }
+    }
+    
+    const startMinutes = timeToMinutes(startTime);
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    // ⚡ Cache blocked slots
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    
+    const availableEndTimes = [];
+    
+    for (let i = 0; i < allEndSlots.length; i++) {
+      const endSlot = allEndSlots[i];
+      const endMinutes = timeToMinutes(endSlot);
+      
+      if (endMinutes <= startMinutes) continue;
+      
+      // ⚡ เช็คจาก cached data (ไม่มี buffer)
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          if (!(endMinutes <= block.start || startMinutes >= block.end)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableEndTimes.push(endSlot);
+      } else {
+        break;
+      }
+    }
+    
+    return availableEndTimes;
+    
+  } catch (error) {
+    console.error('Error in getSurveyAvailableEndTimes:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ ดึง Available End Times สำหรับ Survey Work
+ */
+function getSurveyAvailableEndTimes(date, startTime) {
+  try {
+    if (!startTime || !date) return [];
+    
+    const allEndSlots = [];
+    for (let hour = 9; hour <= 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 9 && minute === 0) continue;
+        if (hour === 20 && minute > 0) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allEndSlots.push(time);
+      }
+    }
+    
+    const startMinutes = timeToMinutes(startTime);
+    
+    // ดึงทีม Survey ทั้งหมด
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    // หา end time ที่ไกลที่สุดที่ยังมีทีมว่าง
+    const availableEndTimes = [];
+    
+    for (let i = 0; i < allEndSlots.length; i++) {
+      const endSlot = allEndSlots[i];
+      const endMinutes = timeToMinutes(endSlot);
+      
+      if (endMinutes <= startMinutes) continue;
+      
+      // เช็คว่ามีทีมว่างในช่วง startTime - endSlot หรือไม่
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        if (isSurveyTeamAvailable(availableTeams[j].resourceId, date, startTime, endSlot)) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableEndTimes.push(endSlot);
+      } else {
+        // ถ้าไม่มีทีมว่างแล้ว ให้หยุดเช็คต่อ
+        break;
+      }
+    }
+    
+    return availableEndTimes;
+    
+  } catch (error) {
+    console.error('Error in getSurveyAvailableEndTimes:', error);
+    return [];
+  }
+}
+
+
+function saveSurveyWorkRequirement(data) {
+  try {
+    console.log('========== saveSurveyWorkRequirement START ==========');
+    console.log('Input data:', JSON.stringify(data));
+    
+    // Validation
+    if (!data.requestDate || !data.startTime || !data.endTime || 
+        !data.workType || !data.description || !data.location || 
+        !data.requesterName || !data.requesterEmail) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    // ตรวจสอบและดึงข้อมูลผู้ใช้จาก User sheet
+    const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
+    
+    if (!userValidation.success) {
+      console.log('User validation failed:', userValidation.message);
+      return {
+        success: false,
+        message: userValidation.message
+      };
+    }
+    
+    console.log('User validation success:', userValidation);
+    
+    const validatedEmail = userValidation.email;
+    const validatedName = userValidation.name;
+    
+    // จัดทีม Survey อัตโนมัติ
+    const teamAssignment = assignSurveyTeamAutomatically(
+      data.requestDate, 
+      data.startTime, 
+      data.endTime
+    );
+    
+    if (!teamAssignment.success) {
+      console.log('Team assignment failed:', teamAssignment.message);
+      return {
+        success: false,
+        message: teamAssignment.message
+      };
+    }
+    
+    console.log('Survey team assigned:', teamAssignment);
+    
+    // สร้าง Unique ID
+    const rfiId = generateUniqueId();
+    console.log('Generated ID:', rfiId);
+    
+    // ดึง Sheet
+    let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('RFI_List sheet not found, creating new one...');
+      sheet = createRFIListSheet();
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const nextRow = lastRow + 1;
+    const currentTime = new Date();
+    
+    console.log('Adding data to sheet at row:', nextRow);
+    
+    const combinedDescription = data.workType + ' - ' + data.description;
+    console.log('Combined description:', combinedDescription);
+    
+    // Format date
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    
+    // เตรียมข้อมูล
+    const rowData = [];
+    for (let i = 0; i < 40; i++) {
+      rowData.push('');
+    }
+    
+    rowData[0] = rfiId;
+    rowData[2] = combinedDescription;
+    rowData[3] = data.location;
+    rowData[4] = formattedDate;
+    rowData[5] = data.startTime;
+    rowData[6] = data.endTime;
+    rowData[9] = validatedEmail;
+    rowData[10] = validatedName;
+    rowData[11] = teamAssignment.teamName;
+    rowData[14] = 'Survey Work Request Submitted';
+    rowData[15] = currentTime;
+    rowData[39] = 'Survey Work';
+    
+    console.log('Row data prepared');
+    
+    sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
+    console.log('Data added to sheet successfully');
+    
+    // ⭐ สร้าง Calendar Event
+    let calendarResult = null;
+    try {
+      console.log('Creating Calendar Event...');
+      
+      const calendarData = {
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamName
+      };
+      
+      calendarResult = createSurveyWorkCalendarEvent(calendarData, rfiId);
+      
+      if (calendarResult.success) {
+        console.log('✅ Calendar Event Created Successfully');
+        console.log('Event ID:', calendarResult.eventId);
+        console.log('Guests:', calendarResult.guestsCount);
+      } else {
+        console.log('⚠️ Calendar Event Creation Failed:', calendarResult.message);
+      }
+      
+    } catch (calendarError) {
+      console.error('⚠️ Calendar Error:', calendarError);
+      calendarResult = {
+        success: false,
+        error: calendarError.toString()
+      };
+    }
+    
+    // ส่งอีเมล
+    let emailSent = false;
+    try {
+      const emailData = {
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamName,
+        teamCategory: 'Survey Work'
+      };
+      emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId);
+      console.log('Email sent:', emailSent);
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+    }
+    
+    let message = 'บันทึก Survey Work Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
+    message += '\nทีมงาน: ' + teamAssignment.teamName;
+    
+    if (!userValidation.exists) {
+      message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
+    }
+    
+    // ⭐ แจ้งผลการสร้าง Calendar
+    if (calendarResult && calendarResult.success) {
+      message += '\n✅ สร้าง Calendar Event แล้ว (Guests: ' + calendarResult.guestsCount + ' คน)';
+    } else if (calendarResult) {
+      message += '\n⚠️ ไม่สามารถสร้าง Calendar Event ได้';
+    }
+    
+    if (emailSent) {
+      message += '\nส่งอีเมลแจ้งทีม Survey แล้ว';
+    }
+    
+    console.log('========== saveSurveyWorkRequirement SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: message,
+      rfiId: rfiId,
+      emailSent: emailSent,
+      calendarCreated: calendarResult ? calendarResult.success : false,
+      calendarEventId: calendarResult && calendarResult.success ? calendarResult.eventId : null,
+      userAdded: !userValidation.exists,
+      assignedTeam: teamAssignment.teamName
+    };
+    
+  } catch (error) {
+    console.error('========== saveSurveyWorkRequirement FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ฟังก์ชันช่วย: หา Survey Work Calendar ID
+ * (ใช้เมื่อต้องการหา Calendar ID อัตโนมัติ)
+ */
+function findSurveyWorkCalendar() {
+  try {
+    const calendars = CalendarApp.getAllCalendars();
+    
+    console.log('========== All Calendars ==========');
+    for (let i = 0; i < calendars.length; i++) {
+      const cal = calendars[i];
+      console.log(i + 1 + '. ' + cal.getName());
+      console.log('   ID: ' + cal.getId());
+      console.log('   Color: ' + cal.getColor());
+      console.log('');
+    }
+    console.log('===================================');
+    
+    // พยายามหา Calendar ที่มีชื่อเกี่ยวกับ Survey
+    for (let i = 0; i < calendars.length; i++) {
+      const cal = calendars[i];
+      const name = cal.getName().toLowerCase();
+      
+      if (name.includes('survey')) {
+        console.log('✅ Found Survey Calendar:');
+        console.log('Name:', cal.getName());
+        console.log('ID:', cal.getId());
+        return cal.getId();
+      }
+    }
+    
+    console.log('⚠️ No Survey Calendar found - using primary calendar');
+    return 'primary';
+    
+  } catch (error) {
+    console.error('Error finding Survey Calendar:', error);
+    return 'primary';
+  }
+}
+
+
+// ===== Survey Work - Email & Calendar Functions =====
+// เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
+
+/**
+ * ⭐ ดึง Email List ของ Survey Team (Role = "Survey" หรือ "Survey Reviewer")
+ */
+function getSurveyEmailList() {
+  try {
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      console.log('User sheet not found');
+      return [];
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No data in User sheet');
+      return [];
+    }
+    
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    const emailList = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim();
+      const displayName = String(data[i][1] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      // ⭐ เฉพาะ Role = "Survey" หรือ "Survey Reviewer" และ Status = "Activated"
+      if ((role === 'Survey' || role === 'Survey Reviewer') && 
+          status === 'Activated' && 
+          email && email.includes('@')) {
+        emailList.push({
+          email: email,
+          name: displayName,
+          role: role
+        });
+      }
+    }
+    
+    console.log('Found Survey team emails:', emailList.length);
+    return emailList;
+    
+  } catch (error) {
+    console.error('Error getting Survey email list:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ สร้าง Calendar Event สำหรับ Survey Work (Sub Calendar แยกจาก RFI)
+ * 
+ * @param {Object} data - ข้อมูล Survey Work
+ * @param {string} rfiId - ID ของ Survey Work
+ * @return {Object} ผลลัพธ์การสร้าง event
+ */
+function createSurveyWorkCalendarEvent(data, rfiId) {
+  try {
+    console.log('========== Creating Survey Work Calendar Event ==========');
+    console.log('RFI ID:', rfiId);
+    console.log('Data:', JSON.stringify(data));
+    
+    // ⭐ Sub Calendar ID สำหรับ Survey Work (แยกจาก RFI)
+    // TODO: เปลี่ยนเป็น Calendar ID จริงของคุณ
+    const SURVEY_WORK_CALENDAR_ID = '9e21ac30dc20b0eb52fc1dcf7a5e50b5e431f087f91096c729efc20712f6470c@group.calendar.google.com'; // ⚠️ เปลี่ยนเป็น Calendar ID ของ Survey Work
+    
+    let calendar;
+    try {
+      calendar = CalendarApp.getCalendarById(SURVEY_WORK_CALENDAR_ID);
+      
+      if (!calendar) {
+        console.log('⚠️ Survey Work Calendar not found, using primary calendar');
+        calendar = CalendarApp.getDefaultCalendar();
+      }
+    } catch (calError) {
+      console.log('⚠️ Error accessing Survey Work Calendar:', calError.message);
+      console.log('Using primary calendar instead');
+      calendar = CalendarApp.getDefaultCalendar();
+    }
+    
+    // สร้างวันเวลาสำหรับ event
+    const dateParts = data.requestDate.split('-');
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1; // JavaScript month เริ่มที่ 0
+    const day = parseInt(dateParts[2]);
+    
+    const startTimeParts = data.startTime.split(':');
+    const startHour = parseInt(startTimeParts[0]);
+    const startMinute = parseInt(startTimeParts[1]);
+    
+    const endTimeParts = data.endTime.split(':');
+    const endHour = parseInt(endTimeParts[0]);
+    const endMinute = parseInt(endTimeParts[1]);
+    
+    const startDateTime = new Date(year, month, day, startHour, startMinute, 0);
+    const endDateTime = new Date(year, month, day, endHour, endMinute, 0);
+    
+    // สร้าง Event Title
+    const eventTitle = '🌿 Survey Work: ' + rfiId + ' - ' + data.assignedTeam;
+    
+    // สร้าง Event Description
+    const description = 
+      '═══════════════════════════════════════\n' +
+      '🌿 SURVEY WORK REQUEST\n' +
+      '═══════════════════════════════════════\n\n' +
+      'Survey Work ID: ' + rfiId + '\n' +
+      'ทีมงาน: ' + data.assignedTeam + '\n' +
+      'รายละเอียด: ' + data.description + '\n' +
+      'สถานที่: ' + data.location + '\n\n' +
+      '───────────────────────────────────────\n' +
+      'ผู้ขอ: ' + data.requesterName + '\n' +
+      'อีเมลผู้ขอ: ' + data.requesterEmail + '\n' +
+      '───────────────────────────────────────\n' +
+      'วันที่: ' + formatDateThai(data.requestDate) + '\n' +
+      'เวลา: ' + data.startTime + ' - ' + data.endTime + ' น.\n\n' +
+      'ประเภท: Survey Work\n' +
+      'สถานะ: Survey Work Request Submitted\n\n' +
+      '═══════════════════════════════════════\n' +
+      'สร้างโดย: Survey Work Requirement System\n' +
+      'เวลาที่สร้าง: ' + new Date().toLocaleString('th-TH') + '\n' +
+      '═══════════════════════════════════════';
+    
+    // ⭐ สร้าง Guest List
+    const guestList = [];
+    
+    // 1. เพิ่ม Requester Email
+    if (data.requesterEmail && data.requesterEmail.includes('@')) {
+      guestList.push(data.requesterEmail);
+      console.log('Added Requester:', data.requesterEmail);
+    }
+    
+    // 2. เพิ่ม Survey Team Emails
+    const surveyTeamEmails = getSurveyEmailList();
+    surveyTeamEmails.forEach(function(member) {
+      if (!guestList.includes(member.email)) {
+        guestList.push(member.email);
+        console.log('Added Survey Team Member:', member.email, '(' + member.role + ')');
+      }
+    });
+    
+    console.log('Total guests:', guestList.length);
+    
+    // สร้าง Event
+    const event = calendar.createEvent(
+      eventTitle,
+      startDateTime,
+      endDateTime,
+      {
+        description: description,
+        location: data.location,
+        guests: guestList.join(','),
+        sendInvites: true // ส่ง email notification ไปหา guests
+      }
+    );
+    
+    // เพิ่ม Color (เขียว)
+    try {
+      event.setColor(CalendarApp.EventColor.GREEN);
+    } catch (colorError) {
+      console.log('Could not set event color:', colorError.message);
+    }
+    
+    console.log('✅ Calendar Event Created:', event.getId());
+    console.log('Event Title:', eventTitle);
+    console.log('Start:', startDateTime);
+    console.log('End:', endDateTime);
+    console.log('Guests:', guestList.join(', '));
+    console.log('========== Calendar Event Creation Complete ==========');
+    
+    return {
+      success: true,
+      eventId: event.getId(),
+      eventTitle: eventTitle,
+      guestsCount: guestList.length,
+      guests: guestList
+    };
+    
+  } catch (error) {
+    console.error('========== Calendar Event Creation FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      error: error.toString(),
+      message: 'ไม่สามารถสร้าง Calendar Event ได้: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ อัปเดต: ส่งอีเมลแจ้ง Survey Work ไปหา Survey Team
+ */
+function sendSurveyWorkNotificationEmail(data, rfiId) {
+  try {
+    console.log('========== START: sendSurveyWorkNotificationEmail ==========');
+    
+    const quota = checkEmailQuota();
+    if (quota <= 1) {
+      console.log('Email quota too low:', quota);
+      return false;
+    }
+    
+    const emailList = getSurveyEmailList();
+    
+    if (emailList.length === 0) {
+      console.log('No Survey team email recipients found');
+      return false;
+    }
+    
+    const recipients = emailList.map(function(e) { return e.email; });
+    
+    // ✅ เพิ่ม Requester Email
+    if (data.requesterEmail && 
+        data.requesterEmail.includes('@') && 
+        !recipients.includes(data.requesterEmail)) {
+      recipients.push(data.requesterEmail);
+    }
+    
+    // ✅ เพิ่ม Team Emails
+    if (data.assignedTeam) {
+      const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
+      teamEmails.forEach(function(teamMember) {
+        if (!recipients.includes(teamMember.email)) {
+          recipients.push(teamMember.email);
+          console.log('Added team member:', teamMember.name, '->', teamMember.email);
+        }
+      });
+    }
+    
+    console.log('Sending to:', recipients.length, 'recipients');
+    console.log('Recipients:', recipients.join(', '));
+    
+    const emailHtml = createSurveyWorkEmailHTML(data, rfiId);
+    
+    const sent = safeSendEmail({
+      to: recipients.join(','),
+      subject: '🌿 Survey Work Request ใหม่ [ID: ' + rfiId + ']',
+      htmlBody: emailHtml,
+      name: 'Survey Work Requirement System'
+    });
+    
+    console.log('Email result:', sent);
+    return sent;
+    
+  } catch (error) {
+    console.error('Error in sendSurveyWorkNotificationEmail:', error);
+    return false;
+  }
+}
+
+
+/**
+ * ⭐ อัปเดต HTML สำหรับอีเมล Survey Work (ปรับสีเขียว)
+ */
+function createSurveyWorkEmailHTML(data, rfiId) {
+  const emailBody = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+h2 { color: #16a34a; }
+.id-badge { 
+  display: inline-block;
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #ecfdf5; }
+.status-badge {
+  display: inline-block;
+  background: #22c55e;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.highlight {
+  background: #ecfdf5;
+  padding: 10px;
+  border-left: 4px solid #16a34a;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<h2>🌿 แจ้ง Survey Work Request ใหม่</h2>
+<div class="id-badge">Survey Work ID: ${rfiId}</div>
+<p>เรียน ทีม Survey</p>
+<p>มี Survey Work Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ</p>
+
+<div class="highlight">
+  <strong>📅 Calendar Event</strong><br>
+  ระบบได้สร้าง Calendar Event แล้ว และส่ง invitation ไปยังอีเมลของคุณ<br>
+  กรุณาตรวจสอบ Calendar เพื่อยืนยันการเข้าร่วม
+</div>
+
+<h3>รายละเอียด Survey Work</h3>
+<table>
+<tr><th>Survey Work ID</th><td><strong>${rfiId}</strong></td></tr>
+<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
+<tr><th>สถานที่</th><td>${data.location}</td></tr>
+<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
+<tr><th>เวลา</th><td>${data.startTime} - ${data.endTime} น.</td></tr>
+<tr><th>ทีมที่จัดให้</th><td><strong style="color: #16a34a;">${data.assignedTeam}</strong> (Survey Team)</td></tr>
+<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
+${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
+<tr><th>สถานะ</th><td><span class="status-badge">Survey Work Request Submitted</span></td></tr>
+</table>
+
+<div class="highlight">
+  <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
+  1. ตรวจสอบ Calendar Event ที่ได้รับ<br>
+  2. ยืนยันการเข้าร่วม (Accept/Decline)<br>
+  3. เตรียมอุปกรณ์และเอกสารที่จำเป็น<br>
+  4. ติดต่อผู้ขอหากต้องการข้อมูลเพิ่มเติม
+</div>
+
+<hr>
+<p><small>อีเมลนี้ส่งจากระบบ Survey Work Requirement โดยอัตโนมัติ</small></p>
+<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
+</body>
+</html>`;
+  
+  return emailBody;
+}
+
+
+// ทดสอบดึงทีม Survey
+function testGetSurveyTeams() {
+  const teams = getSurveyTeams();
+  console.log('Survey Teams:', teams);
+}
+
+// ทดสอบ Available Slots
+function testSurveySlots() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  const slots = getSurveyAvailableTimeSlots(date);
+  console.log('Available slots:', slots);
+}
+
+// ===== ฟังก์ชันทดสอบสำหรับ "Cancel RFI Request Submitted" =====
+// วางโค้ดนี้ใน Code.gs และรันเพื่อทดสอบ
+
+/**
+ * ทดสอบ Status ที่มีคำว่า "Cancel" ทั้งหมด
+ */
+function testCancelStatuses() {
+  console.log('========== Test Cancel Statuses ==========');
+  
+  const cancelStatuses = [
+    'Cancel',
+    'Cancelled',
+    'Cancel RFI Request Submitted',        // ⭐ ต้องการให้ IGNORED
+    'RFI Request Cancelled',
+    'Cancelled by User',
+    'Auto-Cancelled',
+    'Pre-Cancelled',
+    'Cancellation Requested',
+    'Pending Cancellation'
+  ];
+  
+  cancelStatuses.forEach(function(status) {
+    const result = isStatusInactive(status);
+    const icon = result ? '✅' : '❌';
+    const text = result ? 'IGNORED (ถูกต้อง)' : 'BLOCKS (ผิดพลาด!)';
+    
+    console.log(icon + ' ' + status + ' → ' + text);
+  });
+  
+  console.log('==========================================');
+}
+
+/**
+ * ทดสอบ Status ที่ไม่มีคำว่า "Cancel" ต้องไม่ถูก IGNORED
+ */
+function testNonCancelStatuses() {
+  console.log('========== Test Non-Cancel Statuses ==========');
+  
+  const nonCancelStatuses = [
+    'Draft',
+    'RFI Request Submitted',
+    'Survey Work Request Submitted',
+    'In Progress',
+    'Approved',
+    'Rescheduled',
+    'Inspection Postponed'
+  ];
+  
+  nonCancelStatuses.forEach(function(status) {
+    const result = isStatusInactive(status);
+    const icon = result ? '❌' : '✅';
+    const text = result ? 'IGNORED (ผิดพลาด!)' : 'BLOCKS (ถูกต้อง)';
+    
+    console.log(icon + ' ' + status + ' → ' + text);
+  });
+  
+  console.log('==============================================');
+}
+
+/**
+ * ทดสอบ Case-Insensitive (ไม่สนใจตัวพิมพ์เล็ก/ใหญ่)
+ */
+function testCaseInsensitive() {
+  console.log('========== Test Case Insensitive ==========');
+  
+  const mixedCaseStatuses = [
+    'CANCEL RFI REQUEST SUBMITTED',        // ตัวพิมพ์ใหญ่ทั้งหมด
+    'Cancel RFI Request Submitted',        // Mixed Case
+    'cancel rfi request submitted',        // ตัวพิมพ์เล็กทั้งหมด
+    'CaNcEl RfI ReQuEsT SuBmItTeD'        // สลับ
+  ];
+  
+  mixedCaseStatuses.forEach(function(status) {
+    const result = isStatusInactive(status);
+    const icon = result ? '✅' : '❌';
+    const text = result ? 'IGNORED (ถูกต้อง)' : 'BLOCKS (ผิดพลาด!)';
+    
+    console.log(icon + ' "' + status + '" → ' + text);
+  });
+  
+  console.log('==========================================');
+}
+
+/**
+ * ทดสอบความถูกต้องของการจองทีม
+ * สร้างสถานการณ์จำลองเพื่อทดสอบ
+ */
+function testTeamBookingScenario() {
+  console.log('========== Test Team Booking Scenario ==========');
+  console.log('');
+  console.log('สถานการณ์: ทีม Survey Team A มี RFI ดังนี้');
+  console.log('');
+  
+  const scenarios = [
+    {
+      rfiId: 'RFI001',
+      status: 'RFI Request Submitted',
+      date: '2025-01-15',
+      time: '10:00-12:00',
+      shouldBlock: true
+    },
+    {
+      rfiId: 'RFI002',
+      status: 'Cancel RFI Request Submitted',  // ⭐
+      date: '2025-01-15',
+      time: '13:00-15:00',
+      shouldBlock: false
+    },
+    {
+      rfiId: 'RFI003',
+      status: 'Completed',
+      date: '2025-01-15',
+      time: '15:00-17:00',
+      shouldBlock: false
+    }
+  ];
+  
+  console.log('ต้องการจอง: วันที่ 2025-01-15 เวลา 14:00-16:00');
+  console.log('');
+  
+  scenarios.forEach(function(scenario) {
+    const isInactive = isStatusInactive(scenario.status);
+    const willBlock = !isInactive;
+    const icon = willBlock === scenario.shouldBlock ? '✅' : '❌';
+    
+    console.log(icon + ' ' + scenario.rfiId + ' (' + scenario.status + ')');
+    console.log('   เวลา: ' + scenario.time);
+    console.log('   คาดว่าจะ Block: ' + (scenario.shouldBlock ? 'ใช่' : 'ไม่'));
+    console.log('   จริง: ' + (willBlock ? 'Block' : 'ไม่ Block'));
+    console.log('   ผลลัพธ์: ' + (willBlock === scenario.shouldBlock ? '✅ ถูกต้อง' : '❌ ผิดพลาด'));
+    console.log('');
+  });
+  
+  console.log('สรุป:');
+  console.log('• RFI001 (RFI Request Submitted) → จะ Block การจอง');
+  console.log('• RFI002 (Cancel RFI Request Submitted) → ไม่ Block การจอง ✅');
+  console.log('• RFI003 (Completed) → ไม่ Block การจอง');
+  console.log('');
+  console.log('ดังนั้น สามารถจอง 14:00-16:00 ได้ เพราะ:');
+  console.log('• RFI001 จบเวลา 12:00 (ก่อนหน้า 14:00)');
+  console.log('• RFI002 ถูกยกเลิกแล้ว (ไม่นับ)');
+  console.log('• RFI003 เสร็จสิ้นแล้ว (ไม่นับ)');
+  console.log('===============================================');
+}
+
+/**
+ * รันทดสอบทั้งหมด
+ */
+function runAllCancelTests() {
+  console.log('\n\n');
+  console.log('╔════════════════════════════════════════════╗');
+  console.log('║   รันทดสอบ "Cancel RFI Request Submitted"   ║');
+  console.log('╚════════════════════════════════════════════╝');
+  console.log('\n');
+  
+  testCancelStatuses();
+  console.log('\n');
+  
+  testNonCancelStatuses();
+  console.log('\n');
+  
+  testCaseInsensitive();
+  console.log('\n');
+  
+  testTeamBookingScenario();
+  console.log('\n');
+  
+  console.log('╔════════════════════════════════════════════╗');
+  console.log('║            ทดสอบเสร็จสิ้น ✅                ║');
+  console.log('╚════════════════════════════════════════════╝');
+}
+
+/**
+ * ทดสอบแบบเฉพาะเจาะจง "Cancel RFI Request Submitted"
+ */
+function testCancelRFIRequestSubmitted() {
+  console.log('========== Test "Cancel RFI Request Submitted" ==========');
+  
+  const status = 'Cancel RFI Request Submitted';
+  const result = isStatusInactive(status);
+  
+  console.log('Status: "' + status + '"');
+  console.log('ผลลัพธ์: ' + (result ? 'IGNORED ✅' : 'BLOCKS ❌'));
+  console.log('คำอธิบาย: ' + (result ? 
+    'ถูกต้อง - ทีมจะไม่ถูก Block เพราะ RFI นี้ยกเลิกแล้ว' : 
+    'ผิดพลาด - ควรจะ IGNORED แต่กลับ BLOCKS อยู่'));
+  
+  if (result) {
+    console.log('');
+    console.log('✅ ระบบทำงานถูกต้อง!');
+    console.log('   Status ที่มีคำว่า "Cancel" จะถูก IGNORED โดยอัตโนมัติ');
+  } else {
+    console.log('');
+    console.log('❌ เกิดข้อผิดพลาด!');
+    console.log('   กรุณาตรวจสอบฟังก์ชัน isStatusInactive()');
+  }
+  
+  console.log('========================================================');
+}
+
+/**
+ * ⭐ สร้าง Sub Calendar สำหรับ Survey Work
+ */
+function createSurveyWorkCalendar() {
+  try {
+    console.log('========== Creating Survey Work Calendar ==========');
+    
+    // เช็คว่ามี Calendar ชื่อ "Survey Work" อยู่แล้วหรือไม่
+    const calendars = CalendarApp.getAllCalendars();
+    
+    for (let i = 0; i < calendars.length; i++) {
+      if (calendars[i].getName() === 'Survey Work') {
+        console.log('✅ Survey Work Calendar already exists');
+        console.log('Calendar ID:', calendars[i].getId());
+        return calendars[i];
+      }
+    }
+    
+    // สร้าง Calendar ใหม่
+    const calendar = CalendarApp.createCalendar('Survey Work', {
+      summary: 'Calendar สำหรับจัดการ Survey Work Requests',
+      color: CalendarApp.Color.GREEN,
+      hidden: false
+    });
+    
+    console.log('✅ Survey Work Calendar Created');
+    console.log('Name:', calendar.getName());
+    console.log('ID:', calendar.getId());
+    console.log('Color:', calendar.getColor());
+    console.log('==================================================');
+    
+    // แสดง Dialog พร้อม Calendar ID
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'สร้าง Survey Work Calendar สำเร็จ! ✅',
+      'Calendar Name: Survey Work\n' +
+      'Calendar ID: ' + calendar.getId() + '\n\n' +
+      'กรุณานำ Calendar ID ไปใส่ใน createSurveyWorkCalendarEvent()\n' +
+      'แทนที่ตรง SURVEY_WORK_CALENDAR_ID',
+      ui.ButtonSet.OK
+    );
+    
+    return calendar;
+    
+  } catch (error) {
+    console.error('Error creating Survey Work Calendar:', error);
+    
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถสร้าง Survey Work Calendar ได้\n\n' +
+      'Error: ' + error.toString(),
+      ui.ButtonSet.OK
+    );
+    
+    throw error;
+  }
+}
+
+function testColumnAN() {
+  try {
+    console.log('========== Test Column AN ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('❌ RFI_List sheet not found');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('❌ No data rows');
+      return;
+    }
+    
+    // ดึง Column A (ID), Column O (Status), Column AN (Type)
+    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();        // Column A
+    const statusData = sheet.getRange(2, 15, lastRow - 1, 1).getValues(); // Column O
+    const typeData = sheet.getRange(2, 40, lastRow - 1, 1).getValues();   // Column AN
+    
+    console.log('Total Records:', lastRow - 1);
+    console.log('');
+    
+    let rfiWorkCount = 0;
+    let surveyWorkCount = 0;
+    let emptyCount = 0;
+    
+    console.log('Recent 10 Records:');
+    console.log('─────────────────────────────────────────────────');
+    
+    const startIdx = Math.max(0, data.length - 10);
+    
+    for (let i = startIdx; i < data.length; i++) {
+      const id = String(data[i][0] || '').trim();
+      const status = String(statusData[i][0] || '').trim();
+      const type = String(typeData[i][0] || '').trim();
+      
+      let icon = '❓';
+      if (type === 'RFI Work') {
+        icon = '📋';
+        rfiWorkCount++;
+      } else if (type === 'Survey Work') {
+        icon = '🌿';
+        surveyWorkCount++;
+      } else {
+        icon = '⚠️';
+        emptyCount++;
+      }
+      
+      console.log(icon + ' ' + id + ' | Status: ' + status + ' | Type: ' + (type || '(empty)'));
+    }
+    
+    console.log('─────────────────────────────────────────────────');
+    console.log('');
+    console.log('Summary:');
+    console.log('📋 RFI Work:', rfiWorkCount);
+    console.log('🌿 Survey Work:', surveyWorkCount);
+    console.log('⚠️ Empty/Other:', emptyCount);
+    console.log('');
+    
+    if (emptyCount > 0) {
+      console.log('⚠️ Warning: มี ' + emptyCount + ' records ที่ Column AN ว่าง');
+      console.log('   ควรอัปเดตข้อมูลเก่าให้มี Column AN');
+    } else {
+      console.log('✅ All records have Column AN populated!');
+    }
+    
+    console.log('====================================');
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  }
+}
+
+/**
+ * อัปเดตข้อมูลเก่าให้มี Column AN = "RFI Work"
+ * (สำหรับ records ที่สร้างก่อนการอัปเดต)
+ */
+function updateOldRecordsColumnAN() {
+  try {
+    console.log('========== Update Old Records Column AN ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('❌ RFI_List sheet not found');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('❌ No data rows');
+      return;
+    }
+    
+    // ดึง Column AN (index 40)
+    const typeData = sheet.getRange(2, 40, lastRow - 1, 1).getValues();
+    
+    let updateCount = 0;
+    
+    for (let i = 0; i < typeData.length; i++) {
+      const type = String(typeData[i][0] || '').trim();
+      
+      // ถ้า Column AN ว่าง หรือ ไม่ใช่ "Survey Work" ให้ใส่ "RFI Work"
+      if (!type || (type !== 'Survey Work' && type !== 'RFI Work')) {
+        sheet.getRange(i + 2, 40).setValue('RFI Work');
+        updateCount++;
+      }
+    }
+    
+    console.log('✅ Updated ' + updateCount + ' records with Column AN = "RFI Work"');
+    console.log('==================================================');
+    
+    if (updateCount > 0) {
+      SpreadsheetApp.getUi().alert(
+        'อัปเดตสำเร็จ! ✅',
+        'อัปเดต Column AN ให้กับ ' + updateCount + ' records\n' +
+        'ทุก record ที่ไม่ใช่ Survey Work จะถูกตั้งเป็น "RFI Work"',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } else {
+      SpreadsheetApp.getUi().alert(
+        'ไม่มีข้อมูลที่ต้องอัปเดต',
+        'ทุก records มี Column AN ถูกต้องแล้ว',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    }
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    
+    SpreadsheetApp.getUi().alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถอัปเดต Column AN ได้\n\n' +
+      'Error: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * ✨ ดึง Email ของ Team งานจาก Resources sheet ตาม Team Names
+ * @param {string} teamNames - ชื่อทีมที่คั่นด้วย comma (เช่น "Survey Team A,Lab Team B")
+ * @returns {Array} รายการอีเมลของ Team
+ */
+function getTeamEmailsByTeamNames(teamNames) {
+  try {
+    if (!teamNames || String(teamNames).trim() === '') {
+      console.log('No team names provided');
+      return [];
+    }
+    
+    const teamString = String(teamNames).trim();
+    const requestedTeams = teamString.split(',').map(function(t) { 
+      return t.trim(); 
+    }).filter(function(t) { 
+      return t.length > 0; 
+    });
+    
+    if (requestedTeams.length === 0) {
+      console.log('No valid teams in team names');
+      return [];
+    }
+    
+    console.log('Looking for emails for teams:', requestedTeams.join(', '));
+    
+    const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!resourceSheet) {
+      console.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = resourceSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No data in Resources sheet');
+      return [];
+    }
+    
+    // ดึง Column B (Resource_Name), E (Status), F (Contact_Email)
+    const data = resourceSheet.getRange(2, 2, lastRow - 1, 5).getValues();
+    const teamEmails = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const resourceName = String(data[i][0] || '').trim();  // Column B
+      const status = String(data[i][3] || '').trim();        // Column E
+      const contactEmail = String(data[i][4] || '').trim();  // Column F
+      
+      // ✅ เช็คว่า Team นี้อยู่ในรายการที่ต้องการ, Status = Activated, และมีอีเมล
+      if (requestedTeams.indexOf(resourceName) !== -1 && 
+          status === 'Activated' && 
+          contactEmail && 
+          contactEmail.includes('@')) {
+        teamEmails.push({
+          email: contactEmail,
+          name: resourceName,
+          role: 'Team Member'
+        });
+        console.log('Found team email:', resourceName, '->', contactEmail);
+      }
+    }
+    
+    console.log('Total team emails found:', teamEmails.length);
+    return teamEmails;
+    
+  } catch (error) {
+    console.error('Error getting team emails:', error);
+    return [];
+  }
+}
+
+/**
+ * ทดสอบดึง Team Emails
+ */
+function testGetTeamEmails() {
+  console.log('========== Test Get Team Emails ==========');
+  
+  const testTeams = [
+    'Survey Team A',
+    'Survey Team A,Lab Team B',
+    'Survey Team A, Lab Team A, Inspector Team A'
+  ];
+  
+  testTeams.forEach(function(teamNames) {
+    console.log('\n📝 Testing with teams:', teamNames);
+    const emails = getTeamEmailsByTeamNames(teamNames);
+    
+    if (emails.length > 0) {
+      console.log('✅ Found', emails.length, 'team emails:');
+      emails.forEach(function(team) {
+        console.log('  -', team.name, '→', team.email);
+      });
+    } else {
+      console.log('⚠️ No team emails found');
+    }
+  });
+  
+  console.log('\n==========================================');
+}
+
+// ===== Performance & Helper Functions =====
+
+/**
+ * ⚡ Cache blocked time slots สำหรับทีม
+ */
+function getBlockedTimeSlotsForTeams(date, teams) {
+  const blockedSlots = {};
+  
+  teams.forEach(function(team) {
+    blockedSlots[team.resourceId] = [];
+  });
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+  if (!sheet) return blockedSlots;
+  
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return blockedSlots;
+  
+  const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+  
+  const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+  if (!resourceSheet) return blockedSlots;
+  
+  const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+  
+  const nameToId = {};
+  resourceData.forEach(function(row) {
+    const rid = String(row[0] || '').trim();
+    const rname = String(row[1] || '').trim();
+    if (rid && rname) {
+      nameToId[rname] = rid;
+    }
+  });
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const rfiDate = formatDate(new Date(row[4]));
+    const status = String(row[14] || '').trim();
+    
+    if (isStatusInactive(status)) continue;
+    if (rfiDate !== date) continue;
+    
+    const startTime = formatTime(row[5]);
+    const endTime = formatTime(row[6]);
+    const assignedTeams = String(row[11] || '').trim();
+    
+    if (!assignedTeams) continue;
+    
+    const teamNames = assignedTeams.split(',').map(function(n) { return n.trim(); });
+    
+    teamNames.forEach(function(teamName) {
+      const resourceId = nameToId[teamName];
+      if (resourceId && blockedSlots[resourceId]) {
+        blockedSlots[resourceId].push({
+          start: timeToMinutes(startTime),
+          end: timeToMinutes(endTime)
+        });
+      }
+    });
+  }
+  
+  return blockedSlots;
+}
+
+/**
+ * 🔧 แปลง minutes กลับเป็น time string
+ */
+function minutesToTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
+}
+
+/**
+ * ⚙️ ดึง Buffer Minutes ตาม Work Type
+ */
+function getBufferMinutes(workType) {
+  const bufferConfig = {
+    'Survey Work': 0,
+    'Lab Work': 30,
+    'Inspector Work': 30,
+    'Heavy Work': 60
+  };
+  
+  return bufferConfig[workType] || 25;
+}
+
+/**
+ * 💬 หาเหตุผลที่ไม่มี Time Slots
+ */
+function getNoSlotsReason(date, category) {
+  try {
+    const teams = getTeamsByCategory(category);
+    
+    if (teams.length === 0) {
+      return {
+        reason: 'no_teams',
+        message: 'ไม่พบทีมงานในหมวด ' + category,
+        suggestion: 'กรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มทีมงาน'
+      };
+    }
+    
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      return {
+        reason: 'past_date',
+        message: 'ไม่สามารถเลือกวันที่ผ่านไปแล้ว',
+        suggestion: 'กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป'
+      };
+    }
+    
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, teams);
+    
+    let totalBlocks = 0;
+    Object.keys(blockedSlots).forEach(function(teamId) {
+      totalBlocks += blockedSlots[teamId].length;
+    });
+    
+    if (totalBlocks > 0) {
+      return {
+        reason: 'fully_booked',
+        message: 'ทีมงานถูกจองเต็มแล้วในวันนี้',
+        suggestion: 'ลองเลือกวันอื่นหรือติดต่อทีม QC เพื่อเปลี่ยนเวลา',
+        details: {
+          totalTeams: teams.length,
+          totalBookings: totalBlocks
+        }
+      };
+    }
+    
+    return {
+      reason: 'time_constraint',
+      message: 'ไม่มีช่วงเวลาที่เหมาะสม',
+      suggestion: 'กรุณาเลือกวันอื่น'
+    };
+    
+  } catch (error) {
+    console.error('Error getting no slots reason:', error);
+    return {
+      reason: 'error',
+      message: 'เกิดข้อผิดพลาดในการตรวจสอบ',
+      suggestion: 'กรุณาลองใหม่อีกครั้ง'
+    };
+  }
+}
+
+/**
+ * 📊 ดูข้อมูลทีมที่ว่างพร้อมเวลา
+ */
+function getAvailableTeamsWithSlots(date, category) {
+  try {
+    const teams = getTeamsByCategory(category);
+    if (teams.length === 0) return [];
+    
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, teams);
+    
+    const result = [];
+    
+    teams.forEach(function(team) {
+      const blocks = blockedSlots[team.resourceId] || [];
+      
+      result.push({
+        teamId: team.resourceId,
+        teamName: team.resourceName,
+        teamNo: team.teamNo,
+        totalBookings: blocks.length,
+        blockedTimes: blocks.map(function(b) {
+          return minutesToTime(b.start) + '-' + minutesToTime(b.end);
+        }),
+        isFullyBooked: blocks.length >= 10
+      });
+    });
+    
+    result.sort(function(a, b) {
+      return a.totalBookings - b.totalBookings;
+    });
+    
+    return result;
+    
+  } catch (error) {
+    console.error('Error getting available teams:', error);
+    return [];
+  }
+}
+
+/**
+ * 💡 แนะนำเวลาอื่นที่มีทีมว่าง
+ */
+function suggestAlternativeTimeSlots(category, date, startTime, endTime) {
+  try {
+    const teams = getTeamsByCategory(category);
+    if (teams.length === 0) return [];
+    
+    const duration = timeToMinutes(endTime) - timeToMinutes(startTime);
+    const suggestions = [];
+    
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        allSlots.push(hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));
+      }
+    }
+    
+    allSlots.forEach(function(slot) {
+      const startMinutes = timeToMinutes(slot);
+      const endMinutes = startMinutes + duration;
+      
+      if (endMinutes > 20 * 60) return;
+      
+      const endSlot = minutesToTime(endMinutes);
+      
+      let hasAvailableTeam = false;
+      
+      for (let i = 0; i < teams.length; i++) {
+        if (isTeamAvailable(teams[i].resourceId, date, slot, endSlot)) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        suggestions.push({
+          startTime: slot,
+          endTime: endSlot,
+          duration: duration + ' นาที'
+        });
+      }
+    });
+    
+    return suggestions.slice(0, 5);
+    
+  } catch (error) {
+    console.error('Error suggesting alternatives:', error);
+    return [];
+  }
+}
+
+/**
+ * ✅ Validate RFI Request
+ */
+function validateRFIRequest(data) {
+  const errors = [];
+  
+  if (!data.requestDate) errors.push('กรุณาเลือกวันที่');
+  if (!data.startTime) errors.push('กรุณาเลือกเวลาเริ่มต้น');
+  if (!data.endTime) errors.push('กรุณาเลือกเวลาสิ้นสุด');
+  if (!data.description) errors.push('กรุณาระบุรายละเอียด');
+  if (!data.location) errors.push('กรุณาระบุสถานที่');
+  
+  if (data.requestDate) {
+    const selectedDate = new Date(data.requestDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      errors.push('ไม่สามารถเลือกวันที่ผ่านไปแล้ว');
+    }
+  }
+  
+  if (data.startTime && data.endTime) {
+    const startMinutes = timeToMinutes(data.startTime);
+    const endMinutes = timeToMinutes(data.endTime);
+    
+    if (endMinutes <= startMinutes) {
+      errors.push('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น');
+    }
+    
+    const duration = endMinutes - startMinutes;
+    if (duration < 30) {
+      errors.push('ระยะเวลาต้องไม่น้อยกว่า 30 นาที');
+    }
+    
+    if (duration > 480) {
+      errors.push('ระยะเวลาต้องไม่เกิน 8 ชั่วโมง');
+    }
+  }
+  
+  if (data.startTime) {
+    const startMinutes = timeToMinutes(data.startTime);
+    if (startMinutes < 9 * 60 || startMinutes >= 19 * 60) {
+      errors.push('เวลาเริ่มต้นต้องอยู่ระหว่าง 09:00-19:00');
+    }
+  }
+  
+  if (data.endTime) {
+    const endMinutes = timeToMinutes(data.endTime);
+    if (endMinutes > 20 * 60) {
+      errors.push('เวลาสิ้นสุดต้องไม่เกิน 20:00');
+    }
+  }
+  
+  if (data.requesterEmail && !data.requesterEmail.includes('@')) {
+    errors.push('รูปแบบอีเมลไม่ถูกต้อง');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors: errors
+  };
+}
+
+/**
+ * 💬 หาเหตุผลที่จัดทีมไม่ได้
+ */
+function getTeamAssignmentFailureReason(category, date, startTime, endTime) {
+  try {
+    const teams = getTeamsByCategory(category);
+    
+    if (teams.length === 0) {
+      return {
+        reason: 'no_teams_in_category',
+        message: 'ไม่มีทีมในหมวด ' + category,
+        suggestion: 'ติดต่อผู้ดูแลเพื่อเพิ่มทีมงาน'
+      };
+    }
+    
+    const unavailableTeams = [];
+    
+    teams.forEach(function(team) {
+      if (!isTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        unavailableTeams.push({
+          teamName: team.resourceName,
+          teamNo: team.teamNo
+        });
+      }
+    });
+    
+    if (unavailableTeams.length === teams.length) {
+      return {
+        reason: 'all_teams_busy',
+        message: 'ทีมทั้งหมดไม่ว่างในช่วงเวลานี้',
+        suggestion: 'ลองเลือกเวลาอื่น หรือวันอื่น',
+        details: {
+          totalTeams: teams.length,
+          busyTeams: unavailableTeams
+        }
+      };
+    }
+    
+    return {
+      reason: 'unknown',
+      message: 'ไม่สามารถจัดทีมได้',
+      suggestion: 'กรุณาติดต่อผู้ดูแลระบบ'
+    };
+    
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      reason: 'error',
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * 🧪 ทดสอบฟังก์ชันที่ปรับปรุง
+ */
+function testOptimizedFunctions() {
+  console.log('========== Test Optimized Functions ==========');
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  // 1. Test getRFIByDate
+  console.log('\n1. Testing getRFIByDate()...');
+  const rfis = getRFIByDate(date);
+  console.log('Found RFIs:', rfis.length);
+  
+  // 2. Test getAvailableTimeSlots
+  console.log('\n2. Testing getAvailableTimeSlots()...');
+  const startTime = new Date().getTime();
+  const slots = getAvailableTimeSlots(date, 'Survey');
+  const endTime = new Date().getTime();
+  console.log('Found slots:', slots.length);
+  console.log('⚡ Time taken:', (endTime - startTime) + 'ms');
+  
+  // 3. Test getNoSlotsReason
+  console.log('\n3. Testing getNoSlotsReason()...');
+  const reason = getNoSlotsReason(date, 'Survey');
+  console.log('Reason:', reason.message);
+  
+  // 4. Test getAvailableTeamsWithSlots
+  console.log('\n4. Testing getAvailableTeamsWithSlots()...');
+  const teams = getAvailableTeamsWithSlots(date, 'Survey');
+  teams.forEach(function(team) {
+    console.log('-', team.teamName + ':', team.totalBookings + ' bookings');
+  });
+  
+  // 5. Test validateRFIRequest
+  console.log('\n5. Testing validateRFIRequest()...');
+  const testData = {
+    requestDate: date,
+    startTime: '14:00',
+    endTime: '15:00',
+    description: 'Test',
+    location: 'Test Location',
+    requesterEmail: 'test@example.com'
+  };
+  const validation = validateRFIRequest(testData);
+  console.log('Valid:', validation.valid);
+  
+  console.log('\n========== Test Complete ==========');
+}
+
