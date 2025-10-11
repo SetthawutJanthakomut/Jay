@@ -4350,7 +4350,7 @@ const eventTitle = '🌿 Survey Work: ' + surveyNo + ' - ' + data.assignedTeam; 
 /**
  * ⭐ อัปเดต: ส่งอีเมลแจ้ง Survey Work ไปหา Survey Team
  */
-function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {  // ⭐ เพิ่ม parameter
+function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {
   try {
     console.log('========== START: sendSurveyWorkNotificationEmail ==========');
     
@@ -4369,14 +4369,14 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {  // ⭐ เพ
     
     const recipients = emailList.map(function(e) { return e.email; });
     
-    // ✅ เพิ่ม Requester Email
+    // เพิ่ม Requester Email
     if (data.requesterEmail && 
         data.requesterEmail.includes('@') && 
         !recipients.includes(data.requesterEmail)) {
       recipients.push(data.requesterEmail);
     }
     
-    // ✅ เพิ่ม Team Emails
+    // เพิ่ม Team Emails
     if (data.assignedTeam) {
       const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
       teamEmails.forEach(function(teamMember) {
@@ -4390,7 +4390,8 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {  // ⭐ เพ
     console.log('Sending to:', recipients.length, 'recipients');
     console.log('Recipients:', recipients.join(', '));
     
-    const emailHtml = createSurveyWorkEmailHTML(data, rfiId);
+    // ⭐ แก้ไข: เรียก createSurveyWorkEmailHTML และส่ง surveyNo
+    const emailHtml = createSurveyWorkEmailHTML(data, rfiId, surveyNo);
     
     const sent = safeSendEmail({
       to: recipients.join(','),
@@ -4408,11 +4409,13 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {  // ⭐ เพ
   }
 }
 
-
 /**
  * ⭐ อัปเดต HTML สำหรับอีเมล Survey Work (ปรับสีเขียว)
  */
-function createSurveyWorkEmailHTML(data, rfiId) {
+/**
+ * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล Survey Work (เพิ่ม parameter surveyNo)
+ */
+function createSurveyWorkEmailHTML(data, rfiId, surveyNo) {  // ⭐ เพิ่ม parameter
   const emailBody = `<!DOCTYPE html>
 <html>
 <head>
@@ -4453,7 +4456,7 @@ th { background-color: #ecfdf5; }
 </head>
 <body>
 <h2>🌿 แจ้ง Survey Work Request ใหม่</h2>
-<div class="id-badge">Survey NO: ${surveyNo}</div>  // ⭐ ใช้ surveyNo
+<div class="id-badge">Survey NO: ${surveyNo}</div>
 <p>เรียน ทีม Survey</p>
 <p>มี Survey Work Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ</p>
 
@@ -4465,7 +4468,7 @@ th { background-color: #ecfdf5; }
 
 <h3>รายละเอียด Survey Work</h3>
 <table>
-<tr><th>Survey NO</th><td><strong>${surveyNo}</strong></td></tr>  // ⭐ ใช้ surveyNo
+<tr><th>Survey NO</th><td><strong>${surveyNo}</strong></td></tr>
 <tr><th>รายละเอียด</th><td>${data.description}</td></tr>
 <tr><th>สถานที่</th><td>${data.location}</td></tr>
 <tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
