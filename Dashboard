@@ -1,0 +1,392 @@
+// ===== Dashboard System =====
+// File: Dashboard.gs
+// Description: System สำหรับแสดง Analytics และ Statistics
+
+/**
+ * 📊 สร้าง Performance Dashboard
+ */
+function createPerformanceDashboard() {
+  try {
+    console.log('========== Creating Performance Dashboard ==========');
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // ลบ dashboard เก่า (ถ้ามี)
+    let dashboardSheet = ss.getSheetByName('Dashboard');
+    if (dashboardSheet) {
+      ss.deleteSheet(dashboardSheet);
+    }
+    
+    dashboardSheet = ss.insertSheet('Dashboard');
+    
+    // Header
+    dashboardSheet.getRange(1, 1).setValue('📊 RFI System Dashboard');
+    dashboardSheet.getRange(1, 1).setFontSize(18).setFontWeight('bold');
+    dashboardSheet.getRange(2, 1).setValue('Generated: ' + new Date().toLocaleString('th-TH'));
+    dashboardSheet.getRange(2, 1).setFontSize(10).setFontColor('#666666');
+    
+    let row = 4;
+    
+    // ===== 1. Performance Metrics =====
+    row = addPerformanceMetrics(dashboardSheet, row);
+    row += 2;
+    
+    // ===== 2. Team Usage Statistics =====
+    row = addTeamUsageStats(dashboardSheet, row);
+    row += 2;
+    
+    // ===== 3. Error Summary =====
+    row = addErrorSummary(dashboardSheet, row);
+    row += 2;
+    
+    // ===== 4. Recent Activity =====
+    row = addRecentActivity(dashboardSheet, row);
+    row += 2;
+    
+    // ===== 5. Top Slow Queries =====
+    row = addSlowQueries(dashboardSheet, row);
+    
+    // Format columns
+    dashboardSheet.setColumnWidth(1, 250);
+    dashboardSheet.setColumnWidth(2, 150);
+    dashboardSheet.setColumnWidth(3, 150);
+    dashboardSheet.setColumnWidth(4, 200);
+    
+    console.log('✅ Dashboard created successfully');
+    
+    SpreadsheetApp.getUi().alert(
+      'Dashboard สร้างสำเร็จ! 📊',
+      'กรุณาไปดูที่ Sheet "Dashboard"\n\n' +
+      'ข้อมูลที่แสดง:\n' +
+      '✓ Performance Metrics\n' +
+      '✓ Team Usage Statistics\n' +
+      '✓ Error Summary\n' +
+      '✓ Recent Activity\n' +
+      '✓ Slow Queries',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+    SpreadsheetApp.setActiveSheet(dashboardSheet);
+    
+  } catch (error) {
+    console.error('Error creating dashboard:', error);
+    logError('createPerformanceDashboard', error, {});
+    
+    SpreadsheetApp.getUi().alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถสร้าง Dashboard ได้\n\n' +
+      'Error: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * ⚡ Performance Metrics Section
+ */
+function addPerformanceMetrics(sheet, startRow) {
+  sheet.getRange(startRow, 1).setValue('⚡ Performance Metrics (Last 7 Days)')
+    .setFontWeight('bold').setFontSize(14);
+  startRow++;
+  
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  
+  if (!perfSheet || perfSheet.getLastRow() <= 1) {
+    sheet.getRange(startRow, 1).setValue('No performance data available');
+    return startRow + 1;
+  }
+  
+  const data = perfSheet.getRange(2, 1, perfSheet.getLastRow() - 1, 3).getValues();
+  
+  // กรองข้อมูล 7 วันล่าสุด
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const recentData = data.filter(function(row) {
+    return new Date(row[0]) >= sevenDaysAgo;
+  });
+  
+  if (recentData.length === 0) {
+    sheet.getRange(startRow, 1).setValue('No recent performance data');
+    return startRow + 1;
+  }
+  
+  // คำนวณ metrics
+  let totalCalls = recentData.length;
+  let totalDuration = 0;
+  let slowQueries = 0;
+  
+  const config = getLoggingConfig();  // ✅ เพิ่มบรรทัดนี้
+  
+  recentData.forEach(function(row) {
+    const duration = parseFloat(row[2]);
+    totalDuration += duration;
+    if (duration > config.slowQueryThreshold) {  // ✅ ใช้จาก config
+      slowQueries++;
+    }
+  });
+  
+  const avgDuration = (totalDuration / totalCalls).toFixed(2);
+  
+  // Header
+  sheet.getRange(startRow, 1, 1, 2).setValues([['Metric', 'Value']]);
+  sheet.getRange(startRow, 1, 1, 2).setFontWeight('bold')
+    .setBackground('#1877f2').setFontColor('white');
+  startRow++;
+  
+  // Data
+  const metrics = [
+    ['Total Function Calls', totalCalls],
+    ['Average Duration', avgDuration + ' ms'],
+    ['Slow Queries (>' + config.slowQueryThreshold + 'ms)', slowQueries],  // ✅ ใช้จาก config
+    ['Slow Query Rate', ((slowQueries / totalCalls) * 100).toFixed(1) + '%']
+  ];
+  
+  sheet.getRange(startRow, 1, metrics.length, 2).setValues(metrics);
+  
+  return startRow + metrics.length;
+}
+
+/**
+ * 👥 Team Usage Statistics
+ */
+function addTeamUsageStats(sheet, startRow) {
+  sheet.getRange(startRow, 1).setValue('👥 Team Usage Statistics (Last 30 Days)')
+    .setFontWeight('bold').setFontSize(14);
+  startRow++;
+  
+  const teamSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Team_Assignment_Log');
+  
+  if (!teamSheet || teamSheet.getLastRow() <= 1) {
+    sheet.getRange(startRow, 1).setValue('No team assignment data available');
+    return startRow + 1;
+  }
+  
+  const data = teamSheet.getRange(2, 1, teamSheet.getLastRow() - 1, 3).getValues();
+  
+  // กรองข้อมูล 30 วันล่าสุด
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const recentData = data.filter(function(row) {
+    return new Date(row[0]) >= thirtyDaysAgo;
+  });
+  
+  if (recentData.length === 0) {
+    sheet.getRange(startRow, 1).setValue('No recent team assignment data');
+    return startRow + 1;
+  }
+  
+  // นับการใช้งานแต่ละทีม
+  const teamCount = {};
+  
+  recentData.forEach(function(row) {
+    const teams = String(row[2] || '').split(',');
+    teams.forEach(function(team) {
+      team = team.trim();
+      if (team) {
+        teamCount[team] = (teamCount[team] || 0) + 1;
+      }
+    });
+  });
+  
+  // เรียงตามจำนวนมาก → น้อย
+  const sortedTeams = Object.keys(teamCount).sort(function(a, b) {
+    return teamCount[b] - teamCount[a];
+  });
+  
+  // Header
+  sheet.getRange(startRow, 1, 1, 2).setValues([['Team', 'Assignments']]);
+  sheet.getRange(startRow, 1, 1, 2).setFontWeight('bold')
+    .setBackground('#16a34a').setFontColor('white');
+  startRow++;
+  
+  // Data (Top 10 teams)
+  const topTeams = sortedTeams.slice(0, 10);
+  const teamData = topTeams.map(function(team) {
+    return [team, teamCount[team]];
+  });
+  
+  sheet.getRange(startRow, 1, teamData.length, 2).setValues(teamData);
+  
+  return startRow + teamData.length;
+}
+
+/**
+ * 🐛 Error Summary
+ */
+function addErrorSummary(sheet, startRow) {
+  sheet.getRange(startRow, 1).setValue('🐛 Error Summary (Last 7 Days)')
+    .setFontWeight('bold').setFontSize(14);
+  startRow++;
+  
+  const errorSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Error_Log');
+  
+  if (!errorSheet || errorSheet.getLastRow() <= 1) {
+    sheet.getRange(startRow, 1).setValue('✅ No errors recorded');
+    sheet.getRange(startRow, 1).setBackground('#d1fae5');
+    return startRow + 1;
+  }
+  
+  const data = errorSheet.getRange(2, 1, errorSheet.getLastRow() - 1, 7).getValues();
+  
+  // กรองข้อมูล 7 วันล่าสุด
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const recentErrors = data.filter(function(row) {
+    return new Date(row[0]) >= sevenDaysAgo;
+  });
+  
+  if (recentErrors.length === 0) {
+    sheet.getRange(startRow, 1).setValue('✅ No recent errors');
+    sheet.getRange(startRow, 1).setBackground('#d1fae5');
+    return startRow + 1;
+  }
+  
+  // นับตาม severity
+  const severityCount = {
+    'Critical': 0,
+    'Warning': 0,
+    'Info': 0
+  };
+  
+  recentErrors.forEach(function(row) {
+    const severity = row[6] || 'Info';
+    severityCount[severity] = (severityCount[severity] || 0) + 1;
+  });
+  
+  // Header
+  sheet.getRange(startRow, 1, 1, 2).setValues([['Severity', 'Count']]);
+  sheet.getRange(startRow, 1, 1, 2).setFontWeight('bold')
+    .setBackground('#dc2626').setFontColor('white');
+  startRow++;
+  
+  // Data
+  const errorData = [
+    ['🚨 Critical', severityCount['Critical']],
+    ['⚠️ Warning', severityCount['Warning']],
+    ['ℹ️ Info', severityCount['Info']],
+    ['📊 Total', recentErrors.length]
+  ];
+  
+  sheet.getRange(startRow, 1, errorData.length, 2).setValues(errorData);
+  
+  // Highlight critical
+  if (severityCount['Critical'] > 0) {
+    sheet.getRange(startRow, 1, 1, 2).setBackground('#fee2e2');
+  }
+  
+  return startRow + errorData.length;
+}
+
+/**
+ * 📝 Recent Activity
+ */
+function addRecentActivity(sheet, startRow) {
+  sheet.getRange(startRow, 1).setValue('📝 Recent Activity (Last 10)')
+    .setFontWeight('bold').setFontSize(14);
+  startRow++;
+  
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  
+  if (!perfSheet || perfSheet.getLastRow() <= 1) {
+    sheet.getRange(startRow, 1).setValue('No activity data');
+    return startRow + 1;
+  }
+  
+  const lastRow = perfSheet.getLastRow();
+  const startDataRow = Math.max(2, lastRow - 9); // ดึง 10 แถวล่าสุด
+  const numRows = lastRow - startDataRow + 1;
+  
+  const data = perfSheet.getRange(startDataRow, 1, numRows, 4).getValues();
+  
+  // Header
+  sheet.getRange(startRow, 1, 1, 4).setValues([
+    ['Time', 'Function', 'Duration', 'Status']
+  ]);
+  sheet.getRange(startRow, 1, 1, 4).setFontWeight('bold')
+    .setBackground('#6366f1').setFontColor('white');
+  startRow++;
+  
+  // Data (reverse เพื่อแสดงล่าสุดก่อน)
+  const reversedData = data.reverse().map(function(row) {
+    return [
+      new Date(row[0]).toLocaleString('th-TH'),
+      row[1],
+      row[2] + ' ms',
+      row[3]
+    ];
+  });
+  
+  sheet.getRange(startRow, 1, reversedData.length, 4).setValues(reversedData);
+  
+  return startRow + reversedData.length;
+}
+
+/**
+ * 🐌 Slow Queries
+ */
+function addSlowQueries(sheet, startRow) {
+  sheet.getRange(startRow, 1).setValue('🐌 Slowest Queries (Top 10)')
+    .setFontWeight('bold').setFontSize(14);
+  startRow++;
+  
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  
+  if (!perfSheet || perfSheet.getLastRow() <= 1) {
+    sheet.getRange(startRow, 1).setValue('No performance data');
+    return startRow + 1;
+  }
+  
+  const data = perfSheet.getRange(2, 1, perfSheet.getLastRow() - 1, 3).getValues();
+  
+  // เรียงตาม duration มาก → น้อย
+  const sortedData = data.sort(function(a, b) {
+    return parseFloat(b[2]) - parseFloat(a[2]);
+  });
+  
+  // เอา top 10
+  const top10 = sortedData.slice(0, 10);
+  
+  // Header
+  sheet.getRange(startRow, 1, 1, 3).setValues([
+    ['Function', 'Duration', 'Time']
+  ]);
+  sheet.getRange(startRow, 1, 1, 3).setFontWeight('bold')
+    .setBackground('#f59e0b').setFontColor('white');
+  startRow++;
+  
+  // Data
+  const slowData = top10.map(function(row) {
+    return [
+      row[1],
+      row[2] + ' ms',
+      new Date(row[0]).toLocaleString('th-TH')
+    ];
+  });
+  
+  sheet.getRange(startRow, 1, slowData.length, 3).setValues(slowData);
+  
+  // Highlight very slow (> 1000ms)
+  slowData.forEach(function(row, index) {
+    const duration = parseFloat(row[1]);
+    if (duration > 1000) {
+      sheet.getRange(startRow + index, 1, 1, 3).setBackground('#fee2e2');
+    }
+  });
+  
+  return startRow + slowData.length;
+}
+
+/**
+ * 📈 ดูสถิติการใช้งาน
+ */
+function viewUsageStats() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard');
+  if (sheet) {
+    SpreadsheetApp.setActiveSheet(sheet);
+  } else {
+    createPerformanceDashboard();
+  }
+}

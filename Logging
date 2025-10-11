@@ -1,0 +1,1111 @@
+// ===== Logging & Error Tracking System =====
+// File: Logging.gs
+// Description: System สำหรับบันทึก Performance, Errors และ Team Assignments
+
+/**
+ * ⚙️ Config สำหรับ Logging System
+ */
+var LOGGING_CONFIG = {
+  enabled: true,                    // เปิด/ปิด logging
+  errorTracking: true,              // เปิด/ปิด error tracking
+  performanceTracking: true,        // เปิด/ปิด performance tracking
+  maxLogAge: 30,                    // เก็บ log ไว้ 30 วัน
+  maxErrorAge: 90,                  // เก็บ error ไว้ 90 วัน
+  logSlowQueries: true,             // log queries ที่ช้า
+  slowQueryThreshold: 500           // ถือว่าช้าถ้าเกิน 500ms
+};
+
+/**
+ * 📝 Log การใช้งานฟังก์ชัน
+ */
+function logFunctionCall(functionName, params, duration, result) {
+  try {
+    const config = getLoggingConfig();  // ✅ เปลี่ยนจาก LOGGING_CONFIG
+    
+    if (!config.enabled) return;
+    
+    // ... rest of code ...
+    
+    // Log เฉพาะ slow queries ถ้าตั้งค่าไว้
+    if (config.logSlowQueries && duration < config.slowQueryThreshold) {
+      return;
+    }
+    
+    // ... rest of code ...
+    
+    cleanupOldLogs(sheet, config.maxLogAge);
+    
+  } catch (error) {
+    console.error('Failed to log function call:', error);
+  }
+}
+
+/**
+ * 🐛 Log errors
+ */
+function logError(functionName, error, context) {
+  try {
+    const config = getLoggingConfig();  // ✅ เปลี่ยนจาก LOGGING_CONFIG
+    
+    if (!config.errorTracking) return;
+    
+    // ... rest of code ...
+    
+    cleanupOldLogs(sheet, config.maxErrorAge);
+    
+    // ... rest of code ...
+    
+  } catch (logError) {
+    console.error('Failed to log error:', logError);
+  }
+}
+
+/**
+ * 📊 Log การใช้ทีม
+ */
+function logTeamAssignment(rfiId, teamNames, date, startTime, endTime, category) {
+  try {
+    const config = getLoggingConfig();  // ✅ เปลี่ยนจาก LOGGING_CONFIG
+    
+    if (!config.enabled) return;
+    
+    // ... rest of code ...
+    
+    cleanupOldLogs(sheet, config.maxLogAge);
+    
+  } catch (error) {
+    console.error('Failed to log team assignment:', error);
+  }
+}
+
+/**
+ * 🎯 Wrapper สำหรับ track performance
+ */
+function trackPerformance(functionName, params, callback) {
+  const startTime = new Date().getTime();
+  let result = null;
+  let error = null;
+  
+  try {
+    result = callback();
+    return result;
+  } catch (err) {
+    error = err;
+    logError(functionName, err, params);
+    throw err;
+  } finally {
+    const endTime = new Date().getTime();
+    const duration = endTime - startTime;
+    
+    const config = getLoggingConfig();  // ✅ เปลี่ยนจาก LOGGING_CONFIG
+    
+    if (!error && config.performanceTracking) {
+      logFunctionCall(functionName, params, duration, result);
+    }
+  }
+}
+
+/**
+ * 🐛 Log errors
+ */
+function logError(functionName, error, context) {
+  try {
+    if (!LOGGING_CONFIG.errorTracking) return;
+    
+    const sheet = getOrCreateSheet('Error_Log', [
+      'Timestamp',
+      'Function',
+      'Error Message',
+      'Error Stack',
+      'User',
+      'Context',
+      'Severity'
+    ]);
+    
+    const user = Session.getActiveUser().getEmail();
+    const errorMessage = error.toString();
+    const errorStack = error.stack || '';
+    const severity = determineSeverity(error);
+    
+    sheet.appendRow([
+      new Date(),
+      functionName,
+      errorMessage,
+      errorStack.substring(0, 500),
+      user,
+      JSON.stringify(context).substring(0, 200),
+      severity
+    ]);
+    
+    // Auto cleanup old errors
+    cleanupOldLogs(sheet, LOGGING_CONFIG.maxErrorAge);
+    
+    // ส่งแจ้งเตือนถ้า error สำคัญ
+    if (severity === 'Critical') {
+      notifyAdminAboutError(functionName, errorMessage);
+    }
+    
+  } catch (logError) {
+    console.error('Failed to log error:', logError);
+  }
+}
+
+
+
+/**
+ * 🔧 สร้าง/ดึง Sheet (ถ้ายังไม่มีให้สร้างใหม่)
+ */
+function getOrCreateSheet(sheetName, headers) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(sheetName);
+    
+    // ตั้งค่า headers
+    if (headers && headers.length > 0) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      const headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setFontWeight('bold');
+      headerRange.setBackground('#1877f2');
+      headerRange.setFontColor('#ffffff');
+      headerRange.setHorizontalAlignment('center');
+      
+      sheet.setFrozenRows(1);
+      
+      // Auto resize columns
+      for (let i = 1; i <= headers.length; i++) {
+        sheet.autoResizeColumn(i);
+      }
+    }
+  }
+  
+  return sheet;
+}
+
+/**
+ * 🧹 ลบ logs เก่า
+ */
+function cleanupOldLogs(sheet, maxAgeDays) {
+  try {
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return; // ไม่มีข้อมูล
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+    
+    let rowsToDelete = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const timestamp = new Date(data[i][0]);
+      if (timestamp < cutoffDate) {
+        rowsToDelete.push(i + 2); // +2 เพราะ header + index 0
+      }
+    }
+    
+    // ลบจากล่างขึ้นบน
+    rowsToDelete.reverse();
+    rowsToDelete.forEach(function(rowIndex) {
+      sheet.deleteRow(rowIndex);
+    });
+    
+    if (rowsToDelete.length > 0) {
+      console.log('Cleaned up ' + rowsToDelete.length + ' old logs from ' + sheet.getName());
+    }
+    
+  } catch (error) {
+    console.error('Failed to cleanup old logs:', error);
+  }
+}
+
+/**
+ * ⚠️ กำหนด severity ของ error
+ */
+function determineSeverity(error) {
+  const errorStr = error.toString().toLowerCase();
+  
+  if (errorStr.includes('permission') || 
+      errorStr.includes('quota') || 
+      errorStr.includes('limit exceeded')) {
+    return 'Critical';
+  }
+  
+  if (errorStr.includes('not found') || 
+      errorStr.includes('invalid')) {
+    return 'Warning';
+  }
+  
+  return 'Info';
+}
+
+/**
+ * 📧 แจ้งเตือน Admin เมื่อเกิด Critical Error
+ */
+function notifyAdminAboutError(functionName, errorMessage) {
+  try {
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) return;
+    
+    const subject = '🚨 Critical Error in RFI System';
+    const body = 
+      'Critical error occurred in RFI System:\n\n' +
+      'Function: ' + functionName + '\n' +
+      'Error: ' + errorMessage + '\n' +
+      'Time: ' + new Date().toLocaleString('th-TH') + '\n\n' +
+      'Please check the Error_Log sheet for details.';
+    
+    const quota = MailApp.getRemainingDailyQuota();
+    if (quota > 0) {
+      MailApp.sendEmail({
+        to: adminEmails.join(','),
+        subject: subject,
+        body: body
+      });
+    }
+    
+  } catch (error) {
+    console.error('Failed to notify admin:', error);
+  }
+}
+
+/**
+ * ✅ UPDATED: getAdminEmails() แบบมี fallback
+ */
+function getAdminEmails() {
+  try {
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    // ถ้าไม่มี Sheet User → ใช้ email จาก Config
+    if (!userSheet) {
+      console.log('No User sheet found, using fallback admin emails');
+      return getFallbackAdminEmails();
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('No users found, using fallback admin emails');
+      return getFallbackAdminEmails();
+    }
+    
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    const adminEmails = [];
+    
+    data.forEach(function(row) {
+      const email = String(row[0] || '').trim();
+      const role = String(row[2] || '').trim();
+      const status = String(row[3] || '').trim();
+      
+      if (role === 'Admin' && status === 'Activated' && email) {
+        adminEmails.push(email);
+      }
+    });
+    
+    // ถ้าไม่มี Admin → ใช้ fallback
+    if (adminEmails.length === 0) {
+      console.log('No active admins found, using fallback admin emails');
+      return getFallbackAdminEmails();
+    }
+    
+    return adminEmails;
+    
+  } catch (error) {
+    console.error('Error getting admin emails:', error);
+    return getFallbackAdminEmails();
+  }
+}
+
+/**
+ * 🔧 Fallback Admin Emails (กรณีไม่มี Sheet User)
+ */
+function getFallbackAdminEmails() {
+  // ⚠️ แก้ไขเป็น email จริงของคุณ
+  return [
+    'setthawut.itd@gmail.com'
+    
+  ];
+}
+
+/**
+ * 🧹 ล้าง Logs ทั้งหมด
+ */
+function clearAllLogs() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'ยืนยันการลบ Logs',
+    'คุณต้องการลบ Logs ทั้งหมดใช่หรือไม่?\n\n' +
+    'การกระทำนี้ไม่สามารถยกเลิกได้',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    return;
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const logSheets = ['Performance_Log', 'Error_Log', 'Team_Assignment_Log'];
+  
+  logSheets.forEach(function(sheetName) {
+    const sheet = ss.getSheetByName(sheetName);
+    if (sheet && sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+      console.log('Cleared ' + sheetName);
+    }
+  });
+  
+  ui.alert(
+    'ลบ Logs สำเร็จ',
+    'ลบ Logs ทั้งหมดเรียบร้อยแล้ว',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * ⚙️ เปิด/ปิด Logging (แบบใหม่)
+ */
+function toggleLogging() {
+  const config = getLoggingConfig();
+  const newState = !config.enabled;
+  
+  setLoggingConfig('logging_enabled', newState);
+  
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Logging ' + (newState ? 'Enabled' : 'Disabled'),
+    'Logging is now ' + (newState ? 'ON ✅' : 'OFF ❌') + '\n\n' +
+    'การตั้งค่านี้จะยังคงอยู่แม้ปิด Spreadsheet',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * ⚙️ เปิด/ปิด Error Tracking
+ */
+function toggleErrorTracking() {
+  const config = getLoggingConfig();
+  const newState = !config.errorTracking;
+  
+  setLoggingConfig('error_tracking', newState);
+  
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Error Tracking ' + (newState ? 'Enabled' : 'Disabled'),
+    'Error Tracking is now ' + (newState ? 'ON ✅' : 'OFF ❌'),
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * ⚙️ เปิด/ปิด Performance Tracking
+ */
+function togglePerformanceTracking() {
+  const config = getLoggingConfig();
+  const newState = !config.performanceTracking;
+  
+  setLoggingConfig('performance_tracking', newState);
+  
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Performance Tracking ' + (newState ? 'Enabled' : 'Disabled'),
+    'Performance Tracking is now ' + (newState ? 'ON ✅' : 'OFF ❌'),
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * 📊 ดูการตั้งค่าปัจจุบัน
+ */
+function viewLoggingSettings() {
+  const config = getLoggingConfig();
+  
+  const message = 
+    '⚙️ Logging Settings\n\n' +
+    'Logging: ' + (config.enabled ? '✅ ON' : '❌ OFF') + '\n' +
+    'Error Tracking: ' + (config.errorTracking ? '✅ ON' : '❌ OFF') + '\n' +
+    'Performance Tracking: ' + (config.performanceTracking ? '✅ ON' : '❌ OFF') + '\n' +
+    'Log Slow Queries: ' + (config.logSlowQueries ? '✅ ON' : '❌ OFF') + '\n\n' +
+    'Max Log Age: ' + config.maxLogAge + ' days\n' +
+    'Max Error Age: ' + config.maxErrorAge + ' days\n' +
+    'Slow Query Threshold: ' + config.slowQueryThreshold + ' ms';
+  
+  SpreadsheetApp.getUi().alert('Logging Settings', message, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * ⚙️ ตั้งค่า Slow Query Threshold
+ */
+function setSlowQueryThreshold() {
+  const ui = SpreadsheetApp.getUi();
+  const config = getLoggingConfig();
+  
+  const response = ui.prompt(
+    'Set Slow Query Threshold',
+    'Enter threshold in milliseconds (current: ' + config.slowQueryThreshold + 'ms):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (response.getSelectedButton() === ui.Button.OK) {
+    const value = parseInt(response.getResponseText());
+    
+    if (isNaN(value) || value < 0) {
+      ui.alert('Error', 'Please enter a valid number', ui.ButtonSet.OK);
+      return;
+    }
+    
+    setLoggingConfig('slow_query_threshold', value);
+    ui.alert('Success', 'Slow Query Threshold set to ' + value + 'ms', ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * 📝 ดู Performance Logs
+ */
+function viewPerformanceLogs() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  if (sheet) {
+    SpreadsheetApp.setActiveSheet(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert('ไม่พบ Performance Logs');
+  }
+}
+
+/**
+ * 🐛 ดู Error Logs
+ */
+function viewErrorLogs() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Error_Log');
+  if (sheet) {
+    SpreadsheetApp.setActiveSheet(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert('ไม่พบ Error Logs');
+  }
+}
+
+/**
+ * 👥 ดู Team Assignment Logs
+ */
+function viewTeamLogs() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Team_Assignment_Log');
+  if (sheet) {
+    SpreadsheetApp.setActiveSheet(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert('ไม่พบ Team Assignment Logs');
+  }
+}
+
+// ===== Logging Configuration =====
+// เปลี่ยนจากตัวแปร global เป็น function
+
+/**
+ * ⚙️ ดึง Logging Config (จาก PropertiesService)
+ */
+function getLoggingConfig() {
+  const props = PropertiesService.getScriptProperties();
+  
+  return {
+    enabled: props.getProperty('logging_enabled') !== 'false',  // default: true
+    errorTracking: props.getProperty('error_tracking') !== 'false',
+    performanceTracking: props.getProperty('performance_tracking') !== 'false',
+    maxLogAge: parseInt(props.getProperty('max_log_age') || '30'),
+    maxErrorAge: parseInt(props.getProperty('max_error_age') || '90'),
+    logSlowQueries: props.getProperty('log_slow_queries') !== 'false',
+    slowQueryThreshold: parseInt(props.getProperty('slow_query_threshold') || '500')
+  };
+}
+
+/**
+ * 💾 บันทึก Logging Config
+ */
+function setLoggingConfig(key, value) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(key, String(value));
+}
+
+/**
+ * 🔄 Reset Logging Config เป็นค่าเริ่มต้น
+ */
+function resetLoggingConfig() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('logging_enabled', 'true');
+  props.setProperty('error_tracking', 'true');
+  props.setProperty('performance_tracking', 'true');
+  props.setProperty('max_log_age', '30');
+  props.setProperty('max_error_age', '90');
+  props.setProperty('log_slow_queries', 'true');
+  props.setProperty('slow_query_threshold', '500');
+  
+  console.log('✅ Logging config reset to defaults');
+}
+
+
+// ===== Test Functions for Logging System =====
+// เพิ่มส่วนนี้ต่อท้ายไฟล์ Logging.gs
+
+/**
+ * 🧪 Test Logging System ทั้งหมด
+ */
+function testLoggingSystem() {
+  console.log('========== Test Logging System ==========');
+  
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'Test Logging System',
+    'ต้องการทดสอบระบบ Logging ใช่หรือไม่?\n\n' +
+    'การทดสอบจะสร้าง:\n' +
+    '✓ Performance Logs (3 รายการ)\n' +
+    '✓ Error Logs (3 รายการ)\n' +
+    '✓ Team Assignment Logs (2 รายการ)',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    return;
+  }
+  
+  const results = {
+    performanceLogs: 0,
+    errorLogs: 0,
+    teamLogs: 0,
+    errors: []
+  };
+  
+  try {
+    // 1. Test Performance Logging
+    console.log('\n1. Testing Performance Logging...');
+    results.performanceLogs = testPerformanceLogging();
+    
+    // 2. Test Error Logging
+    console.log('\n2. Testing Error Logging...');
+    results.errorLogs = testErrorLogging();
+    
+    // 3. Test Team Assignment Logging
+    console.log('\n3. Testing Team Assignment Logging...');
+    results.teamLogs = testTeamAssignmentLogging();
+    
+    // 4. Test Cleanup
+    console.log('\n4. Testing Log Cleanup...');
+    testLogCleanup();
+    
+    // 5. Test Config
+    console.log('\n5. Testing Config Management...');
+    testConfigManagement();
+    
+    console.log('\n========== Test Complete ==========');
+    
+    // แสดงผลลัพธ์
+    const message = 
+      '✅ Test Logging System เสร็จสิ้น\n\n' +
+      'Performance Logs สร้าง: ' + results.performanceLogs + ' รายการ\n' +
+      'Error Logs สร้าง: ' + results.errorLogs + ' รายการ\n' +
+      'Team Logs สร้าง: ' + results.teamLogs + ' รายการ\n\n' +
+      'กรุณาตรวจสอบ Sheets:\n' +
+      '- Performance_Log\n' +
+      '- Error_Log\n' +
+      '- Team_Assignment_Log';
+    
+    ui.alert('Test Complete', message, ui.ButtonSet.OK);
+    
+    // เปิด Performance_Log
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+    if (sheet) {
+      SpreadsheetApp.setActiveSheet(sheet);
+    }
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+    ui.alert('Test Failed', 'เกิดข้อผิดพลาด:\n' + error.toString(), ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * 🧪 Test 1: Performance Logging
+ */
+function testPerformanceLogging() {
+  console.log('Testing Performance Logging...');
+  
+  let count = 0;
+  
+  // Test 1: Fast query
+  logFunctionCall('testFastQuery', {test: 'data'}, 150, {success: true, message: 'Fast query test'});
+  count++;
+  console.log('✅ Test fast query logged');
+  
+  // Test 2: Slow query
+  logFunctionCall('testSlowQuery', {test: 'data'}, 850, {success: true, message: 'Slow query test'});
+  count++;
+  console.log('✅ Test slow query logged');
+  
+  // Test 3: Failed query
+  logFunctionCall('testFailedQuery', {test: 'data'}, 300, {success: false, message: 'Query failed'});
+  count++;
+  console.log('✅ Test failed query logged');
+  
+  // Test 4: ใช้ trackPerformance wrapper
+  const result = trackPerformance('testTrackPerformance', {param1: 'value1'}, function() {
+    Utilities.sleep(100); // จำลองการทำงาน
+    return {success: true, message: 'Wrapper test'};
+  });
+  count++;
+  console.log('✅ Test trackPerformance wrapper logged');
+  
+  console.log('Total performance logs created: ' + count);
+  return count;
+}
+
+/**
+ * 🧪 Test 2: Error Logging
+ */
+function testErrorLogging() {
+  console.log('Testing Error Logging...');
+  
+  let count = 0;
+  
+  // Test 1: Info error
+  const infoError = new Error('This is an info error for testing');
+  logError('testInfoError', infoError, {context: 'test', severity: 'info'});
+  count++;
+  console.log('✅ Test info error logged');
+  
+  // Test 2: Warning error
+  const warningError = new Error('Test not found error');
+  logError('testWarningError', warningError, {context: 'test', type: 'validation'});
+  count++;
+  console.log('✅ Test warning error logged');
+  
+  // Test 3: Critical error (ไม่ส่งอีเมลจริง)
+  const criticalError = new Error('Test permission denied error');
+  
+  // ปิดการส่งอีเมลชั่วคราว
+  const originalNotify = this.notifyAdminAboutError;
+  this.notifyAdminAboutError = function() {
+    console.log('📧 Email notification skipped (test mode)');
+  };
+  
+  logError('testCriticalError', criticalError, {context: 'test', type: 'critical'});
+  count++;
+  console.log('✅ Test critical error logged');
+  
+  // คืนค่าฟังก์ชันเดิม
+  this.notifyAdminAboutError = originalNotify;
+  
+  console.log('Total error logs created: ' + count);
+  return count;
+}
+
+/**
+ * 🧪 Test 3: Team Assignment Logging
+ */
+function testTeamAssignmentLogging() {
+  console.log('Testing Team Assignment Logging...');
+  
+  let count = 0;
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const testDate = tomorrow.toISOString().split('T')[0];
+  
+  // Test 1: Single team
+  logTeamAssignment(
+    'TEST-RFI-001',
+    'Survey Team A',
+    testDate,
+    '09:00',
+    '11:00',
+    'Survey Work'
+  );
+  count++;
+  console.log('✅ Test single team assignment logged');
+  
+  // Test 2: Multiple teams
+  logTeamAssignment(
+    'TEST-RFI-002',
+    'Survey Team A,Lab Team B',
+    testDate,
+    '14:00',
+    '16:00',
+    'Survey,Lab'
+  );
+  count++;
+  console.log('✅ Test multiple team assignment logged');
+  
+  console.log('Total team assignment logs created: ' + count);
+  return count;
+}
+
+/**
+ * 🧪 Test 4: Log Cleanup
+ */
+function testLogCleanup() {
+  console.log('Testing Log Cleanup...');
+  
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  
+  if (!perfSheet || perfSheet.getLastRow() <= 1) {
+    console.log('⚠️ No performance logs to cleanup');
+    return;
+  }
+  
+  const beforeRows = perfSheet.getLastRow() - 1; // ไม่นับ header
+  console.log('Rows before cleanup: ' + beforeRows);
+  
+  // เพิ่ม log เก่ามาก (100 วันก่อน)
+  const oldDate = new Date();
+  oldDate.setDate(oldDate.getDate() - 100);
+  
+  perfSheet.appendRow([
+    oldDate,
+    'testOldFunction',
+    250,
+    'Success',
+    Session.getActiveUser().getEmail(),
+    '{}',
+    'Old test log'
+  ]);
+  
+  console.log('Added 1 old log (100 days ago)');
+  
+  // ทดสอบ cleanup (จะลบ log ที่เก่ากว่า maxLogAge วัน)
+  const config = getLoggingConfig();
+  cleanupOldLogs(perfSheet, config.maxLogAge);
+  
+  const afterRows = perfSheet.getLastRow() - 1;
+  console.log('Rows after cleanup: ' + afterRows);
+  
+  if (afterRows < beforeRows + 1) {
+    console.log('✅ Old log cleaned up successfully');
+  } else {
+    console.log('ℹ️ No logs were old enough to clean up');
+  }
+}
+
+/**
+ * 🧪 Test 5: Config Management
+ */
+function testConfigManagement() {
+  console.log('Testing Config Management...');
+  
+  // บันทึกค่าเดิม
+  const originalConfig = getLoggingConfig();
+  console.log('Original config:', JSON.stringify(originalConfig));
+  
+  // Test: เปลี่ยนค่า
+  setLoggingConfig('logging_enabled', false);
+  const config1 = getLoggingConfig();
+  console.log('After disable:', config1.enabled);
+  
+  if (!config1.enabled) {
+    console.log('✅ Config change successful');
+  }
+  
+  // Test: Reset
+  resetLoggingConfig();
+  const config2 = getLoggingConfig();
+  console.log('After reset:', config2.enabled);
+  
+  if (config2.enabled) {
+    console.log('✅ Config reset successful');
+  }
+  
+  // คืนค่าเดิม
+  Object.keys(originalConfig).forEach(function(key) {
+    const propKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    setLoggingConfig(propKey, originalConfig[key]);
+  });
+  
+  console.log('✅ Config restored to original values');
+}
+
+/**
+ * 🧪 Test การส่งอีเมล Admin (จำลอง)
+ */
+function testAdminEmailNotification() {
+  console.log('========== Test Admin Email Notification ==========');
+  
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'Test Admin Email',
+    'ต้องการทดสอบการส่งอีเมลแจ้ง Admin ใช่หรือไม่?\n\n' +
+    '⚠️ การทดสอบนี้จะส่งอีเมลจริง!',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    console.log('Test cancelled');
+    return;
+  }
+  
+  try {
+    // ดึง admin emails
+    const adminEmails = getAdminEmails();
+    console.log('Admin emails found:', adminEmails);
+    
+    if (adminEmails.length === 0) {
+      ui.alert(
+        'ไม่พบ Admin',
+        'ไม่พบอีเมล Admin ในระบบ\n\n' +
+        'กรุณาตรวจสอบ:\n' +
+        '1. Sheet "User" มีข้อมูลหรือไม่\n' +
+        '2. มี User ที่ Role = "Admin" และ Status = "Activated"\n' +
+        '3. หรือตั้งค่า Fallback Emails ใน getFallbackAdminEmails()',
+        ui.ButtonSet.OK
+      );
+      return;
+    }
+    
+    // ส่งอีเมลทดสอบ
+    notifyAdminAboutError('testAdminEmailNotification', 'This is a test critical error');
+    
+    console.log('✅ Test email sent to:', adminEmails.join(', '));
+    
+    ui.alert(
+      'Test Email Sent',
+      'ส่งอีเมลทดสอบไปที่:\n' + adminEmails.join('\n') + '\n\n' +
+      'กรุณาตรวจสอบกล่องจดหมายของ Admin',
+      ui.ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+    ui.alert(
+      'Test Failed',
+      'ไม่สามารถส่งอีเมลได้:\n' + error.toString(),
+      ui.ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * 🧪 Test Logging เมื่อปิด
+ */
+function testLoggingWhenDisabled() {
+  console.log('========== Test Logging When Disabled ==========');
+  
+  const ui = SpreadsheetApp.getUi();
+  
+  // บันทึกค่าเดิม
+  const originalConfig = getLoggingConfig();
+  
+  try {
+    // ปิด logging
+    setLoggingConfig('logging_enabled', false);
+    console.log('Logging disabled');
+    
+    // ลองบันทึก log (ไม่ควรบันทึก)
+    const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+    const beforeRows = perfSheet ? perfSheet.getLastRow() : 0;
+    
+    logFunctionCall('testWhenDisabled', {test: 'data'}, 200, {success: true});
+    
+    const afterRows = perfSheet ? perfSheet.getLastRow() : 0;
+    
+    if (beforeRows === afterRows) {
+      console.log('✅ Logging correctly disabled - no new logs added');
+      ui.alert(
+        'Test Passed',
+        'Logging ถูกปิดอย่างถูกต้อง\nไม่มี logs ใหม่ถูกบันทึก',
+        ui.ButtonSet.OK
+      );
+    } else {
+      console.log('❌ Logging still active - logs were added');
+      ui.alert(
+        'Test Failed',
+        'Logging ยังทำงานอยู่แม้จะปิดแล้ว',
+        ui.ButtonSet.OK
+      );
+    }
+    
+  } finally {
+    // คืนค่าเดิม
+    setLoggingConfig('logging_enabled', originalConfig.enabled);
+    console.log('Logging restored to:', originalConfig.enabled);
+  }
+}
+
+/**
+ * 🧪 Test Slow Query Detection
+ */
+function testSlowQueryDetection() {
+  console.log('========== Test Slow Query Detection ==========');
+  
+  const config = getLoggingConfig();
+  const threshold = config.slowQueryThreshold;
+  
+  console.log('Current slow query threshold:', threshold + 'ms');
+  
+  // Test 1: Fast query (ไม่ควร log ถ้า logSlowQueries = true)
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  const beforeRows = perfSheet ? perfSheet.getLastRow() : 0;
+  
+  logFunctionCall('testFastQuery', {}, threshold - 100, {success: true});
+  
+  const afterRows1 = perfSheet ? perfSheet.getLastRow() : 0;
+  
+  if (config.logSlowQueries && afterRows1 === beforeRows) {
+    console.log('✅ Fast query not logged (correct behavior)');
+  } else if (!config.logSlowQueries && afterRows1 > beforeRows) {
+    console.log('✅ Fast query logged (logSlowQueries disabled)');
+  }
+  
+  // Test 2: Slow query (ควร log เสมอ)
+  logFunctionCall('testSlowQuery', {}, threshold + 100, {success: true});
+  
+  const afterRows2 = perfSheet ? perfSheet.getLastRow() : 0;
+  
+  if (afterRows2 > afterRows1) {
+    console.log('✅ Slow query logged (correct behavior)');
+  }
+  
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Test Complete',
+    'Slow Query Detection Test เสร็จสิ้น\n\n' +
+    'Threshold: ' + threshold + 'ms\n' +
+    'logSlowQueries: ' + config.logSlowQueries + '\n\n' +
+    'ตรวจสอบ Performance_Log เพื่อดูผลลัพธ์',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * 🧪 Test ทั้งหมดพร้อมกัน (Comprehensive Test)
+ */
+function runComprehensiveLoggingTest() {
+  console.log('========== Comprehensive Logging Test ==========');
+  
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'Comprehensive Test',
+    'ทดสอบระบบ Logging ทั้งหมด?\n\n' +
+    'การทดสอบรวม:\n' +
+    '1. Performance Logging\n' +
+    '2. Error Logging\n' +
+    '3. Team Assignment Logging\n' +
+    '4. Config Management\n' +
+    '5. Cleanup System\n' +
+    '6. Slow Query Detection\n\n' +
+    'ใช้เวลาประมาณ 5-10 วินาที',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    return;
+  }
+  
+  const startTime = new Date().getTime();
+  const results = [];
+  
+  try {
+    // Test 1
+    console.log('\n📝 Test 1/6: Performance Logging...');
+    const perfCount = testPerformanceLogging();
+    results.push('✅ Performance Logs: ' + perfCount + ' created');
+    
+    // Test 2
+    console.log('\n🐛 Test 2/6: Error Logging...');
+    const errorCount = testErrorLogging();
+    results.push('✅ Error Logs: ' + errorCount + ' created');
+    
+    // Test 3
+    console.log('\n👥 Test 3/6: Team Assignment Logging...');
+    const teamCount = testTeamAssignmentLogging();
+    results.push('✅ Team Logs: ' + teamCount + ' created');
+    
+    // Test 4
+    console.log('\n⚙️ Test 4/6: Config Management...');
+    testConfigManagement();
+    results.push('✅ Config Management: Passed');
+    
+    // Test 5
+    console.log('\n🧹 Test 5/6: Cleanup System...');
+    testLogCleanup();
+    results.push('✅ Cleanup System: Passed');
+    
+    // Test 6
+    console.log('\n🐌 Test 6/6: Slow Query Detection...');
+    const config = getLoggingConfig();
+    logFunctionCall('testFast', {}, 100, {success: true});
+    logFunctionCall('testSlow', {}, 900, {success: true});
+    results.push('✅ Slow Query Detection: Passed');
+    
+    const endTime = new Date().getTime();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
+    
+    console.log('\n========== Test Complete ==========');
+    console.log('Duration:', duration + 's');
+    
+    // แสดงผลลัพธ์
+    const message = 
+      '🎉 Comprehensive Test เสร็จสิ้น!\n\n' +
+      results.join('\n') + '\n\n' +
+      'เวลาที่ใช้: ' + duration + ' วินาที\n\n' +
+      'กรุณาตรวจสอบ Sheets:\n' +
+      '- Performance_Log\n' +
+      '- Error_Log\n' +
+      '- Team_Assignment_Log';
+    
+    ui.alert('Test Complete ✅', message, ui.ButtonSet.OK);
+    
+    // สร้าง Dashboard
+    const createDashboard = ui.alert(
+      'Create Dashboard?',
+      'ต้องการสร้าง Dashboard เพื่อดูผลลัพธ์หรือไม่?',
+      ui.ButtonSet.YES_NO
+    );
+    
+    if (createDashboard === ui.Button.YES) {
+      createPerformanceDashboard();
+    }
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+    
+    const endTime = new Date().getTime();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
+    
+    ui.alert(
+      'Test Failed ❌',
+      'เกิดข้อผิดพลาด:\n' + error.toString() + '\n\n' +
+      'Results so far:\n' + results.join('\n') + '\n\n' +
+      'Duration: ' + duration + 's',
+      ui.ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * 🧪 ดูสถานะ Logging ปัจจุบัน
+ */
+function viewLoggingStatus() {
+  const config = getLoggingConfig();
+  
+  const perfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Performance_Log');
+  const errorSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Error_Log');
+  const teamSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Team_Assignment_Log');
+  
+  const perfCount = perfSheet ? perfSheet.getLastRow() - 1 : 0;
+  const errorCount = errorSheet ? errorSheet.getLastRow() - 1 : 0;
+  const teamCount = teamSheet ? teamSheet.getLastRow() - 1 : 0;
+  
+  const adminEmails = getAdminEmails();
+  
+  const message = 
+    '📊 Logging System Status\n\n' +
+    '⚙️ Configuration:\n' +
+    'Logging: ' + (config.enabled ? '✅ ON' : '❌ OFF') + '\n' +
+    'Error Tracking: ' + (config.errorTracking ? '✅ ON' : '❌ OFF') + '\n' +
+    'Performance Tracking: ' + (config.performanceTracking ? '✅ ON' : '❌ OFF') + '\n' +
+    'Log Slow Queries: ' + (config.logSlowQueries ? '✅ ON' : '❌ OFF') + '\n' +
+    'Slow Query Threshold: ' + config.slowQueryThreshold + ' ms\n\n' +
+    '📝 Log Counts:\n' +
+    'Performance Logs: ' + perfCount + '\n' +
+    'Error Logs: ' + errorCount + '\n' +
+    'Team Assignment Logs: ' + teamCount + '\n\n' +
+    '👤 Admin Emails:\n' +
+    (adminEmails.length > 0 ? adminEmails.join('\n') : 'None configured') + '\n\n' +
+    '🗑️ Cleanup:\n' +
+    'Max Log Age: ' + config.maxLogAge + ' days\n' +
+    'Max Error Age: ' + config.maxErrorAge + ' days';
+  
+  SpreadsheetApp.getUi().alert('Logging Status', message, SpreadsheetApp.getUi().ButtonSet.OK);
+}

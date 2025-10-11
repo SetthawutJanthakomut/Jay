@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QC - เลื่อนตรวจ RFI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Kanit', sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); }
+    h1 { text-align: center; font-size: 32px; font-weight: 600; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 16px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.3s; }
+    .btn-primary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    thead { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e4e6eb; font-size: 14px; }
+    tbody tr:hover { background: #fff0f5; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; background: #fff3cd; color: #856404; }
+    .btn-reschedule { background: #f093fb; color: white; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 13px; }
+    .btn-reschedule:hover { background: #e082ea; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-state h3 { font-size: 24px; margin-bottom: 10px; }
+    .loading { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; margin: 0 auto 10px; border: 3px solid rgba(240, 147, 251, 0.2); border-top-color: #f093fb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .message { padding: 12px 16px; margin-top: 20px; border-radius: 10px; text-align: center; display: none; font-size: 14px; white-space: pre-line; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .inspector-checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+    .inspector-checkbox-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; background: white; border: 2px solid #e4e6eb; cursor: pointer; transition: all 0.2s; }
+    .inspector-checkbox-item:hover { border-color: #f093fb; background: #fff0f5; }
+    .inspector-checkbox-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: #f093fb; }
+    .inspector-checkbox-item label { cursor: pointer; margin: 0; font-size: 15px; color: #333; flex: 1; }
+    .inspector-checkbox-item .badge { font-size: 12px; padding: 4px 8px; border-radius: 5px; background: #fff0f5; color: #f093fb; font-weight: 500; }
+    .inspector-checkbox-item input[type="checkbox"]:checked + label { font-weight: 600; color: #f093fb; }
+    .inspector-loading { color: #999; text-align: center; padding: 30px; font-style: italic; }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e4e6eb;
+      border-radius: 10px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 15px;
+      transition: all 0.3s;
+    }
+    
+    input:focus, select:focus { border-color: #f093fb; outline: none; }
+    input:disabled, select:disabled { background: #f5f6f7; opacity: 0.7; cursor: not-allowed; }
+    
+    .form-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    .required { color: #e74c3c; }
+    .info-note { font-size: 12px; color: #f093fb; margin-top: 5px; font-style: italic; }
+    
+    .original-info { background: #fff0f5; border-left: 4px solid #f093fb; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+    .original-info h3 { color: #f093fb; font-size: 16px; margin-bottom: 10px; }
+    .original-info p { margin: 5px 0; font-size: 14px; color: #666; }
+    .original-info strong { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 40px;">
+  <!-- Icon Badge -->
+  <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);">
+    <span style="font-size: 40px;">📅</span>
+  </div>
+  
+  <!-- Title -->
+  <h1 style="font-size: 32px; font-weight: 600; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;">
+    QC - เลื่อนตรวจ RFI
+  </h1>
+  
+  <!-- Subtitle with Badge -->
+  <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+    <span style="color: #666; font-size: 16px;">จัดการ RFI ที่เลื่อนการตรวจงาน (Inspection Postponed)</span>
+    <span style="display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 20px; font-size: 12px; font-weight: 500;">QC Postpone</span>
+  </div>
+
+  <!-- Status Info -->
+  <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; font-size: 13px; color: #999;">
+    <div style="display: flex; align-items: center; gap: 5px;">
+      <span style="width: 8px; height: 8px; background: #ffc107; border-radius: 50%; display: inline-block;"></span>
+      <span>Pending</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 5px;">
+      <span style="width: 8px; height: 8px; background: #17a2b8; border-radius: 50%; display: inline-block;"></span>
+      <span>Rescheduled</span>
+    </div>
+  </div>
+</div>
+
+    
+    <div style="margin-bottom: 20px;">
+      <button class="btn btn-primary" onclick="loadPostponedRFIList()">🔄 Refresh</button>
+    </div>
+    
+    <div id="rfiTableContainer">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดข้อมูล...</p>
+      </div>
+    </div>
+    
+    <div id="message" class="message"></div>
+
+    <!-- Reschedule View -->
+    <div id="rescheduleView" style="display:none; margin-top: 30px; border-top: 2px solid #f093fb; padding-top: 30px;">
+      <div style="background: linear-gradient(135deg, #fff0f5 0%, #ffe4f0 100%); border-left: 4px solid #f093fb; padding: 15px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; color: #1c4587;">
+        <strong>📅 เลื่อนตรวจ RFI:</strong> <span id="rescheduleRFINo"></span><br>
+        <strong>⏰ กำหนดวันและเวลาใหม่ และเลือกทีมที่ว่าง</strong>
+      </div>
+      
+      <!-- แสดงข้อมูลเดิม -->
+      <div class="original-info">
+        <h3>ℹ️ ข้อมูลเดิม (ก่อนเลื่อน)</h3>
+        <p><strong>วันที่เดิม:</strong> <span id="originalDate"></span></p>
+        <p><strong>เวลาเดิม:</strong> <span id="originalTime"></span></p>
+        <p><strong>ทีมเดิม:</strong> <span id="originalTeam"></span></p>
+      </div>
+      
+      <form id="rescheduleForm">
+        <input type="hidden" id="rescheduleRfiId">
+        
+        <div style="margin-bottom: 20px;">
+          <label class="form-label">วันที่ตรวจงานใหม่ <span class="required">*</span></label>
+          <input type="date" id="rescheduleDate" required>
+          <div class="info-note">เลือกวันที่ใหม่สำหรับการตรวจงาน</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+          <div>
+            <label class="form-label">เวลาเริ่มต้นใหม่ <span class="required">*</span></label>
+            <select id="rescheduleStartTime" required disabled>
+              <option value="">-- กรุณาเลือกวันที่ก่อน --</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="form-label">เวลาสิ้นสุดใหม่</label>
+            <select id="rescheduleEndTime">
+              <option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>
+            </select>
+            <div class="info-note">ไม่ระบุ = ใช้เวลาเริ่มต้น +1 ชั่วโมง</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label class="form-label">ทีมงาน (Assigned Inspector) <span class="required">*</span></label>
+          <div id="rescheduleInspectorContainer" style="border: 2px solid #e4e6eb; border-radius: 10px; padding: 15px; background: #f8f9fa; min-height: 100px; max-height: 300px; overflow-y: auto;">
+            <div class="inspector-loading">กรุณาเลือกวันที่และเวลาก่อน</div>
+          </div>
+          <input type="hidden" id="rescheduleAssignedInspector" required>
+          <div id="rescheduleSelectedTeamsInfo" class="info-note">เลือกได้หลายทีม (เฉพาะทีมที่ว่าง)</div>
+        </div>
+        
+        <div style="display: flex; gap: 15px; margin-top: 30px;">
+          <button type="button" onclick="cancelReschedule()" style="flex: 1; padding: 14px; background: #e4e6eb; color: #333; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer;">ยกเลิก</button>
+          <button type="submit" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer;">บันทึกการเลื่อนตรวจ</button>
+        </div>
+      </form>
+      
+      <div id="rescheduleLoading" class="loading" style="display:none;">
+        <div class="spinner"></div>
+        <p>กำลังบันทึกข้อมูล...</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+var availableTeams = [];
+
+window.onload = function() {
+  loadPostponedRFIList();
+  setupRescheduleFormListeners();
+};
+
+function setupRescheduleFormListeners() {
+  var dateInput = document.getElementById('rescheduleDate');
+  var startInput = document.getElementById('rescheduleStartTime');
+  var endInput = document.getElementById('rescheduleEndTime');
+  
+  if (dateInput) {
+    dateInput.addEventListener('change', function() {
+      updateAvailableSlots();
+      resetTeamSelection();
+    });
+  }
+  
+  if (startInput) {
+    startInput.addEventListener('change', function() {
+      updateEndTimeSlots();
+      loadAvailableTeams();
+    });
+  }
+  
+  if (endInput) {
+    endInput.addEventListener('change', function() {
+      loadAvailableTeams();
+    });
+  }
+  
+  var form = document.getElementById('rescheduleForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      handleRescheduleSubmit();
+    });
+  }
+}
+
+function loadPostponedRFIList() {
+  var container = document.getElementById('rfiTableContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(rfiList) {
+      if (!rfiList || rfiList.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>ไม่พบรายการ RFI</h3><p>ไม่มี RFI ที่สถานะ Inspection Postponed</p></div>';
+        return;
+      }
+      
+      var html = '<table><thead><tr>';
+      html += '<th>RFI NO</th><th>รายละเอียด</th><th>สถานที่</th><th>วันที่เดิม</th>';
+      html += '<th>เวลาเดิม</th><th>ทีมงานเดิม</th><th>สถานะ</th><th>จัดการ</th>';
+      html += '</tr></thead><tbody>';
+      
+      for (var i = 0; i < rfiList.length; i++) {
+        var rfi = rfiList[i];
+        var desc = rfi.description || '';
+        
+        html += '<tr>';
+        html += '<td><strong>' + (rfi.rfiNo || 'N/A') + '</strong></td>';
+        html += '<td>' + desc.substring(0, 30) + (desc.length > 30 ? '...' : '') + '</td>';
+        html += '<td>' + (rfi.location || '') + '</td>';
+        html += '<td>' + (rfi.requestDate || '') + '</td>';
+        html += '<td>' + (rfi.startTime || '') + '-' + (rfi.endTime || '') + '</td>';
+        html += '<td>' + (rfi.assignedInspector || '') + '</td>';
+        html += '<td><span class="status-badge">' + rfi.status + '</span></td>';
+        html += '<td><button class="btn-reschedule" onclick="rescheduleRFI(\'' + rfi.id + '\')">📅 เลื่อนตรวจ</button></td>';
+        html += '</tr>';
+      }
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      showMessage('โหลดข้อมูลสำเร็จ: ' + rfiList.length + ' รายการ', 'success', 3000);
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div class="empty-state"><h3>เกิดข้อผิดพลาด</h3><p>' + (error.message || error) + '</p></div>';
+      showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
+    })
+    .getPostponedRFIList();
+}
+
+function rescheduleRFI(rfiId) {
+  document.getElementById('rfiTableContainer').style.display = 'none';
+  document.querySelector('.btn-primary').style.display = 'none';
+  document.getElementById('rescheduleView').style.display = 'block';
+  
+  google.script.run
+    .withSuccessHandler(function(rfi) {
+      if (!rfi) {
+        alert('ไม่พบข้อมูล RFI');
+        cancelReschedule();
+        return;
+      }
+      
+      // แสดงข้อมูลเดิม
+      document.getElementById('rescheduleRFINo').textContent = rfi.rfiNo || 'N/A';
+      document.getElementById('rescheduleRfiId').value = rfi.id;
+      
+      document.getElementById('originalDate').textContent = formatDateThai(rfi.requestDate);
+      document.getElementById('originalTime').textContent = (rfi.startTime || '') + ' - ' + (rfi.endTime || '');
+      document.getElementById('originalTeam').textContent = rfi.assignedInspector || '';
+      
+      // ตั้งค่าวันที่ขั้นต่ำเป็นวันพรุ่งนี้
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      var minDate = tomorrow.getFullYear() + '-' + 
+                    String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(tomorrow.getDate()).padStart(2, '0');
+      document.getElementById('rescheduleDate').setAttribute('min', minDate);
+    })
+    .withFailureHandler(function(error) {
+      alert('เกิดข้อผิดพลาด: ' + (error.message || error));
+      cancelReschedule();
+    })
+    .getRFIById(rfiId);
+}
+
+function cancelReschedule() {
+  document.getElementById('rfiTableContainer').style.display = 'block';
+  document.querySelector('.btn-primary').style.display = 'inline-block';
+  document.getElementById('rescheduleView').style.display = 'none';
+  document.getElementById('rescheduleForm').reset();
+  
+  resetTeamSelection();
+  availableTeams = [];
+}
+
+function updateAvailableSlots() {
+  var date = document.getElementById('rescheduleDate').value;
+  var startTimeSelect = document.getElementById('rescheduleStartTime');
+  var endTimeSelect = document.getElementById('rescheduleEndTime');
+  
+  startTimeSelect.innerHTML = '<option value="">-- กำลังโหลด... --</option>';
+  startTimeSelect.disabled = true;
+  endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
+  endTimeSelect.disabled = true;
+  
+  if (date) {
+    google.script.run
+      .withSuccessHandler(function(slots) {
+        startTimeSelect.innerHTML = '';
+        if (!slots || slots.length === 0) {
+          startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
+        } else {
+          startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+          for (var i = 0; i < slots.length; i++) {
+            var option = document.createElement('option');
+            option.value = slots[i];
+            option.textContent = slots[i] + ' น.';
+            startTimeSelect.appendChild(option);
+          }
+          startTimeSelect.disabled = false;
+        }
+      })
+      .withFailureHandler(function(error) {
+        startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลา', 'error');
+      })
+      .getAvailableTimeSlots(date, null);
+  }
+}
+
+function updateEndTimeSlots() {
+  var date = document.getElementById('rescheduleDate').value;
+  var startTime = document.getElementById('rescheduleStartTime').value;
+  var endTimeSelect = document.getElementById('rescheduleEndTime');
+  
+  if (!startTime) {
+    endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
+    endTimeSelect.disabled = true;
+    return;
+  }
+  
+  endTimeSelect.innerHTML = '<option value="">-- กำลังโหลด... --</option>';
+  endTimeSelect.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(times) {
+      endTimeSelect.innerHTML = '<option value="">-- ไม่ระบุ (default +1 ชม.) --</option>';
+      if (times && times.length > 0) {
+        for (var i = 0; i < times.length; i++) {
+          var option = document.createElement('option');
+          option.value = times[i];
+          option.textContent = times[i] + ' น.';
+          endTimeSelect.appendChild(option);
+        }
+        endTimeSelect.disabled = false;
+      }
+    })
+    .withFailureHandler(function(error) {
+      endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+    })
+    .getAvailableEndTimes(date, startTime, null);
+}
+
+function loadAvailableTeams() {
+  var date = document.getElementById('rescheduleDate').value;
+  var startTime = document.getElementById('rescheduleStartTime').value;
+  var endTime = document.getElementById('rescheduleEndTime').value;
+  var container = document.getElementById('rescheduleInspectorContainer');
+  
+  if (!date || !startTime) {
+    container.innerHTML = '<div class="inspector-loading">กรุณาเลือกวันที่และเวลาก่อน</div>';
+    return;
+  }
+  
+  if (!endTime) {
+    var parts = startTime.split(':');
+    var hour = parseInt(parts[0]) + 1;
+    endTime = hour.toString().padStart(2, '0') + ':' + parts[1];
+  }
+  
+  container.innerHTML = '<div class="inspector-loading">กำลังโหลดทีมงานที่ว่าง...</div>';
+  
+  google.script.run
+    .withSuccessHandler(function(resources) {
+      availableTeams = resources || [];
+      
+      if (availableTeams.length === 0) {
+        container.innerHTML = '<div class="inspector-loading">ไม่มีทีมว่างในช่วงเวลานี้</div>';
+        showMessage('ไม่มีทีมว่างสำหรับวันและเวลาที่เลือก', 'warning');
+        return;
+      }
+      
+      var html = '<div class="inspector-checkbox-group">';
+      
+      for (var i = 0; i < availableTeams.length; i++) {
+        var team = availableTeams[i];
+        html += '<div class="inspector-checkbox-item">';
+        html += '<input type="checkbox" id="team_' + team.id + '" value="' + team.name + '" onchange="updateSelectedTeams()">';
+        html += '<label for="team_' + team.id + '">' + team.name + '</label>';
+        html += '<span class="badge">' + team.subType + '</span>';
+        html += '</div>';
+      }
+      
+      html += '</div>';
+      container.innerHTML = html;
+      showMessage('พบทีมว่าง ' + availableTeams.length + ' ทีม', 'info', 3000);
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div class="inspector-loading">เกิดข้อผิดพลาด</div>';
+      showMessage('เกิดข้อผิดพลาดในการโหลดทีมงาน', 'error');
+    })
+    .getAvailableResourcesList(date, startTime, endTime, null);
+}
+
+function updateSelectedTeams() {
+  var checkboxes = document.querySelectorAll('#rescheduleInspectorContainer input[type="checkbox"]:checked');
+  var selectedTeams = [];
+  
+  for (var i = 0; i < checkboxes.length; i++) {
+    selectedTeams.push(checkboxes[i].value);
+  }
+  
+  document.getElementById('rescheduleAssignedInspector').value = selectedTeams.join(',');
+  
+  var infoDiv = document.getElementById('rescheduleSelectedTeamsInfo');
+  if (selectedTeams.length > 0) {
+    infoDiv.textContent = 'เลือกแล้ว: ' + selectedTeams.join(', ');
+    infoDiv.style.fontWeight = '600';
+  } else {
+    infoDiv.textContent = 'เลือกได้หลายทีม (เฉพาะทีมที่ว่าง)';
+    infoDiv.style.fontWeight = '400';
+  }
+}
+
+function resetTeamSelection() {
+  var container = document.getElementById('rescheduleInspectorContainer');
+  container.innerHTML = '<div class="inspector-loading">กรุณาเลือกวันที่และเวลาก่อน</div>';
+  document.getElementById('rescheduleAssignedInspector').value = '';
+  document.getElementById('rescheduleSelectedTeamsInfo').textContent = 'เลือกได้หลายทีม (เฉพาะทีมที่ว่าง)';
+}
+
+function handleRescheduleSubmit() {
+  var rfiId = document.getElementById('rescheduleRfiId').value;
+  var loading = document.getElementById('rescheduleLoading');
+  
+  var formData = {
+    requestDate: document.getElementById('rescheduleDate').value,
+    startTime: document.getElementById('rescheduleStartTime').value,
+    endTime: document.getElementById('rescheduleEndTime').value,
+    assignedInspector: document.getElementById('rescheduleAssignedInspector').value
+  };
+  
+  if (!formData.requestDate || !formData.startTime || !formData.assignedInspector) {
+    showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+    return;
+  }
+  
+  loading.style.display = 'block';
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loading.style.display = 'none';
+      
+      if (result && result.success) {
+        showMessage(result.message || 'เลื่อนตรวจ RFI สำเร็จ', 'success', 8000);
+        setTimeout(function() {
+          cancelReschedule();
+          loadPostponedRFIList();
+        }, 2000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      loading.style.display = 'none';
+      showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+    })
+    .reschedulePostponedRFI(rfiId, formData);
+}
+
+function formatDateThai(dateString) {
+  if (!dateString) return '';
+  
+  var months = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  
+  var date = new Date(dateString + 'T00:00:00');
+  var day = date.getDate();
+  var month = months[date.getMonth()];
+  var year = date.getFullYear() + 543;
+  
+  return day + ' ' + month + ' ' + year;
+}
+
+function showMessage(text, type, duration) {
+  if (typeof duration === 'undefined') duration = 5000;
+  var messageDiv = document.getElementById('message');
+  messageDiv.textContent = text;
+  messageDiv.className = 'message ' + type;
+  messageDiv.style.display = 'block';
+  setTimeout(function() {
+    messageDiv.style.display = 'none';
+  }, duration);
+}
+</script>
+</body>
+</html>
