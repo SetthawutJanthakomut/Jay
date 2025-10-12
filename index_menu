@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ศูนย์รวมระบบงาน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* ========== Login Screen ========== */
+    .login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+    }
+    
+    .login-box {
+      background: white;
+      border-radius: 24px;
+      padding: 60px 50px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 450px;
+      width: 100%;
+      animation: scaleIn 0.5s ease-out;
+    }
+    
+    .login-box h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    
+    .login-box p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .login-icon {
+      font-size: 80px;
+      margin-bottom: 30px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .google-btn {
+      background: white;
+      border: 2px solid #e4e6eb;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .google-btn:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .google-icon {
+      width: 24px;
+      height: 24px;
+    }
+    
+    /* ========== Main App ========== */
+    .main-app {
+      display: none;
+    }
+    
+    .main-app.show {
+      display: block;
+    }
+    
+    /* ========== Header ========== */
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 30px 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: slideDown 0.6s ease-out;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .header-left h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+    }
+    
+    .header-left p {
+      color: #666;
+      font-size: 16px;
+      font-weight: 300;
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .user-info {
+      text-align: right;
+      margin-right: 10px;
+    }
+    
+    .user-email {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+    
+    .admin-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .btn-logout {
+      background: #f5f6f7;
+      color: #666;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-logout:hover {
+      background: #e4e6eb;
+      transform: translateY(-2px);
+    }
+    
+    .btn-add, .btn-manage {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-manage {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .btn-add:hover, .btn-manage:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* ========== Apps Grid ========== */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 25px;
+      animation: fadeIn 0.8s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    .app-card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      position: relative;
+      overflow: hidden;
+      animation: scaleIn 0.5s ease-out;
+    }
+    
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    .app-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+      background-size: 300% 100%;
+      animation: gradientMove 3s ease infinite;
+    }
+    
+    @keyframes gradientMove {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .app-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.2);
+    }
+    
+    .app-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      object-fit: cover;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .app-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .app-owner {
+      font-size: 13px;
+      color: #999;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .app-actions {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: none;
+      gap: 8px;
+    }
+    
+    .app-card:hover .app-actions {
+      display: flex;
+    }
+    
+    .btn-edit, .btn-delete {
+      background: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-edit {
+      color: #667eea;
+    }
+    
+    .btn-delete {
+      color: #ff6b6b;
+    }
+    
+    .btn-edit:hover, .btn-delete:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* ========== Modal ========== */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+      overflow-y: auto;
+    }
+    
+    .modal.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideUp 0.4s ease-out;
+      margin: 40px 0;
+    }
+    
+    .modal-content.large {
+      max-width: 800px;
+    }
+    
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      margin-bottom: 30px;
+    }
+    
+    .modal-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+    }
+    
+    .modal-header p {
+      color: #999;
+      font-size: 14px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e4e6eb;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-cancel {
+      background: #f5f6f7;
+      color: #666;
+    }
+    
+    .btn-cancel:hover {
+      background: #e4e6eb;
+    }
+    
+    .btn-submit {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* ========== Users Management ========== */
+    .users-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .user-item {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    
+    .user-email-display {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+    
+    .apps-checkboxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .checkbox-item label {
+      font-size: 14px;
+      color: #555;
+      margin: 0;
+      cursor: pointer;
+    }
+    
+    .user-actions-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-save-user, .btn-delete-user {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-save-user {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-delete-user {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-add-user {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    .new-user-form {
+      background: #f0f7ff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .new-user-form.show {
+      display: block;
+    }
+    
+    /* ========== Loading & Messages ========== */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: white;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 20px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      z-index: 2000;
+      display: none;
+      animation: slideInRight 0.4s ease-out;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .message.show {
+      display: block;
+    }
+    
+    .message.success {
+      border-left: 4px solid #10b981;
+    }
+    
+    .message.error {
+      border-left: 4px solid #ef4444;
+    }
+    
+    /* ========== Empty State ========== */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .empty-state h3 {
+      font-size: 24px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .empty-state p {
+      color: #999;
+      font-size: 16px;
+    }
+    
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+      
+      .header-right {
+        flex-direction: column;
+      }
+      
+      .user-info {
+        text-align: center;
+        margin-right: 0;
+      }
+      
+      .apps-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+      }
+      
+      .apps-checkboxes {
+        grid-template-columns: 1fr;
+      }
+      
+      .login-box {
+        padding: 40px 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <div class="login-icon">🚀</div>
+      <h1>ศูนย์รวมระบบงาน</h1>
+      <p>เข้าสู่ระบบด้วย Google Account</p>
+      <button class="google-btn" onclick="handleGoogleLogin()">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        เข้าสู่ระบบด้วย Google
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div class="main-app" id="mainApp">
+    <div class="container">
+      <div class="header">
+        <div class="header-left">
+          <h1>🚀 ศูนย์รวมระบบงาน</h1>
+          <p>เลือกระบบงานที่ต้องการใช้งาน</p>
+        </div>
+        <div class="header-right">
+          <div class="user-info">
+            <div class="user-email" id="userEmail">Loading...</div>
+            <div id="adminBadge"></div>
+          </div>
+          <button class="btn-manage" id="btnManage" style="display:none;" onclick="openManageModal()">
+            <span>👥</span>
+            <span>จัดการสิทธิ์</span>
+          </button>
+          <button class="btn-add" id="btnAdd" style="display:none;" onclick="openModal()">
+            <span>➕</span>
+            <span>เพิ่มระบบงาน</span>
+          </button>
+          <button class="btn-logout" onclick="handleLogout()">
+            🚪 ออกจากระบบ
+          </button>
+        </div>
+      </div>
+      
+      <div id="appsContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>กำลังโหลดระบบงาน...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit App Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">✨ เพิ่มระบบงานใหม่</h2>
+        <p id="modalDesc">กรอกข้อมูลระบบงานที่ต้องการเพิ่ม</p>
+      </div>
+      <form id="addForm">
+        <input type="hidden" id="editMode" value="false">
+        <input type="hidden" id="oldAppName" value="">
+        <div class="form-group">
+          <label>ชื่อระบบงาน</label>
+          <input type="text" id="appName" required placeholder="เช่น Survey Work System">
+        </div>
+        <div class="form-group">
+          <label>URL ของระบบ</label>
+          <input type="url" id="appUrl" required placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>URL รูปภาพ (ไอคอน)</label>
+          <input type="url" id="appPhoto" required placeholder="https://...">
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="closeModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-submit" id="submitBtn">เพิ่มระบบงาน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Manage Permissions Modal -->
+  <div class="modal" id="manageModal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h2>👥 จัดการสิทธิ์ผู้ใช้งาน</h2>
+        <p>เพิ่มหรือแก้ไขสิทธิ์การเข้าถึงระบบงานของผู้ใช้</p>
+      </div>
+      
+      <button class="btn btn-submit btn-add-user" onclick="toggleNewUserForm()">
+        ➕ เพิ่มผู้ใช้ใหม่
+      </button>
+      
+      <div class="new-user-form" id="newUserForm">
+        <div class="form-group">
+          <label>อีเมลผู้ใช้</label>
+          <input type="email" id="newUserEmail" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+          <label>เลือกระบบงานที่อนุญาต</label>
+          <div class="apps-checkboxes" id="newUserApps"></div>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="toggleNewUserForm()">ยกเลิก</button>
+          <button type="button" class="btn btn-submit" onclick="addNewUser()">บันทึก</button>
+        </div>
+      </div>
+      
+      <div class="users-list" id="usersList">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>กำลังโหลดข้อมูลผู้ใช้...</p>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeManageModal()">ปิด</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="message" id="message"></div>
+  
+  <script>
+    let isAdmin = false;
+    let allApps = [];
+    let currentUserEmail = null;
+    let isLoggedIn = false;
+    
+    window.onload = function() {
+      checkLoginStatus();
+    };
+    
+    function checkLoginStatus() {
+      // ตรวจสอบว่ามี session หรือไม่
+      const savedEmail = sessionStorage.getItem('userEmail');
+      
+      if (savedEmail) {
+        currentUserEmail = savedEmail;
+        isLoggedIn = true;
+        showMainApp();
+        loadApps();
+      } else {
+        // พยายามดึงข้อมูลจาก Google Apps Script
+        google.script.run
+          .withSuccessHandler(function(email) {
+            if (email && email !== 'ไม่ทราบผู้ใช้') {
+              currentUserEmail = email;
+              isLoggedIn = true;
+              sessionStorage.setItem('userEmail', email);
+              showMainApp();
+              loadApps();
+            } else {
+              showLoginScreen();
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.log('Auto-login failed:', error);
+            showLoginScreen();
+          })
+          .getCurrentUser();
+      }
+    }
+    
+    function handleGoogleLogin() {
+      // พยายาม login ผ่าน Google Apps Script
+      google.script.run
+        .withSuccessHandler(function(email) {
+          if (email && email !== 'ไม่ทราบผู้ใช้') {
+            currentUserEmail = email;
+            isLoggedIn = true;
+            sessionStorage.setItem('userEmail', email);
+            showMainApp();
+            loadApps();
+            showMessage('เข้าสู่ระบบสำเร็จ! 🎉', 'success');
+          } else {
+            showMessage('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getCurrentUser();
+    }
+    
+    function handleLogout() {
+      if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+        sessionStorage.removeItem('userEmail');
+        currentUserEmail = null;
+        isLoggedIn = false;
+        showLoginScreen();
+        showMessage('ออกจากระบบเรียบร้อย', 'success');
+      }
+    }
+    
+    function showLoginScreen() {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('mainApp').classList.remove('show');
+    }
+    
+    function showMainApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').classList.add('show');
+    }
+    
+    function loadApps() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          isAdmin = result.isAdmin;
+          currentUserEmail = result.userEmail;
+          
+          // แสดงอีเมลผู้ใช้
+          document.getElementById('userEmail').textContent = currentUserEmail;
+          
+          if (isAdmin) {
+            document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👑 Admin</span>';
+            document.getElementById('btnAdd').style.display = 'flex';
+            document.getElementById('btnManage').style.display = 'flex';
+          }
+          
+          displayApps(result.apps);
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getApps();
+    }
+    
+    function displayApps(apps) {
+      const container = document.getElementById('appsContainer');
+      
+      if (!apps || apps.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h3>😊 ยังไม่มีระบบงาน</h3>
+            <p>กรุณาเพิ่มระบบงานเพื่อเริ่มต้นใช้งาน</p>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '<div class="apps-grid">';
+      
+      apps.forEach(function(app, index) {
+        html += `
+          <div class="app-card" onclick="openApp('${app.url}')" style="animation-delay: ${index * 0.1}s">
+            <img src="${app.photo}" alt="${app.name}" class="app-icon" onerror="this.src='https://via.placeholder.com/80/667eea/FFFFFF?text=${app.name.charAt(0)}'">
+            <div class="app-name">${app.name}</div>
+            <div class="app-owner">
+              <span>👤</span>
+              <span>${app.owner}</span>
+            </div>
+            ${isAdmin ? `
+              <div class="app-actions">
+                <button class="btn-edit" onclick="editApp(event, '${app.name}', '${app.url}', '${app.photo}')" title="แก้ไข">✏️</button>
+                <button class="btn-delete" onclick="deleteApp(event, '${app.name}')" title="ลบ">🗑️</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+    }
+    
+    function openApp(url) {
+      window.open(url, '_blank');
+    }
+    
+    function openModal() {
+      document.getElementById('modalTitle').textContent = '✨ เพิ่มระบบงานใหม่';
+      document.getElementById('modalDesc').textContent = 'กรอกข้อมูลระบบงานที่ต้องการเพิ่ม';
+      document.getElementById('submitBtn').textContent = 'เพิ่มระบบงาน';
+      document.getElementById('editMode').value = 'false';
+      document.getElementById('addForm').reset();
+      document.getElementById('addModal').classList.add('show');
+    }
+    
+    function closeModal() {
+      document.getElementById('addModal').classList.remove('show');
+      document.getElementById('addForm').reset();
+    }
+    
+    function editApp(event, name, url, photo) {
+      event.stopPropagation();
+      
+      document.getElementById('modalTitle').textContent = '✏️ แก้ไขระบบงาน';
+      document.getElementById('modalDesc').textContent = 'แก้ไขข้อมูลระบบงาน';
+      document.getElementById('submitBtn').textContent = 'บันทึกการแก้ไข';
+      document.getElementById('editMode').value = 'true';
+      document.getElementById('oldAppName').value = name;
+      document.getElementById('appName').value = name;
+      document.getElementById('appUrl').value = url;
+      document.getElementById('appPhoto').value = photo;
+      document.getElementById('addModal').classList.add('show');
+    }
+    
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('appName').value;
+      const url = document.getElementById('appUrl').value;
+      const photo = document.getElementById('appPhoto').value;
+      const isEdit = document.getElementById('editMode').value === 'true';
+      const oldName = document.getElementById('oldAppName').value;
+      
+      if (isEdit) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              showMessage('แก้ไขระบบงานสำเร็จ! ✅', 'success');
+              closeModal();
+              loadApps();
+            } else {
+              showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+          })
+          .updateApp(oldName, name, url, photo);
+      } else {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              showMessage('เพิ่มระบบงานสำเร็จ! 🎉', 'success');
+              closeModal();
+              loadApps();
+            } else {
+              showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+          })
+          .addApp(name, url, photo);
+      }
+    });
+    
+    function deleteApp(event, name) {
+      event.stopPropagation();
+      
+      if (!confirm('ต้องการลบระบบงาน "' + name + '" ใช่หรือไม่?')) {
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ลบระบบงานสำเร็จ! ✅', 'success');
+            loadApps();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .deleteApp(name);
+    }
+    
+    function openManageModal() {
+      document.getElementById('manageModal').classList.add('show');
+      loadUsersAndApps();
+    }
+    
+    function closeManageModal() {
+      document.getElementById('manageModal').classList.remove('show');
+      document.getElementById('newUserForm').classList.remove('show');
+    }
+    
+    function loadUsersAndApps() {
+      google.script.run
+        .withSuccessHandler(function(apps) {
+          allApps = apps;
+          loadUsers();
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getAllApps();
+    }
+    
+    function loadUsers() {
+      google.script.run
+        .withSuccessHandler(function(users) {
+          displayUsers(users);
+          displayNewUserApps();
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getAllUsers();
+    }
+    
+    function displayUsers(users) {
+      const container = document.getElementById('usersList');
+      
+      if (!users || users.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>ยังไม่มีผู้ใช้</h3><p>เพิ่มผู้ใช้เพื่อจัดการสิทธิ์</p></div>';
+        return;
+      }
+      
+      let html = '';
+      
+      users.forEach(function(user, index) {
+        html += `
+          <div class="user-item">
+            <div class="user-email-display">${user.email}</div>
+            <div class="user-actions-btn">
+              <button class="btn-save-user" onclick="saveUserPermissions('${user.email}', ${index})">💾 บันทึก</button>
+              <button class="btn-delete-user" onclick="deleteUser('${user.email}')">🗑️ ลบ</button>
+            </div>
+            <div class="apps-checkboxes" id="userApps${index}">
+        `;
+        
+        allApps.forEach(function(app) {
+          const checked = user.apps.includes(app) ? 'checked' : '';
+          html += `
+            <div class="checkbox-item">
+              <input type="checkbox" id="user${index}_${app}" value="${app}" ${checked}>
+              <label for="user${index}_${app}">${app}</label>
+            </div>
+          `;
+        });
+        
+        html += `
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    function displayNewUserApps() {
+      const container = document.getElementById('newUserApps');
+      let html = '';
+      
+      allApps.forEach(function(app) {
+        html += `
+          <div class="checkbox-item">
+            <input type="checkbox" id="newUser_${app}" value="${app}">
+            <label for="newUser_${app}">${app}</label>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    function toggleNewUserForm() {
+      const form = document.getElementById('newUserForm');
+      form.classList.toggle('show');
+      if (!form.classList.contains('show')) {
+        document.getElementById('newUserEmail').value = '';
+        const checkboxes = document.querySelectorAll('#newUserApps input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+    }
+    
+    function addNewUser() {
+      const email = document.getElementById('newUserEmail').value.trim();
+      
+      if (!email) {
+        showMessage('กรุณากรอกอีเมล', 'error');
+        return;
+      }
+      
+      const selectedApps = [];
+      const checkboxes = document.querySelectorAll('#newUserApps input[type="checkbox"]:checked');
+      checkboxes.forEach(cb => selectedApps.push(cb.value));
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('เพิ่มผู้ใช้สำเร็จ! ✅', 'success');
+            toggleNewUserForm();
+            loadUsers();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .updateUserPermissions(email, selectedApps);
+    }
+    
+    function saveUserPermissions(email, index) {
+      const selectedApps = [];
+      const checkboxes = document.querySelectorAll(`#userApps${index} input[type="checkbox"]:checked`);
+      checkboxes.forEach(cb => selectedApps.push(cb.value));
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('บันทึกสิทธิ์สำเร็จ! ✅', 'success');
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .updateUserPermissions(email, selectedApps);
+    }
+    
+    function deleteUser(email) {
+      if (!confirm('ต้องการลบผู้ใช้ "' + email + '" ใช่หรือไม่?')) {
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ลบผู้ใช้สำเร็จ! ✅', 'success');
+            loadUsers();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .deleteUser(email);
+    }
+    
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.className = 'message ' + type + ' show';
+      
+      setTimeout(function() {
+        messageDiv.classList.remove('show');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
