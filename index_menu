@@ -356,130 +356,47 @@
 }
     
     /* ========== Apps Grid ========== */
-    .apps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 25px;
-      animation: fadeIn 0.8s ease-out;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-    
-    .app-card {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      position: relative;
-      overflow: hidden;
-      animation: scaleIn 0.5s ease-out;
-    }
-    
-    @keyframes scaleIn {
-      from {
-        opacity: 0;
-        transform: scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-    
-    .app-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 6px;
-      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
-      background-size: 300% 100%;
-      animation: gradientMove 3s ease infinite;
-    }
-    
-    @keyframes gradientMove {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-    
-    .app-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.2);
-    }
-    
-    .app-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 16px;
-      margin-bottom: 20px;
-      object-fit: cover;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .app-name {
-      font-size: 20px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 8px;
-    }
-    
-    .app-owner {
-      font-size: 13px;
-      color: #999;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    
-    .app-actions {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      display: none;
-      gap: 8px;
-    }
-    
-    .app-card:hover .app-actions {
-      display: flex;
-    }
-    
-    .btn-edit, .btn-delete {
-      background: white;
-      border: none;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
-    }
-    
-    .btn-edit {
-      color: #667eea;
-    }
-    
-    .btn-delete {
-      color: #ff6b6b;
-    }
-    
-    .btn-edit:hover, .btn-delete:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
+.apps-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 25px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 20px;
+  animation: fadeIn 0.8s ease-out;
+  scroll-behavior: smooth;
+  
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #667eea #f0f0f0;
+}
+
+.apps-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.apps-grid::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.apps-grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+}
+
+.apps-grid::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
     
     /* ========== Modal ========== */
     .modal {
@@ -1055,9 +972,7 @@ select:focus {
       <span>ดูรายงาน</span>
     </button>
         <!-- เพิ่มใน header-right -->
-<button class="btn-logout" onclick="testDirectCall()" style="background: #ff6b6b;">
-  🧪 Test Reports
-</button>
+
   </div>
   
   <!-- ปุ่มออกจากระบบ -->
@@ -1966,22 +1881,7 @@ function deleteReportItem(rowIndex) {
         .debugUserInfo();
     }
 
-    // เพิ่มฟังก์ชันนี้ใน <script> tag
-function testDirectCall() {
-  console.log('=== Testing V2 ===');
-  
-  google.script.run
-    .withSuccessHandler(function(result) {
-      console.log('V2 Result:', result);
-      console.log('Is Array:', Array.isArray(result));
-      alert('V2 Result: ' + JSON.stringify(result));
-    })
-    .withFailureHandler(function(error) {
-      console.error('V2 Error:', error);
-      alert('V2 Error: ' + error);
-    })
-    .getAllReportsV2(); // เปลี่ยนตรงนี้
-}
+    
 
 // เพิ่มปุ่มทดสอบชั่วคราว
 
@@ -1994,19 +1894,7 @@ function getReports() {
 }
 
   </script>
-  <script>
-google.script.run
-  .withSuccessHandler(function(data) {
-    console.log("Reports V2 Received ===");
-    console.log("Value:", data);
-    if (!data) {
-      console.error("ERROR: Still receiving null!");
-    } else {
-      console.log("✅ Data loaded successfully!");
-    }
-  })
-  .getReports();
-</script>
+
   
 </body>
 </html>
