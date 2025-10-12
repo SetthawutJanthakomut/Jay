@@ -119,10 +119,51 @@ function updateApp(oldName, name, url, photo) {
       sheet.getRange(i + 1, 1).setValue(name);
       sheet.getRange(i + 1, 2).setValue(url);
       sheet.getRange(i + 1, 3).setValue(photo);
+      
+      // หาผู้ใช้ที่มีสิทธิ์เข้าถึงแอปนี้
+      const users = getUsersWithAccessToApp(oldName);
+      
+      // ถ้ามีการเปลี่ยนชื่อแอป ต้องอัปเดตใน Permission sheet ด้วย
+      if (oldName !== name) {
+        updateAppNameInPermissions(oldName, name);
+      }
+      
+      // ส่งอีเมลแจ้งผู้ใช้
+      if (users.length > 0) {
+        notifyAppUpdate(name, url, users);
+      }
+      
       return { success: true };
     }
   }
   return { success: false, message: 'ไม่พบระบบงาน' };
+}
+
+// ฟังก์ชันอัปเดตชื่อแอปใน Permission sheet เมื่อมีการเปลี่ยนชื่อ
+function updateAppNameInPermissions(oldName, newName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    return;
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1]) {
+      try {
+        let apps = JSON.parse(data[i][1]);
+        const index = apps.indexOf(oldName);
+        if (index !== -1) {
+          apps[index] = newName;
+          permSheet.getRange(i + 1, 2).setValue(JSON.stringify(apps));
+        }
+      } catch (e) {
+        // ข้าม
+      }
+    }
+  }
 }
 
 function deleteApp(name) {
@@ -207,7 +248,7 @@ function getAllUsers() {
   return users;
 }
 
-function updateUserPermissions(email, apps) {
+function updateUserPermissions(email, apps, sendEmail) {
   const currentUser = Session.getActiveUser().getEmail();
   const effectiveUser = Session.getEffectiveUser().getEmail();
   const userEmail = currentUser || effectiveUser;
@@ -221,14 +262,25 @@ function updateUserPermissions(email, apps) {
   
   if (!permSheet) {
     permSheet = ss.insertSheet('Permission');
-    permSheet.appendRow(['UserEmail', 'Apps']);
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
   }
   
   const data = permSheet.getDataRange().getValues();
   let found = false;
+  let isNewUser = true;
+  let oldApps = [];
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      if (data[i][1]) {
+        try {
+          oldApps = JSON.parse(data[i][1]);
+          isNewUser = oldApps.length === 0;
+        } catch (e) {
+          oldApps = [];
+        }
+      }
+      
       permSheet.getRange(i + 1, 2).setValue(JSON.stringify(apps));
       found = true;
       break;
@@ -236,7 +288,12 @@ function updateUserPermissions(email, apps) {
   }
   
   if (!found) {
-    permSheet.appendRow([email, JSON.stringify(apps)]);
+    permSheet.appendRow([email, JSON.stringify(apps), '', '']);
+  }
+  
+  // ส่งอีเมลเฉพาะเมื่อ Admin เลือก
+  if (sendEmail === true) {
+    notifyPermissionChange(email, apps, isNewUser);
   }
   
   return { success: true };
@@ -288,4 +345,652 @@ function getOrCreateSheet() {
   }
   
   return sheet;
+}
+
+function debugUserInfo() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  
+  return {
+    currentUser: currentUser || 'ไม่มีข้อมูล',
+    effectiveUser: effectiveUser || 'ไม่มีข้อมูล',
+    userEmail: currentUser || effectiveUser || 'ไม่ทราบผู้ใช้'
+  };
+}
+
+
+// ฟังก์ชันสำหรับ Request เข้าใช้งาน
+function requestAccess(name, note) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!name || !userEmail) {
+    return { success: false, message: 'กรุณากรอกชื่อ' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+  }
+  
+  // ตรวจสอบว่ามี request ซ้ำหรือไม่
+  const data = permSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === userEmail.toLowerCase()) {
+      return { success: false, message: 'คุณได้ส่ง Request ไปแล้ว กรุณารอการอนุมัติจาก Admin' };
+    }
+  }
+  
+  // บันทึก Request
+  permSheet.appendRow([userEmail, '', name, note || '']);
+  
+  // ส่งอีเมลแจ้ง Admin
+  const adminEmail = 'setthawut.se11@gmail.com';
+  const subject = '🔔 มีผู้ใช้ใหม่ Request เข้าใช้ระบบ';
+  const body = `มีผู้ใช้ขอเข้าใช้ระบบงาน\n\n` +
+               `อีเมล: ${userEmail}\n` +
+               `ชื่อ: ${name}\n` +
+               `หมายเหตุ: ${note || '-'}\n\n` +
+               `กรุณาเข้าไปจัดการสิทธิ์ในระบบ`;
+  
+  try {
+    MailApp.sendEmail(adminEmail, subject, body);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+  
+  return { success: true };
+}
+
+// ฟังก์ชันสำหรับรายงานปัญหา
+function sendReport(message) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!message) {
+    return { success: false, message: 'กรุณากรอกข้อความ' };
+  }
+  
+  const adminEmail = 'setthawut.se11@gmail.com';
+  const subject = '📢 รายงานปัญหา/ข้อเสนอแนะระบบงาน';
+  const body = `มีรายงานปัญหาจากผู้ใช้\n\n` +
+               `จาก: ${userEmail}\n` +
+               `ข้อความ:\n${message}\n\n` +
+               `เวลา: ${new Date().toLocaleString('th-TH')}`;
+  
+  try {
+    MailApp.sendEmail(adminEmail, subject, body);
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: 'ไม่สามารถส่งอีเมลได้: ' + e };
+  }
+}
+
+// แก้ไข getAllUsers ให้แสดงทั้ง Name และ Note
+function getAllUsers() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      let apps = [];
+      if (data[i][1]) {
+        try {
+          apps = JSON.parse(data[i][1]);
+        } catch (e) {
+          apps = [];
+        }
+      }
+      users.push({
+        email: data[i][0],
+        apps: apps,
+        name: data[i][2] || '',
+        note: data[i][3] || ''
+      });
+    }
+  }
+  return users;
+}
+
+// ฟังก์ชันหาผู้ใช้ที่มีสิทธิ์เข้าถึงแอป
+function getUsersWithAccessToApp(appName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      try {
+        const apps = JSON.parse(data[i][1]);
+        if (apps.includes(appName)) {
+          users.push(data[i][0]);
+        }
+      } catch (e) {
+        // ข้าม
+      }
+    }
+  }
+  
+  return users;
+}
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนแอปอัปเดต
+function notifyAppUpdate(appName, url, users) {
+  if (!users || users.length === 0) {
+    return;
+  }
+  
+  const subject = '🔔 แจ้งเตือน: ระบบงาน "' + appName + '" มีการอัปเดต';
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `ระบบงาน "${appName}" ที่คุณมีสิทธิ์เข้าถึงมีการอัปเดตข้อมูล\n\n` +
+               `URL: ${url}\n\n` +
+               `กรุณาตรวจสอบการเปลี่ยนแปลงและใช้งานได้ตามปกติ\n\n` +
+               `ขอบคุณครับ/ค่ะ\n` +
+               `ทีมงานระบบ`;
+  
+  try {
+    users.forEach(function(email) {
+      MailApp.sendEmail(email, subject, body);
+    });
+    Logger.log('ส่งอีเมลแจ้งเตือนให้ผู้ใช้ ' + users.length + ' คน');
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+}
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนสิทธิ์ถูกเปลี่ยนแปลง
+function notifyPermissionChange(email, apps, isNewUser) {
+  const subject = isNewUser ? 
+    '✅ คำขอเข้าใช้ระบบได้รับการอนุมัติ' : 
+    '🔔 สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง';
+  
+  let appsList = '';
+  if (apps && apps.length > 0) {
+    appsList = apps.map((app, index) => `${index + 1}. ${app}`).join('\n');
+  } else {
+    appsList = 'ไม่มี (สิทธิ์ถูกยกเลิก)';
+  }
+  
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `${isNewUser ? 'คำขอเข้าใช้ระบบของคุณได้รับการอนุมัติแล้ว!' : 'สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง'}\n\n` +
+               `ระบบงานที่คุณสามารถเข้าถึงได้:\n${appsList}\n\n` +
+               `${apps && apps.length > 0 ? 'คุณสามารถเข้าใช้งานระบบได้ทันที' : 'หากมีข้อสงสัย กรุณาติดต่อ Admin'}\n\n` +
+               `ขอบคุณครับ/ค่ะ\n` +
+               `ทีมงานระบบ`;
+  
+  try {
+    MailApp.sendEmail(email, subject, body);
+    Logger.log('ส่งอีเมลแจ้งเตือนให้: ' + email);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+}
+
+function addApp(name, url, photo) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์เพิ่มระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const owner = userEmail;
+  sheet.appendRow([name, url, photo, owner]);
+  
+  // ส่งอีเมลแจ้ง Admin เองว่าเพิ่มแอปสำเร็จ (Optional)
+  try {
+    const subject = '✅ เพิ่มระบบงานใหม่สำเร็จ';
+    const body = `คุณได้เพิ่มระบบงานใหม่เรียบร้อยแล้ว\n\n` +
+                 `ชื่อระบบ: ${name}\n` +
+                 `URL: ${url}\n\n` +
+                 `อย่าลืมไปจัดการสิทธิ์ให้กับผู้ใช้ที่ต้องการเข้าถึงระบบนี้`;
+    MailApp.sendEmail(userEmail, subject, body);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+  
+  return { success: true };
+}
+
+// ฟังก์ชันสร้าง Sheet Report (กดรันใน Apps Script Editor)
+function createReportSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (reportSheet) {
+    Logger.log('Sheet Report มีอยู่แล้ว');
+    return;
+  }
+  
+  // สร้าง Sheet ใหม่
+  reportSheet = ss.insertSheet('Report');
+  
+  // สร้าง Header
+  reportSheet.appendRow([
+    'Timestamp',
+    'UserEmail', 
+    'Message', 
+    'Status',
+    'AdminReply',
+    'ReplyDate'
+  ]);
+  
+  // ตั้งค่าความกว้างคอลัมน์
+  reportSheet.setColumnWidth(1, 150); // Timestamp
+  reportSheet.setColumnWidth(2, 200); // UserEmail
+  reportSheet.setColumnWidth(3, 400); // Message
+  reportSheet.setColumnWidth(4, 120); // Status
+  reportSheet.setColumnWidth(5, 400); // AdminReply
+  reportSheet.setColumnWidth(6, 150); // ReplyDate
+  
+  // ตั้งค่าสี Header
+  const headerRange = reportSheet.getRange('A1:F1');
+  headerRange.setBackground('#667eea');
+  headerRange.setFontColor('#FFFFFF');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  
+  Logger.log('✅ สร้าง Sheet Report สำเร็จ!');
+}
+
+// แก้ไขฟังก์ชัน sendReport ให้บันทึกลง Sheet
+function sendReport(message) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!message) {
+    return { success: false, message: 'กรุณากรอกข้อความ' };
+  }
+  
+  // บันทึกลง Sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    createReportSheet();
+    reportSheet = ss.getSheetByName('Report');
+  }
+  
+  const timestamp = new Date();
+  reportSheet.appendRow([
+    timestamp,
+    userEmail,
+    message,
+    'รอดำเนินการ',
+    '',
+    ''
+  ]);
+  
+  // ส่งอีเมลแจ้ง Admin
+  const adminEmail = 'setthawut.se11@gmail.com';
+  const subject = '📢 รายงานปัญหา/ข้อเสนอแนะระบบงาน';
+  const body = `มีรายงานปัญหาจากผู้ใช้\n\n` +
+               `จาก: ${userEmail}\n` +
+               `ข้อความ:\n${message}\n\n` +
+               `เวลา: ${timestamp.toLocaleString('th-TH')}\n\n` +
+               `กรุณาเข้าระบบเพื่อตอบกลับผู้ใช้`;
+  
+  try {
+    MailApp.sendEmail(adminEmail, subject, body);
+    return { success: true };
+  } catch (e) {
+    return { success: true, message: 'บันทึกสำเร็จ แต่ไม่สามารถส่งอีเมลได้: ' + e };
+  }
+}
+
+// ฟังก์ชันดึงรายงานทั้งหมด (สำหรับ Admin)
+function getAllReports() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return [];
+  }
+  
+  const data = reportSheet.getDataRange().getValues();
+  const reports = [];
+  
+  for (let i = data.length - 1; i >= 1; i--) { // เรียงจากใหม่ไปเก่า
+    if (data[i][0]) {
+      reports.push({
+        rowIndex: i + 1,
+        timestamp: data[i][0],
+        userEmail: data[i][1],
+        message: data[i][2],
+        status: data[i][3] || 'รอดำเนินการ',
+        adminReply: data[i][4] || '',
+        replyDate: data[i][5] || ''
+      });
+    }
+  }
+  
+  return reports;
+}
+
+// ฟังก์ชันอัปเดตสถานะและตอบกลับ
+function updateReportStatus(rowIndex, status, adminReply) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  const replyDate = new Date();
+  
+  // อัปเดตข้อมูล
+  reportSheet.getRange(rowIndex, 4).setValue(status); // Status
+  reportSheet.getRange(rowIndex, 5).setValue(adminReply); // AdminReply
+  reportSheet.getRange(rowIndex, 6).setValue(replyDate); // ReplyDate
+  
+  // ส่งอีเมลแจ้งผู้รายงาน
+  const reporterEmail = reportSheet.getRange(rowIndex, 2).getValue();
+  const originalMessage = reportSheet.getRange(rowIndex, 3).getValue();
+  
+  const subject = '✅ ตอบกลับ: รายงานปัญหาของคุณ';
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `ขอบคุณที่รายงานปัญหาให้เรา\n\n` +
+               `ข้อความของคุณ:\n"${originalMessage}"\n\n` +
+               `สถานะ: ${status}\n\n` +
+               `คำตอบจาก Admin:\n${adminReply}\n\n` +
+               `วันที่ตอบกลับ: ${replyDate.toLocaleString('th-TH')}\n\n` +
+               `ขอบคุณที่ใช้งานระบบครับ/ค่ะ`;
+  
+  try {
+    MailApp.sendEmail(reporterEmail, subject, body);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+  
+  return { success: true };
+}
+
+// ฟังก์ชันลบรายงาน
+function deleteReport(rowIndex) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  reportSheet.deleteRow(rowIndex);
+  return { success: true };
+}
+
+
+function debugUserInfo() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  
+  return {
+    currentUser: currentUser || 'ไม่มีข้อมูล',
+    effectiveUser: effectiveUser || 'ไม่มีข้อมูล',
+    userEmail: currentUser || effectiveUser || 'ไม่ทราบผู้ใช้'
+  };
+}
+
+
+function loadReports() {
+  console.log('Loading reports...');
+  google.script.run
+    .withSuccessHandler(function(reports) {
+      console.log('Reports received:', reports);
+      displayReports(reports);
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading reports:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getAllReports();
+}
+
+
+function getAllReports() {
+  // Default return array เพื่อป้องกัน null
+  let reports = [];
+  
+  try {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    
+    Logger.log('=== getAllReports Start ===');
+    Logger.log('User: ' + userEmail);
+    Logger.log('Is Admin: ' + isAdmin(userEmail));
+    
+    // ต้องเป็น admin
+    if (!isAdmin(userEmail)) {
+      Logger.log('Not admin - returning empty array');
+      return [];
+    }
+    
+    // เปิด Spreadsheet
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let reportSheet = ss.getSheetByName('Report');
+    
+    Logger.log('Sheet exists: ' + (reportSheet !== null));
+    
+    // สร้าง Sheet ถ้ายังไม่มี
+    if (!reportSheet) {
+      Logger.log('Creating Report sheet...');
+      createReportSheet();
+      reportSheet = ss.getSheetByName('Report');
+      
+      if (!reportSheet) {
+        Logger.log('ERROR: Cannot find/create Report sheet');
+        return [];
+      }
+    }
+    
+    // ดึงข้อมูล
+    const lastRow = reportSheet.getLastRow();
+    Logger.log('Last Row: ' + lastRow);
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows');
+      return [];
+    }
+    
+    const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
+    Logger.log('Fetched ' + data.length + ' rows');
+    
+    // แปลงเป็น array of objects
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0]) {
+        const report = {
+          rowIndex: i + 1,
+          timestamp: data[i][0],
+          userEmail: String(data[i][1] || ''),
+          message: String(data[i][2] || ''),
+          status: String(data[i][3] || 'รอดำเนินการ'),
+          adminReply: String(data[i][4] || ''),
+          replyDate: data[i][5] || ''
+        };
+        reports.push(report);
+      }
+    }
+    
+    Logger.log('Returning ' + reports.length + ' reports');
+    Logger.log('Reports array: ' + JSON.stringify(reports));
+    
+  } catch (error) {
+    Logger.log('ERROR: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+  }
+  
+  // ALWAYS return array - never null
+  return reports;
+}
+
+
+function testGetReports() {
+  const reports = getAllReports();
+  Logger.log('Total reports: ' + reports.length);
+  Logger.log(JSON.stringify(reports, null, 2));
+  return reports;
+}
+
+function testAdminStatus() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  const adminStatus = isAdmin(userEmail);
+  
+  Logger.log('=== Admin Status Test ===');
+  Logger.log('Current User: ' + currentUser);
+  Logger.log('Effective User: ' + effectiveUser);
+  Logger.log('Final Email: ' + userEmail);
+  Logger.log('Is Admin: ' + adminStatus);
+  Logger.log('Admin Email Config: setthawut.se11@gmail.com');
+  
+  return {
+    userEmail: userEmail,
+    isAdmin: adminStatus
+  };
+}
+function getVersion() {
+  return {
+    version: "2.0",
+    timestamp: new Date().toISOString()
+  };
+}
+
+// ฟังก์ชันใหม่ - ชื่อต่างจากเดิม
+function getAllReportsV2() {
+  let reports = [];
+  
+  try {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    
+    Logger.log('=== getAllReportsV2 ===');
+    Logger.log('User: ' + userEmail + ', Admin: ' + isAdmin(userEmail));
+    
+    if (!isAdmin(userEmail)) {
+      return [];
+    }
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let reportSheet = ss.getSheetByName('Report');
+    
+    if (!reportSheet) {
+      createReportSheet();
+      reportSheet = ss.getSheetByName('Report');
+    }
+    
+    if (!reportSheet) {
+      return [];
+    }
+    
+    const lastRow = reportSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return [];
+    }
+    
+    const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
+    
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0]) {
+        reports.push({
+          rowIndex: i + 1,
+          timestamp: data[i][0],
+          userEmail: String(data[i][1] || ''),
+          message: String(data[i][2] || ''),
+          status: String(data[i][3] || 'รอดำเนินการ'),
+          adminReply: String(data[i][4] || ''),
+          replyDate: data[i][5] || ''
+        });
+      }
+    }
+    
+    Logger.log('V2 Returning: ' + reports.length + ' reports');
+    
+  } catch (error) {
+    Logger.log('V2 ERROR: ' + error);
+  }
+  
+  return reports;
+}
+
+
+function testGetAllReportsV2() {
+  Logger.clear();
+  Logger.log('========== TEST START ==========');
+  
+  const result = getAllReportsV2();
+  
+  Logger.log('Result Type: ' + typeof result);
+  Logger.log('Is Array: ' + Array.isArray(result));
+  Logger.log('Is Null: ' + (result === null));
+  Logger.log('Is Undefined: ' + (result === undefined));
+  Logger.log('Result: ' + JSON.stringify(result));
+  Logger.log('========== TEST END ==========');
+  
+  return result;
+}
+
+function getReports() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Reports");
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  return data.length > 1 ? data : null;
 }
