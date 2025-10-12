@@ -357,50 +357,35 @@
     
   /* ========== Apps Grid ========== */
 .apps-grid {
-  display: flex;
-  flex-direction: row;
-  gap: 25px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: clamp(20px, 2.5vw, 30px);
   padding: 20px 10px;
   animation: fadeIn 0.8s ease-out;
-  scroll-behavior: smooth;
-  
-  /* Custom scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: #667eea #f0f0f0;
+  max-width: 100%;
 }
 
-.apps-grid::-webkit-scrollbar {
-  height: 8px;
+/* 1 card only - center it */
+.apps-grid.single-card {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
-.apps-grid::-webkit-scrollbar-track {
-  background: #f0f0f0;
-  border-radius: 10px;
-}
-
-.apps-grid::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-}
-
-.apps-grid::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
+.apps-grid.single-card .app-card {
+  max-width: 400px;
+  width: 100%;
 }
 
 /* ========== App Card ========== */
 .app-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 30px 25px;
-  min-width: clamp(200px, 20vw, 320px);
-  max-width: clamp(200px, 20vw, 320px);
-  flex-shrink: 0;
+  border-radius: 24px;
+  padding: clamp(25px, 3vw, 35px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -408,89 +393,102 @@
   text-align: center;
   animation: slideUp 0.6s ease-out;
   animation-fill-mode: both;
+  border: 2px solid transparent;
 }
 
 .app-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.2);
 }
 
 .app-icon {
-  width: clamp(60px, 8vw, 100px);
-  height: clamp(60px, 8vw, 100px);
-  border-radius: clamp(12px, 2vw, 24px);
-  margin-bottom: clamp(15px, 2vw, 25px);
+  width: clamp(80px, 10vw, 120px);
+  height: clamp(80px, 10vw, 120px);
+  border-radius: 20px;
+  margin-bottom: clamp(18px, 2.5vw, 28px);
   object-fit: cover;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 3px solid rgba(255, 255, 255, 0.8);
 }
 
 .app-card:hover .app-icon {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.08) rotate(-3deg);
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
 }
 
 .app-name {
-  font-size: clamp(14px, 1.5vw, 20px);
+  font-size: clamp(16px, 2vw, 22px);
   font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
+  color: #1a1a1a;
+  margin-bottom: 14px;
   line-height: 1.4;
+  letter-spacing: -0.02em;
 }
 
 .app-owner {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: clamp(11px, 1.2vw, 14px);
-  color: #999;
-  background: #f5f6f7;
-  padding: clamp(5px, 0.8vw, 8px) clamp(10px, 1.5vw, 14px);
-  border-radius: 20px;
+  gap: 8px;
+  font-size: clamp(12px, 1.3vw, 15px);
+  color: #666;
+  background: linear-gradient(135deg, #f5f6f7 0%, #e9ecef 100%);
+  padding: clamp(6px, 1vw, 10px) clamp(14px, 2vw, 18px);
+  border-radius: 25px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .app-actions {
   position: absolute;
-  top: clamp(10px, 1.5vw, 18px);
-  right: clamp(10px, 1.5vw, 18px);
+  top: clamp(12px, 2vw, 20px);
+  right: clamp(12px, 2vw, 20px);
   display: flex;
-  gap: clamp(6px, 1vw, 10px);
+  gap: clamp(8px, 1.2vw, 12px);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .app-card:hover .app-actions {
   opacity: 1;
+  transform: translateY(-2px);
 }
 
 .btn-edit, .btn-delete {
-  width: clamp(32px, 4vw, 40px);
-  height: clamp(32px, 4vw, 40px);
+  width: clamp(38px, 5vw, 46px);
+  height: clamp(38px, 5vw, 46px);
   border: none;
-  border-radius: clamp(8px, 1.2vw, 12px);
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(14px, 1.8vw, 18px);
+  font-size: clamp(16px, 2vw, 20px);
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #666;
 }
 
 .btn-edit:hover {
-  background: #667eea;
-  transform: scale(1.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .btn-delete:hover {
-  background: #ef4444;
-  transform: scale(1.1);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  transform: scale(1.15) rotate(-5deg);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(40px);
   }
   to {
     opacity: 1;
@@ -507,38 +505,80 @@
   }
 }
 
-/* ========== Responsive App Cards ========== */
-@media (max-width: 768px) {
+/* ========== Responsive Grid ========== */
+@media (min-width: 1400px) {
+  .apps-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1399px) {
+  .apps-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .apps-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 15px 5px;
+  }
+  
   .app-card {
-    min-width: 240px;
-    max-width: 240px;
+    max-width: 100%;
     padding: 25px 20px;
   }
   
   .app-icon {
-    width: 70px;
-    height: 70px;
+    width: 90px;
+    height: 90px;
   }
   
   .app-name {
-    font-size: 16px;
+    font-size: 18px;
+  }
+  
+  .app-owner {
+    font-size: 13px;
+  }
+  
+  .app-actions {
+    opacity: 1;
   }
 }
 
 @media (max-width: 480px) {
+  .apps-grid {
+    gap: 15px;
+  }
+  
   .app-card {
-    min-width: 200px;
-    max-width: 200px;
     padding: 20px 15px;
+    border-radius: 20px;
   }
   
   .app-icon {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
   }
   
   .app-name {
-    font-size: 15px;
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  
+  .app-owner {
+    font-size: 12px;
+    padding: 6px 12px;
   }
 }
     
