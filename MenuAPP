@@ -1,0 +1,291 @@
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('ศูนย์รวมระบบงาน')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function getApps() {
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  const userIsAdmin = isAdmin(userEmail);
+  
+  // ดึง permissions ของ user
+  const userPermissions = getUserPermissions(userEmail);
+  
+  const apps = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      const appName = data[i][0];
+      
+      // ตรวจสอบว่า user มีสิทธิ์เข้าถึงหรือไม่
+      const hasAccess = userIsAdmin || 
+                       data[i][3] === userEmail || 
+                       userPermissions.includes(appName);
+      
+      if (hasAccess) {
+        apps.push({
+          name: appName,
+          url: data[i][1],
+          photo: data[i][2],
+          owner: data[i][3] || '',
+          isOwner: data[i][3] === userEmail,
+          isAdmin: userIsAdmin
+        });
+      }
+    }
+  }
+  return { 
+    apps: apps, 
+    isAdmin: userIsAdmin,
+    userEmail: userEmail
+  };
+}
+
+function getCurrentUser() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  return currentUser || effectiveUser || 'ไม่ทราบผู้ใช้';
+}
+
+function isAdmin(email) {
+  if (!email) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    email = currentUser || effectiveUser;
+  }
+  
+  const adminEmail = 'setthawut.se11@gmail.com';
+  return email && email.toLowerCase() === adminEmail.toLowerCase();
+}
+
+function getUserPermissions(email) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps']);
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      if (data[i][1]) {
+        try {
+          return JSON.parse(data[i][1]);
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
+  }
+  return [];
+}
+
+function addApp(name, url, photo) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์เพิ่มระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const owner = userEmail;
+  sheet.appendRow([name, url, photo, owner]);
+  return { success: true };
+}
+
+function updateApp(oldName, name, url, photo) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์แก้ไขระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === oldName) {
+      sheet.getRange(i + 1, 1).setValue(name);
+      sheet.getRange(i + 1, 2).setValue(url);
+      sheet.getRange(i + 1, 3).setValue(photo);
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'ไม่พบระบบงาน' };
+}
+
+function deleteApp(name) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์ลบระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === name) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'ไม่พบระบบงาน' };
+}
+
+function getAllApps() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  const apps = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      apps.push(data[i][0]);
+    }
+  }
+  return apps;
+}
+
+function getAllUsers() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps']);
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      let apps = [];
+      if (data[i][1]) {
+        try {
+          apps = JSON.parse(data[i][1]);
+        } catch (e) {
+          apps = [];
+        }
+      }
+      users.push({
+        email: data[i][0],
+        apps: apps
+      });
+    }
+  }
+  return users;
+}
+
+function updateUserPermissions(email, apps) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps']);
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  let found = false;
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      permSheet.getRange(i + 1, 2).setValue(JSON.stringify(apps));
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    permSheet.appendRow([email, JSON.stringify(apps)]);
+  }
+  
+  return { success: true };
+}
+
+function deleteUser(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      permSheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'ไม่พบผู้ใช้' };
+}
+
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Apps');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Apps');
+    sheet.appendRow(['Name', 'URL_Web', 'URL_Photo', 'Owner']);
+    
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const owner = currentUser || effectiveUser;
+    
+    sheet.appendRow(['Survey Work Requirement', 'https://example.com/survey', 'https://via.placeholder.com/80/4CAF50/FFFFFF?text=S', owner]);
+    sheet.appendRow(['Central Car Booking System', 'https://example.com/car-booking', 'https://via.placeholder.com/80/2196F3/FFFFFF?text=C', owner]);
+    sheet.appendRow(['RFI Requirement System', 'https://example.com/rfi', 'https://via.placeholder.com/80/FF9800/FFFFFF?text=R', owner]);
+    sheet.appendRow(['Oil Approval', 'https://example.com/oil-approval', 'https://via.placeholder.com/80/F44336/FFFFFF?text=O', owner]);
+  }
+  
+  return sheet;
+}
