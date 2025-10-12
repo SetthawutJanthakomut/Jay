@@ -879,12 +879,7 @@ function getAllReports() {
 }
 
 
-function testGetReports() {
-  const reports = getAllReports();
-  Logger.log('Total reports: ' + reports.length);
-  Logger.log(JSON.stringify(reports, null, 2));
-  return reports;
-}
+
 
 function testAdminStatus() {
   const currentUser = Session.getActiveUser().getEmail();
@@ -920,9 +915,6 @@ function getAllReportsV2() {
     const effectiveUser = Session.getEffectiveUser().getEmail();
     const userEmail = currentUser || effectiveUser;
     
-    Logger.log('=== getAllReportsV2 ===');
-    Logger.log('User: ' + userEmail + ', Admin: ' + isAdmin(userEmail));
-    
     if (!isAdmin(userEmail)) {
       return [];
     }
@@ -949,14 +941,18 @@ function getAllReportsV2() {
     
     for (let i = data.length - 1; i >= 1; i--) {
       if (data[i][0]) {
+        // แปลง Date เป็น ISO String หรือ empty string
+        const timestamp = data[i][0] instanceof Date ? data[i][0].toISOString() : String(data[i][0] || '');
+        const replyDate = data[i][5] instanceof Date ? data[i][5].toISOString() : String(data[i][5] || '');
+        
         reports.push({
           rowIndex: i + 1,
-          timestamp: data[i][0],
+          timestamp: timestamp,
           userEmail: String(data[i][1] || ''),
           message: String(data[i][2] || ''),
           status: String(data[i][3] || 'รอดำเนินการ'),
           adminReply: String(data[i][4] || ''),
-          replyDate: data[i][5] || ''
+          replyDate: replyDate
         });
       }
     }
@@ -987,10 +983,11 @@ function testGetAllReportsV2() {
   return result;
 }
 
-function getReports() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Reports");
-  if (!sheet) return null;
+function testReports() {
+     const result = getAllReportsV2();
+     Logger.log('Type: ' + typeof result);
+     Logger.log('Is Array: ' + Array.isArray(result));
+     Logger.log('Value: ' + JSON.stringify(result));
+     Logger.log('Length: ' + (result ? result.length : 'null'));
+   }
 
-  const data = sheet.getDataRange().getValues();
-  return data.length > 1 ? data : null;
-}
