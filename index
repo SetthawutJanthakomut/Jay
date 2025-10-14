@@ -542,10 +542,14 @@
         <input type="text" id="requesterName" name="requesterName" required placeholder="กรอกชื่อ-นามสกุล">
       </div>
       
-      <div class="form-group">
-        <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
-        <input type="email" id="requesterEmail" name="requesterEmail" required placeholder="กรอกอีเมล - สำหรับรับการแจ้งเตือน">
-      </div>
+<!-- ✅ ใหม่ -->
+<div class="form-group">
+  <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
+  <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
+         style="background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%); color: #1877f2; font-weight: 500; cursor: not-allowed; border-color: #1877f2;"
+         placeholder="กำลังโหลดอีเมลของคุณ...">
+  <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
+</div>
       
       <button type="submit" id="submitBtn">ส่ง RFI Request</button>
     </form>
@@ -567,13 +571,15 @@
     let selectedTeamCategory = null;
     let isMultiWork = false;
     
-    window.onload = function() {
-      setMinDate();
-      loadWorkTypes();
-      initTeamCategoryButtons();
-      initCheckboxes();
-      showMessage('กรุณาเลือกหมวดงานและวันถัดไปจากวันที่ทำการจอง', 'info');
-    };
+    // ✅ ใหม่
+window.onload = function() {
+  setMinDate();
+  loadWorkTypes();
+  initTeamCategoryButtons();
+  initCheckboxes();
+  loadUserEmail();  // ⭐ เพิ่มบรรทัดนี้
+  showMessage('กรุณาเลือกหมวดงานและวันถัดไปจากวันที่ทำการจอง', 'info');
+};
     
     // Team Category Button Handler
     function initTeamCategoryButtons() {
@@ -647,6 +653,37 @@
         cb.checked = false;
       });
     }
+
+    // ⭐ เพิ่ม function นี้
+function loadUserEmail() {
+  const emailInput = document.getElementById('requesterEmail');
+  emailInput.value = 'กำลังโหลด...';
+  emailInput.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(email) {
+      if (email) {
+        emailInput.value = email;
+        emailInput.disabled = true;
+        console.log('✅ User email loaded:', email);
+      } else {
+        emailInput.value = '';
+        emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
+        emailInput.disabled = false;
+        showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading email:', error);
+      emailInput.value = '';
+      emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
+      emailInput.disabled = false;
+      showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
+    })
+    .getCurrentUserEmail();  // ✅ เรียก function ที่มีอยู่แล้ว
+}
+
+// function loadWorkTypes() อยู่ต่อด้านล่าง...
     
     function loadWorkTypes() {
       const workTypeSelect = document.getElementById('workType');
@@ -842,28 +879,35 @@
     }
     
     function handleSubmit(event) {
-      event.preventDefault();
-      
-      // Check team category is selected
-      if (!selectedTeamCategory) {
-        showMessage('กรุณาเลือกหมวดงานก่อน', 'error');
-        return;
-      }
-      
-      const submitBtn = document.getElementById('submitBtn');
-      const loading = document.querySelector('.loading');
-      
-      const formData = {
-        teamCategory: selectedTeamCategory,
-        requestDate: document.getElementById('requestDate').value,
-        workType: document.getElementById('workType').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value,
-        description: document.getElementById('description').value.trim(),
-        location: document.getElementById('location').value.trim(),
-        requesterName: document.getElementById('requesterName').value.trim(),
-        requesterEmail: document.getElementById('requesterEmail').value.trim()
-      };
+  event.preventDefault();
+  
+  // Check team category is selected
+  if (!selectedTeamCategory) {
+    showMessage('กรุณาเลือกหมวดงานก่อน', 'error');
+    return;
+  }
+  
+  // ⭐ เพิ่มการเช็คอีเมล
+  const email = document.getElementById('requesterEmail').value;
+  if (!email || email === 'กำลังโหลด...') {
+    showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+    return;
+  }
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const loading = document.querySelector('.loading');
+  
+  const formData = {
+    teamCategory: selectedTeamCategory,
+    requestDate: document.getElementById('requestDate').value,
+    workType: document.getElementById('workType').value,
+    startTime: document.getElementById('startTime').value,
+    endTime: document.getElementById('endTime').value,
+    description: document.getElementById('description').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    requesterName: document.getElementById('requesterName').value.trim(),
+    requesterEmail: email  // ✅ ใช้อีเมลที่ดึงมา
+  };
       
       const requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
       const missingFields = requiredFields.filter(field => !formData[field]);
