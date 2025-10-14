@@ -365,10 +365,14 @@
         <input type="text" id="requesterName" name="requesterName" required placeholder="กรอกชื่อ-นามสกุล">
       </div>
       
-      <div class="form-group">
-        <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
-        <input type="email" id="requesterEmail" name="requesterEmail" required placeholder="กรอกอีเมล - สำหรับรับการแจ้งเตือน">
-      </div>
+<div class="form-group">
+  <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
+  <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
+         style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #16a34a; font-weight: 500;  cursor: not-allowed; border-color: #1877f2;"
+         placeholder="กำลังโหลดอีเมลของคุณ...">
+  <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
+</div>
+
       
       <button type="submit" id="submitBtn">ส่ง Survey Work Request</button>
     </form>
@@ -388,10 +392,13 @@
   
   <script>
     window.onload = function() {
-      setMinDate();
-      loadWorkTypes();
-      showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
-    };
+  setMinDate();
+  loadWorkTypes();
+  loadUserEmail();
+  showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
+};
+
+
     
     function setMinDate() {
       const today = new Date();
@@ -437,6 +444,34 @@
         .getWorkTypeList();
     }
     
+    function loadUserEmail() {
+  const emailInput = document.getElementById('requesterEmail');
+  emailInput.value = 'กำลังโหลด...';
+  emailInput.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(email) {
+      if (email) {
+        emailInput.value = email;
+        emailInput.disabled = true;
+        console.log('✅ User email loaded:', email);
+      } else {
+        emailInput.value = '';
+        emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
+        emailInput.disabled = false;
+        showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading email:', error);
+      emailInput.value = '';
+      emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
+      emailInput.disabled = false;
+      showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
+    })
+    .getCurrentUserEmail();  // ✅ เรียก function ที่มีอยู่แล้ว
+}
+
     function showMessage(text, type, duration) {
       if (typeof duration === 'undefined') duration = 5000;
       
