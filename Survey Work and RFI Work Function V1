@@ -1,4 +1,4 @@
-//v8
+//v9
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -1631,13 +1631,11 @@ function saveRFIRequirement(data) {
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
     rowData[0] = rfiId;                          // A - ID
-    rowData[1] = surveyNo;
     rowData[2] = combinedDescription;            // C - description
     rowData[3] = data.location;                  // D - Location
     rowData[4] = formattedDate;                  // E - Request_Date
     rowData[5] = data.startTime;                 // F - Start_Time
-    rowData[6] = data.endTime;                   // G - End_Time
-    rowData[7] = orderSurvey; 
+    rowData[6] = data.endTime;                   // G - End_Time 
     rowData[9] = validatedEmail;                 // J - Requester_Email
     rowData[10] = validatedName;                 // K - Requester_Name
     rowData[11] = teamAssignment.teamNames;      // L - Assigned_Inspector (ชื่อทีมที่จัดให้)
@@ -2321,14 +2319,6 @@ function getRequesterList() {
 /**
  * ดึง email ของ user ปัจจุบัน
  */
-function getCurrentUserEmail() {
-  try {
-    return Session.getActiveUser().getEmail();
-  } catch (error) {
-    console.error('Error getting current user email:', error);
-    return '';
-  }
-}
 
 /**
  * คำนวณ Order_RFI ถัดไป
@@ -3913,6 +3903,8 @@ function saveSurveyWorkRequirement(data) {
   try {
     console.log('========== saveSurveyWorkRequirement START ==========');
     console.log('Input data:', JSON.stringify(data));
+
+
     
     // Validation
     if (!data.requestDate || !data.startTime || !data.endTime || 
@@ -3925,6 +3917,7 @@ function saveSurveyWorkRequirement(data) {
     }
     
     // ตรวจสอบและดึงข้อมูลผู้ใช้จาก User sheet
+    
     const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
