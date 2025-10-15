@@ -238,7 +238,6 @@
           <div id="editLabReportGroup" style="display:none;">
             <label class="form-label">Lab Report <span class="required">*</span></label>
             <select id="editRequireLabReport">
-              <option value="None">None (ไม่ต้องแนบ)</option>
               <option value="Both">Both (Open + Close)</option>
               <option value="Closing">Closing (Close เท่านั้น)</option>
             </select>
@@ -735,10 +734,11 @@ function updateEditSelectedTeams() {
   
   document.getElementById('editAssignedInspector').value = selectedTeams.join(',');
   
-  var surveyGroup = document.getElementById('editSurveyReportGroup');
+var surveyGroup = document.getElementById('editSurveyReportGroup');
   if (surveyGroup) {
     if (hasSurvey) {
       surveyGroup.style.display = 'block';
+      document.getElementById('editRequireSurveyReport').value = 'Both'; // ⭐ เพิ่มบรรทัดนี้
     } else {
       surveyGroup.style.display = 'none';
       document.getElementById('editRequireSurveyReport').value = 'None';
