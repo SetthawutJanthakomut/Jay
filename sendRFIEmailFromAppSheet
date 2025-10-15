@@ -595,13 +595,13 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
             
             ${requestDate ? `
             <div class="info-row">
-              <span class="label">วันที่ตรวจสอบ:</span>
+              <span class="label">วันที่นัดหมายตรวจสอบ:</span>
               <span class="value">📅 ${formattedRequestDate}</span>
             </div>
             ` : ''}
             
             <div class="info-row">
-              <span class="label">วันที่ส่ง:</span>
+              <span class="label">วันที่ส่งอัปเดต:</span>
               <span class="value">${currentDate}</span>
             </div>
             
