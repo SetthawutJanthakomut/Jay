@@ -635,6 +635,58 @@ function checkEmailQuota() {
   }
 }
 
+function getQuotaResetTime() {
+  try {
+    const now = new Date();
+    const timezone = Session.getScriptTimeZone();
+    
+    // คำนวณเวลาเที่ยงคืนของวันถัดไป (quota รีเซ็ตเวลา 00:00)
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    // คำนวณเวลาที่เหลือ
+    const msRemaining = tomorrow - now;
+    const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
+    const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+    
+    const resetTimeFormatted = Utilities.formatDate(tomorrow, timezone, 'dd/MM/yyyy HH:mm:ss');
+    
+    return {
+      resetTime: tomorrow,
+      resetTimeFormatted: resetTimeFormatted,
+      hoursRemaining: hoursRemaining,
+      minutesRemaining: minutesRemaining,
+      timeRemainingText: `${hoursRemaining} ชั่วโมง ${minutesRemaining} นาที`
+    };
+  } catch (error) {
+    Logger.log('Error getting quota reset time:', error);
+    return null;
+  }
+}
+
+function displayQuotaInfo() {
+  const quota = checkEmailQuota();
+  const resetInfo = getQuotaResetTime();
+  
+  Logger.log("=".repeat(60));
+  Logger.log("📊 Email Quota Information");
+  Logger.log("=".repeat(60));
+  Logger.log(`📧 Quota คงเหลือ: ${quota} อีเมล`);
+  
+  if (resetInfo) {
+    Logger.log(`🔄 Quota จะรีเซ็ตในอีก: ${resetInfo.timeRemainingText}`);
+    Logger.log(`⏰ รีเซ็ตเวลา: ${resetInfo.resetTimeFormatted}`);
+  }
+  
+  Logger.log("=".repeat(60));
+  
+  return {
+    remainingQuota: quota,
+    resetInfo: resetInfo
+  };
+}
+
 function safeSendEmail(emailParams) {
   try {
     const quota = checkEmailQuota();
@@ -901,4 +953,9 @@ function testAllFunctions() {
   Logger.log("");
   Logger.log("✅ ทดสอบเสร็จสิ้น!");
   Logger.log(`📊 Email Quota คงเหลือ: ${checkEmailQuota()}`);
+}
+
+// 11. ทดสอบเช็ค Quota และเวลารีเซ็ต
+function testQuotaInfo() {
+  displayQuotaInfo();
 }
