@@ -15,6 +15,7 @@ function sendRFIEmailFromAppSheet(params) {
     labReportNumber = '',  // เลขที่เอกสาร LAB Report
     labReportRemarks = '',  // หมายเหตุ LAB Report
     qcReport = '',
+    qcReportNumber = '',  // เลขที่เอกสาร QC Report
     qcReportRemarks = ''  // หมายเหตุ QC Report
   } = params;
   
@@ -61,6 +62,7 @@ function sendRFIEmailFromAppSheet(params) {
       labReportNumber,
       labReportRemarks,
       qcReport,
+      qcReportNumber,
       qcReportRemarks
     );
     
@@ -88,7 +90,7 @@ function sendRFIEmailFromAppSheet(params) {
 }
 
 // ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
-function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportRemarks = '') {
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportNumber = '', qcReportRemarks = '') {
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -136,6 +138,7 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       labReportNumber,
       labReportRemarks,
       qcReport,
+      qcReportNumber,
       qcReportRemarks
     );
     
@@ -256,7 +259,7 @@ function getStatusIcon(status) {
 }
 
 // ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนประเภทเอกสารและสถานะเอกสาร) =====
-function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportRemarks) {
+function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks) {
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -357,6 +360,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
       documentStatusHTML += `
         <div class="doc-status-item" style="border-left-color: ${qcColor};">
           <div class="doc-label">✔️ QC Report</div>
+          ${qcReportNumber && qcReportNumber.trim() !== '' ? `
+          <div class="doc-number">
+            📋 เลขที่: ${qcReportNumber}
+          </div>
+          ` : ''}
           <div class="doc-status" style="background-color: ${qcColor};">
             ${qcIcon} ${qcReport}
           </div>
@@ -641,6 +649,7 @@ function testSingleEmail() {
     labReportNumber: "LAB-2024-055",
     labReportRemarks: "ต้องแก้ไขข้อมูลในหน้า 3 และส่งใหม่ภายใน 3 วัน",
     qcReport: "Approved",
+    qcReportNumber: "QC-2024-012",
     qcReportRemarks: ""  // ไม่มีหมายเหตุ - จะไม่แสดง
   });
 }
@@ -658,10 +667,11 @@ function testMultipleEmails() {
     "Approved",
     "SUR-2024-003",
     "ตรวจสอบครบถ้วนแล้ว",
-    "",  // LAB Report ว่าง - จะไม่แสดง
+    "",
     "",
     "",
     "Rejected",
+    "",
     "กรุณาแก้ไขและส่งใหม่"
   );
 }
@@ -697,6 +707,7 @@ function testOpenRFI() {
     labReportNumber: "LAB-2024-088",
     labReportRemarks: "ผลแล้บออกมาตรงตามข้อกำหนด ไม่พบสิ่งผิดปกติ",
     qcReport: "Approved",
+    qcReportNumber: "QC-2024-025",
     qcReportRemarks: "QC ตรวจสอบแล้วเห็นชอบให้ดำเนินการต่อได้"
   });
 }
@@ -712,10 +723,13 @@ function testCloseRFI() {
     requestDate: "2024-10-15",
     documentType: "Close RFI",
     surveyReport: "Rejected",
+    surveyReportNumber: "SUR-2024-005",
     surveyReportRemarks: "Survey Report ต้องเพิ่มรายละเอียดในส่วนของ Section 2.3 และแนบภาพประกอบเพิ่มเติม",
     labReport: "Approved",
+    labReportNumber: "LAB-2024-099",
     labReportRemarks: "ผลการทดสอบจากห้องปฏิบัติการผ่านเกณฑ์",
     qcReport: "Rejected",
+    qcReportNumber: "QC-2024-030",
     qcReportRemarks: "พบความไม่สอดคล้องในรายการตรวจสอบข้อที่ 5, 7 และ 12 กรุณาแก้ไขและส่งใหม่ภายใน 5 วันทำการ"
   });
 }
@@ -731,7 +745,10 @@ function testMultipleEmailsNoType() {
     "2024-10-15",
     "",  // ไม่ระบุ Document Type
     "Approved",
+    "",
     "ตรวจสอบเบื้องต้นเรียบร้อย",
+    "",
+    "",
     "",
     "",
     "",
@@ -750,10 +767,13 @@ function testInspectionStarted() {
     requestDate: "2024-10-15",
     documentType: "Open RFI",
     surveyReport: "Approved",
+    surveyReportNumber: "SUR-2024-007",
     surveyReportRemarks: "",
-    labReport: "Approved", 
+    labReport: "Approved",
+    labReportNumber: "LAB-2024-100",
     labReportRemarks: "",
     qcReport: "Approved",
+    qcReportNumber: "QC-2024-040",
     qcReportRemarks: ""
   });
 }
@@ -769,10 +789,13 @@ function testCancelledRFI() {
     requestDate: "2024-10-15",
     documentType: "Open RFI",
     surveyReport: "",
+    surveyReportNumber: "",
     surveyReportRemarks: "",
     labReport: "",
+    labReportNumber: "",
     labReportRemarks: "",
     qcReport: "",
+    qcReportNumber: "",
     qcReportRemarks: ""
   });
 }
