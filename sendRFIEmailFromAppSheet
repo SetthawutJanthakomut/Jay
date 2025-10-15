@@ -1,0 +1,613 @@
+// ===== ฟังก์ชันหลักส่งอีเมล (เพิ่ม parameter สถานะเอกสาร) =====
+function sendRFIEmailFromAppSheet(params) {
+  const { 
+    email, 
+    rfiNumber, 
+    description, 
+    status, 
+    remarks, 
+    requestDate,
+    surveyReport = '',  // เพิ่ม parameter สถานะเอกสาร
+    labReport = '',
+    qcReport = ''
+  } = params;
+  
+  if (!email || !rfiNumber || !description || !status) {
+    Logger.log("❌ Missing required field(s)");
+    return false;
+  }
+  
+  try {
+    // ตรวจสอบ quota
+    const quota = checkEmailQuota();
+    Logger.log(`📊 Current email quota: ${quota}`);
+    
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return false;
+    }
+    
+    let statusColor = getStatusColor(status);
+    let statusIcon = getStatusIcon(status);
+    const subject = `RFI #${rfiNumber} - ${description}`;
+    
+    Logger.log("=== RFI Email Info ===");
+    Logger.log("📧 To: " + email);
+    Logger.log("🔢 RFI: " + rfiNumber);
+    Logger.log("📝 Description: " + description);
+    Logger.log("📊 Status: " + status);
+    Logger.log("✉️ Subject: " + subject);
+    
+    const htmlMessage = createRFIEmailHTML(
+      rfiNumber, 
+      description, 
+      status, 
+      remarks, 
+      requestDate, 
+      statusColor, 
+      statusIcon,
+      surveyReport,
+      labReport,
+      qcReport
+    );
+    
+    // ส่งอีเมลแบบ batch
+    const sent = safeSendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'RFI System - Notification'
+    });
+    
+    if (!sent) {
+      Logger.log('❌ Failed to send email');
+      return false;
+    }
+    
+    Logger.log("=====================");
+    Logger.log(`✅ RFI Email sent successfully to: ${email}`);
+    return true;
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+    return false;
+  }
+}
+
+// ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter สถานะเอกสาร) =====
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, surveyReport = '', labReport = '', qcReport = '') {
+  let emails = [];
+  
+  if (typeof emailList === 'string') {
+    emails = emailList.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0 && e.includes('@'));
+  } else if (Array.isArray(emailList)) {
+    emails = emailList.filter(e => e && e.includes('@'));
+  } else {
+    Logger.log("❌ Invalid email format");
+    return false;
+  }
+  
+  if (emails.length === 0) {
+    Logger.log("❌ No valid email addresses found");
+    return false;
+  }
+  
+  try {
+    // ตรวจสอบ quota
+    const quota = checkEmailQuota();
+    Logger.log(`📊 Current email quota: ${quota}`);
+    
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return false;
+    }
+    
+    Logger.log(`📧 Sending batch email to ${emails.length} recipient(s): ${emails.join(', ')}`);
+    
+    const statusColor = getStatusColor(status);
+    const statusIcon = getStatusIcon(status);
+    const subject = `RFI #${rfiNumber} - ${description}`;
+    const htmlMessage = createRFIEmailHTML(
+      rfiNumber, 
+      description, 
+      status, 
+      remarks, 
+      requestDate, 
+      statusColor, 
+      statusIcon,
+      surveyReport,
+      labReport,
+      qcReport
+    );
+    
+    // ส่งแบบ batch (ครั้งเดียว)
+    const recipientList = emails.join(',');
+    
+    const sent = safeSendEmail({
+      to: recipientList,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'RFI System - Notification'
+    });
+    
+    if (!sent) {
+      Logger.log('❌ Failed to send batch email');
+      return { success: 0, failed: emails.length };
+    }
+    
+    Logger.log(`✅ Batch email sent successfully to ${emails.length} recipients`);
+    Logger.log(`📊 Email quota used: 1 (saved ${emails.length - 1} quota)`);
+    
+    return { success: emails.length, failed: 0 };
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+    return { success: 0, failed: emails.length };
+  }
+}
+
+// ===== ฟังก์ชันตรวจสอบและแสดงสถานะเอกสาร =====
+function getDocumentStatusIcon(status) {
+  if (!status) return '';
+  
+  const statusLower = status.toLowerCase().trim();
+  
+  // ตรวจสอบ Approve
+  if (statusLower.includes('approve')) {
+    return '✅';
+  }
+  // ตรวจสอบ Reject
+  if (statusLower.includes('reject')) {
+    return '❌';
+  }
+  
+  return '📄';
+}
+
+function getDocumentStatusColor(status) {
+  if (!status) return '';
+  
+  const statusLower = status.toLowerCase().trim();
+  
+  // ตรวจสอบ Approve
+  if (statusLower.includes('approve')) {
+    return '#2ed573';
+  }
+  // ตรวจสอบ Reject
+  if (statusLower.includes('reject')) {
+    return '#ff4757';
+  }
+  
+  return '#57606f';
+}
+
+function hasAnyDocumentStatus(surveyReport, labReport, qcReport) {
+  return (surveyReport && surveyReport.trim() !== '') || 
+         (labReport && labReport.trim() !== '') || 
+         (qcReport && qcReport.trim() !== '');
+}
+
+// ===== ฟังก์ชัน Status และ Icon (เหมือนเดิม) =====
+function getStatusColor(status) {
+  const statusLower = status.toLowerCase();
+  
+  if (statusLower.includes('open rfi pending attachment')) return '#FF6B6B';
+  if (statusLower.includes('pending qc review') || 
+      statusLower.includes('revised attachment submitted – pending qc review')) return '#FF9F43';
+  if (statusLower.includes('pending survey review')) return '#FFA726';
+  if (statusLower.includes('ready for consult review') ||
+      statusLower.includes('qc approved – waiting for consult review')) return '#3742fa';
+  if (statusLower.includes('rfi approved – proceed to site inspection')) return '#2ed573';
+  if (statusLower.includes('awaiting final documents for rfi closure') ||
+      statusLower.includes('consult approved – awaiting signed documents')) return '#5352ed';
+  if (statusLower.includes('waiting for revised attachment')) return '#ffa502';
+  if (statusLower.includes('rejected by consult – revise required') ||
+      statusLower.includes('rejected by survey reviewer')) return '#ff4757';
+  if (statusLower.includes('rfi closure documents attached')) return '#1dd1a1';
+  if (statusLower.includes('inspection started')) return '#00d2d3';
+  if (statusLower.includes('inspection postponed')) return '#ff9ff3';
+  if (statusLower.includes('site inspection completed by inspector')) return '#7bed9f';
+  if (statusLower.includes('cancel')) return '#747d8c';
+  
+  return '#57606f';
+}
+
+function getStatusIcon(status) {
+  const statusLower = status.toLowerCase();
+  
+  if (statusLower.includes('open rfi pending attachment')) return '📋';
+  if (statusLower.includes('pending qc review') || 
+      statusLower.includes('revised attachment submitted – pending qc review')) return '🔍';
+  if (statusLower.includes('pending survey review')) return '🔎';
+  if (statusLower.includes('ready for consult review') ||
+      statusLower.includes('qc approved – waiting for consult review')) return '👨‍💼';
+  if (statusLower.includes('rfi approved – proceed to site inspection')) return '✅';
+  if (statusLower.includes('awaiting final documents for rfi closure') ||
+      statusLower.includes('consult approved – awaiting signed documents')) return '📝';
+  if (statusLower.includes('waiting for revised attachment')) return '🔄';
+  if (statusLower.includes('rejected by consult – revise required') ||
+      statusLower.includes('rejected by survey reviewer')) return '❌';
+  if (statusLower.includes('rfi closure documents attached')) return '🎉';
+  if (statusLower.includes('inspection started')) return '🔍';
+  if (statusLower.includes('inspection postponed')) return '⏰';
+  if (statusLower.includes('site inspection completed by inspector')) return '✅';
+  if (statusLower.includes('cancel')) return '🚫';
+  
+  return '📄';
+}
+
+// ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนสถานะเอกสาร) =====
+function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, surveyReport, labReport, qcReport) {
+  const currentDate = new Date().toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  let formattedRequestDate = '';
+  if (requestDate) {
+    try {
+      const reqDate = new Date(requestDate);
+      formattedRequestDate = reqDate.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      formattedRequestDate = requestDate;
+    }
+  }
+  
+  // สร้าง HTML สำหรับสถานะเอกสาร (แสดงเฉพาะที่มีข้อมูล)
+  const hasDocStatus = hasAnyDocumentStatus(surveyReport, labReport, qcReport);
+  
+  let documentStatusHTML = '';
+  if (hasDocStatus) {
+    documentStatusHTML = '<div class="document-status-section">';
+    documentStatusHTML += '<h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">📑 สถานะเอกสาร</h3>';
+    documentStatusHTML += '<div class="document-status-grid">';
+    
+    // Survey Report
+    if (surveyReport && surveyReport.trim() !== '') {
+      const surveyIcon = getDocumentStatusIcon(surveyReport);
+      const surveyColor = getDocumentStatusColor(surveyReport);
+      documentStatusHTML += `
+        <div class="doc-status-item" style="border-left-color: ${surveyColor};">
+          <div class="doc-label">📊 Survey Report</div>
+          <div class="doc-status" style="background-color: ${surveyColor};">
+            ${surveyIcon} ${surveyReport}
+          </div>
+        </div>
+      `;
+    }
+    
+    // LAB Report
+    if (labReport && labReport.trim() !== '') {
+      const labIcon = getDocumentStatusIcon(labReport);
+      const labColor = getDocumentStatusColor(labReport);
+      documentStatusHTML += `
+        <div class="doc-status-item" style="border-left-color: ${labColor};">
+          <div class="doc-label">🧪 LAB Report</div>
+          <div class="doc-status" style="background-color: ${labColor};">
+            ${labIcon} ${labReport}
+          </div>
+        </div>
+      `;
+    }
+    
+    // QC Report
+    if (qcReport && qcReport.trim() !== '') {
+      const qcIcon = getDocumentStatusIcon(qcReport);
+      const qcColor = getDocumentStatusColor(qcReport);
+      documentStatusHTML += `
+        <div class="doc-status-item" style="border-left-color: ${qcColor};">
+          <div class="doc-label">✔️ QC Report</div>
+          <div class="doc-status" style="background-color: ${qcColor};">
+            ${qcIcon} ${qcReport}
+          </div>
+        </div>
+      `;
+    }
+    
+    documentStatusHTML += '</div></div>';
+  }
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          margin: 0;
+          padding: 20px;
+          background-color: #f4f4f4;
+        }
+        .email-container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: white;
+          border-radius: 10px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 30px 20px;
+          text-align: center;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 300;
+        }
+        .content {
+          padding: 30px;
+        }
+        .rfi-card {
+          background-color: #f8f9ff;
+          border-left: 5px solid ${statusColor};
+          padding: 20px;
+          margin: 20px 0;
+          border-radius: 5px;
+        }
+        .rfi-number {
+          font-size: 24px;
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 10px;
+        }
+        .status-badge {
+          display: inline-block;
+          background-color: ${statusColor};
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: bold;
+          margin: 10px 0;
+        }
+        .info-row {
+          margin: 15px 0;
+          padding: 10px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+          border-bottom: none;
+        }
+        .label {
+          font-weight: bold;
+          color: #555;
+          display: inline-block;
+          width: 120px;
+        }
+        .value {
+          color: #333;
+        }
+        .description {
+          background-color: white;
+          padding: 15px;
+          border-radius: 5px;
+          border: 1px solid #ddd;
+          margin-top: 10px;
+        }
+        .remarks {
+          background-color: #fff3cd;
+          border: 1px solid #ffeaa7;
+          padding: 15px;
+          border-radius: 5px;
+          margin-top: 10px;
+        }
+        .document-status-section {
+          margin-top: 25px;
+          padding-top: 20px;
+          border-top: 2px solid #e0e0e0;
+        }
+        .document-status-grid {
+          display: grid;
+          gap: 15px;
+          margin-top: 15px;
+        }
+        .doc-status-item {
+          background-color: #f8f9fa;
+          padding: 15px;
+          border-radius: 8px;
+          border-left: 4px solid #ccc;
+          transition: transform 0.2s;
+        }
+        .doc-label {
+          font-weight: bold;
+          color: #555;
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+        .doc-status {
+          display: inline-block;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 15px;
+          font-size: 13px;
+          font-weight: bold;
+        }
+        .footer {
+          background-color: #f8f9fa;
+          padding: 20px;
+          text-align: center;
+          color: #666;
+          font-size: 12px;
+        }
+        .divider {
+          height: 2px;
+          background: linear-gradient(90deg, transparent, ${statusColor}, transparent);
+          margin: 20px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="header">
+          <h1>📋 RFI Notification</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Request for Information</p>
+        </div>
+        
+        <div class="content">
+          <div class="rfi-card">
+            <div class="rfi-number">
+              ${statusIcon} RFI #${rfiNumber}
+            </div>
+            
+            <div class="status-badge">
+              Status: ${status}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="info-row">
+              <span class="label">รายละเอียด:</span>
+              <div class="description">
+                ${description}
+              </div>
+            </div>
+            
+            ${remarks ? `
+            <div class="info-row">
+              <span class="label">หมายเหตุ:</span>
+              <div class="remarks">
+                <strong>📝 หมายเหตุ:</strong><br>
+                ${remarks}
+              </div>
+            </div>
+            ` : ''}
+            
+            ${requestDate ? `
+            <div class="info-row">
+              <span class="label">วันที่ตรวจสอบ:</span>
+              <span class="value">📅 ${formattedRequestDate}</span>
+            </div>
+            ` : ''}
+            
+            <div class="info-row">
+              <span class="label">วันที่ส่ง:</span>
+              <span class="value">${currentDate}</span>
+            </div>
+            
+            ${documentStatusHTML}
+          </div>
+          
+          <p style="text-align: center; color: #666; margin-top: 30px;">
+            💡 <em>กรุณาติดตาม RFI นี้และดำเนินการตามความเหมาะสม</em>
+          </p>
+        </div>
+        
+        <div class="footer">
+          <p>🏢 ระบบจัดการ RFI | สร้างโดย AppSheet</p>
+          <p>อีเมลนี้ถูกส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// ===== ฟังก์ชัน Helper =====
+function checkEmailQuota() {
+  try {
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+    Logger.log('Remaining email quota:', remainingQuota);
+    return remainingQuota;
+  } catch (error) {
+    Logger.log('Error checking email quota:', error);
+    return 0;
+  }
+}
+
+function safeSendEmail(emailParams) {
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      Logger.log('Email quota exceeded, skipping email');
+      return false;
+    }
+    
+    MailApp.sendEmail(emailParams);
+    return true;
+  } catch (error) {
+    Logger.log('Error sending email:', error);
+    return false;
+  }
+}
+
+// ===== ฟังก์ชันทดสอบ =====
+function testSingleEmail() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-001",
+    description: "ทดสอบระบบ RFI - Batch Email พร้อมสถานะเอกสาร",
+    status: "Open RFI Pending Attachment",
+    remarks: "ทดสอบการส่งแบบ batch พร้อมแสดงสถานะเอกสาร",
+    requestDate: "2024-10-15",
+    surveyReport: "Approved",
+    labReport: "Rejected - ต้องแก้ไข",
+    qcReport: "Approved"
+  });
+}
+
+function testMultipleEmails() {
+  sendRFIEmailToMultipleRecipients(
+    "surveymarine048@gmail.com, surveymarine049@gmail.com",
+    "10-RFI-003",
+    "ทดสอบส่งหลายคนพร้อมสถานะเอกสาร",
+    "Inspection Started",
+    "ส่งให้หลายคนพร้อมกัน - ใช้ quota แค่ 1",
+    "2024-10-15",
+    "Approved",
+    "",  // LAB Report ว่าง - จะไม่แสดง
+    "Rejected - กรุณาแก้ไข"
+  );
+}
+
+function testNoDocumentStatus() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-002",
+    description: "ทดสอบโดยไม่มีสถานะเอกสาร",
+    status: "Pending QC Review",
+    remarks: "ยังไม่มีสถานะเอกสาร - จะไม่แสดงส่วนนี้",
+    requestDate: "2024-10-15"
+    // ไม่ใส่ surveyReport, labReport, qcReport
+  });
+}
+
+function showAllRFIStatuses() {
+  const statuses = [
+    "Open RFI Pending Attachment",
+    "Pending QC Review",
+    "Pending Survey Review", 
+    "Ready for Consult Review",
+    "QC Approved – Waiting for Consult Review",
+    "RFI Approved – Proceed to Site Inspection",
+    "Awaiting Final Documents for RFI Closure",
+    "Consult Approved – Awaiting Signed Documents",
+    "Waiting for Revised Attachment",
+    "Revised Attachment Submitted – Pending QC Review",
+    "Rejected by Consult – Revise Required",
+    "Rejected by Survey Reviewer",
+    "RFI Closure Documents Attached",
+    "Inspection Started",
+    "Inspection Postponed", 
+    "Site Inspection Completed by Inspector",
+    "Cancel"
+  ];
+  
+  statuses.forEach(status => {
+    const color = getStatusColor(status);
+    const icon = getStatusIcon(status);
+    Logger.log(`${icon} ${status} - Color: ${color}`);
+  });
+}
