@@ -9,8 +9,11 @@ function sendRFIEmailFromAppSheet(params) {
     requestDate,
     documentType = '',  // เพิ่ม parameter ประเภทเอกสาร (Open RFI / Close RFI)
     surveyReport = '',  // เพิ่ม parameter สถานะเอกสาร
+    surveyReportRemarks = '',  // หมายเหตุ Survey Report
     labReport = '',
-    qcReport = ''
+    labReportRemarks = '',  // หมายเหตุ LAB Report
+    qcReport = '',
+    qcReportRemarks = ''  // หมายเหตุ QC Report
   } = params;
   
   if (!email || !rfiNumber || !description || !status) {
@@ -50,8 +53,11 @@ function sendRFIEmailFromAppSheet(params) {
       statusIcon,
       documentType,
       surveyReport,
+      surveyReportRemarks,
       labReport,
-      qcReport
+      labReportRemarks,
+      qcReport,
+      qcReportRemarks
     );
     
     // ส่งอีเมลแบบ batch
@@ -78,7 +84,7 @@ function sendRFIEmailFromAppSheet(params) {
 }
 
 // ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
-function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', labReport = '', qcReport = '') {
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportRemarks = '', labReport = '', labReportRemarks = '', qcReport = '', qcReportRemarks = '') {
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -120,8 +126,11 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       statusIcon,
       documentType,
       surveyReport,
+      surveyReportRemarks,
       labReport,
-      qcReport
+      labReportRemarks,
+      qcReport,
+      qcReportRemarks
     );
     
     // ส่งแบบ batch (ครั้งเดียว)
@@ -241,7 +250,7 @@ function getStatusIcon(status) {
 }
 
 // ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนประเภทเอกสารและสถานะเอกสาร) =====
-function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, labReport, qcReport) {
+function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportRemarks, labReport, labReportRemarks, qcReport, qcReportRemarks) {
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -297,6 +306,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
           <div class="doc-status" style="background-color: ${surveyColor};">
             ${surveyIcon} ${surveyReport}
           </div>
+          ${surveyReportRemarks && surveyReportRemarks.trim() !== '' ? `
+          <div class="doc-remarks">
+            💬 ${surveyReportRemarks}
+          </div>
+          ` : ''}
         </div>
       `;
     }
@@ -311,6 +325,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
           <div class="doc-status" style="background-color: ${labColor};">
             ${labIcon} ${labReport}
           </div>
+          ${labReportRemarks && labReportRemarks.trim() !== '' ? `
+          <div class="doc-remarks">
+            💬 ${labReportRemarks}
+          </div>
+          ` : ''}
         </div>
       `;
     }
@@ -325,6 +344,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
           <div class="doc-status" style="background-color: ${qcColor};">
             ${qcIcon} ${qcReport}
           </div>
+          ${qcReportRemarks && qcReportRemarks.trim() !== '' ? `
+          <div class="doc-remarks">
+            💬 ${qcReportRemarks}
+          </div>
+          ` : ''}
         </div>
       `;
     }
@@ -453,6 +477,16 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
           font-size: 13px;
           font-weight: bold;
         }
+        .doc-remarks {
+          margin-top: 10px;
+          padding: 10px;
+          background-color: #fff3cd;
+          border: 1px solid #ffeaa7;
+          border-radius: 5px;
+          font-size: 13px;
+          color: #333;
+          line-height: 1.5;
+        }
         .footer {
           background-color: #f8f9fa;
           padding: 20px;
@@ -507,13 +541,13 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
             
             ${requestDate ? `
             <div class="info-row">
-              <span class="label">วันที่นัดหมายตรวจสอบ:</span>
+              <span class="label">วันที่ตรวจสอบ:</span>
               <span class="value">📅 ${formattedRequestDate}</span>
             </div>
             ` : ''}
             
             <div class="info-row">
-              <span class="label">วันที่ส่งอัปเดต:</span>
+              <span class="label">วันที่ส่ง:</span>
               <span class="value">${currentDate}</span>
             </div>
             
@@ -564,6 +598,8 @@ function safeSendEmail(emailParams) {
 }
 
 // ===== ฟังก์ชันทดสอบ =====
+
+// 1. ทดสอบส่งคนเดียว + มีหมายเหตุเอกสารครบ
 function testSingleEmail() {
   sendRFIEmailFromAppSheet({
     email: "surveymarine048@gmail.com",
@@ -574,11 +610,15 @@ function testSingleEmail() {
     requestDate: "2024-10-15",
     documentType: "Open RFI",
     surveyReport: "Approved",
-    labReport: "Rejected - ต้องแก้ไข",
-    qcReport: "Approved"
+    surveyReportRemarks: "ผ่านการตรวจสอบเรียบร้อยแล้ว",
+    labReport: "Rejected",
+    labReportRemarks: "ต้องแก้ไขข้อมูลในหน้า 3 และส่งใหม่ภายใน 3 วัน",
+    qcReport: "Approved",
+    qcReportRemarks: ""  // ไม่มีหมายเหตุ - จะไม่แสดง
   });
 }
 
+// 2. ทดสอบส่งหลายคน + มีหมายเหตุบางส่วน
 function testMultipleEmails() {
   sendRFIEmailToMultipleRecipients(
     "surveymarine048@gmail.com, surveymarine049@gmail.com",
@@ -589,11 +629,15 @@ function testMultipleEmails() {
     "2024-10-15",
     "Close RFI",
     "Approved",
+    "ตรวจสอบครบถ้วนแล้ว",
     "",  // LAB Report ว่าง - จะไม่แสดง
-    "Rejected - กรุณาแก้ไข"
+    "",
+    "Rejected",
+    "กรุณาแก้ไขและส่งใหม่"
   );
 }
 
+// 3. ทดสอบโดยไม่มีสถานะเอกสารเลย
 function testNoDocumentStatus() {
   sendRFIEmailFromAppSheet({
     email: "surveymarine048@gmail.com",
@@ -607,6 +651,102 @@ function testNoDocumentStatus() {
   });
 }
 
+// 4. ทดสอบ Open RFI พร้อมหมายเหตุเอกสารทั้งหมด
+function testOpenRFI() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-004",
+    description: "ทดสอบ Open RFI แบบสมบูรณ์",
+    status: "Ready for Consult Review",
+    remarks: "เอกสารครบถ้วนพร้อมส่งให้ที่ปรึกษาตรวจสอบ",
+    requestDate: "2024-10-15",
+    documentType: "Open RFI",
+    surveyReport: "Approved",
+    surveyReportRemarks: "Survey Report ผ่านการตรวจสอบจาก Surveyor แล้ว",
+    labReport: "Approved",
+    labReportRemarks: "ผลแล้บออกมาตรงตามข้อกำหนด ไม่พบสิ่งผิดปกติ",
+    qcReport: "Approved",
+    qcReportRemarks: "QC ตรวจสอบแล้วเห็นชอบให้ดำเนินการต่อได้"
+  });
+}
+
+// 5. ทดสอบ Close RFI พร้อม Reject documents
+function testCloseRFI() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-005",
+    description: "ทดสอบ Close RFI พร้อมเอกสารที่ถูก Reject",
+    status: "Awaiting Final Documents for RFI Closure",
+    remarks: "รอเอกสารปิด RFI หลังจากแก้ไขตามที่แนะนำ",
+    requestDate: "2024-10-15",
+    documentType: "Close RFI",
+    surveyReport: "Rejected",
+    surveyReportRemarks: "Survey Report ต้องเพิ่มรายละเอียดในส่วนของ Section 2.3 และแนบภาพประกอบเพิ่มเติม",
+    labReport: "Approved",
+    labReportRemarks: "ผลการทดสอบจากห้องปฏิบัติการผ่านเกณฑ์",
+    qcReport: "Rejected",
+    qcReportRemarks: "พบความไม่สอดคล้องในรายการตรวจสอบข้อที่ 5, 7 และ 12 กรุณาแก้ไขและส่งใหม่ภายใน 5 วันทำการ"
+  });
+}
+
+// 6. ทดสอบส่งหลายคน แบบไม่มี Document Type
+function testMultipleEmailsNoType() {
+  sendRFIEmailToMultipleRecipients(
+    "surveymarine048@gmail.com, surveymarine049@gmail.com, test@example.com",
+    "10-RFI-006",
+    "ทดสอบส่งหลายคนโดยไม่ระบุประเภทเอกสาร",
+    "Pending Survey Review",
+    "ส่งให้ทีม Survey ทั้งหมด",
+    "2024-10-15",
+    "",  // ไม่ระบุ Document Type
+    "Approved",
+    "ตรวจสอบเบื้องต้นเรียบร้อย",
+    "",
+    "",
+    "",
+    ""
+  );
+}
+
+// 7. ทดสอบกรณี Inspection Started
+function testInspectionStarted() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-007",
+    description: "เริ่มการตรวจสอบในสนาม",
+    status: "Inspection Started",
+    remarks: "Inspector เริ่มทำการตรวจสอบแล้วเมื่อเวลา 09:00 น.",
+    requestDate: "2024-10-15",
+    documentType: "Open RFI",
+    surveyReport: "Approved",
+    surveyReportRemarks: "",
+    labReport: "Approved", 
+    labReportRemarks: "",
+    qcReport: "Approved",
+    qcReportRemarks: ""
+  });
+}
+
+// 8. ทดสอบกรณี RFI Cancelled
+function testCancelledRFI() {
+  sendRFIEmailFromAppSheet({
+    email: "surveymarine048@gmail.com",
+    rfiNumber: "10-RFI-008",
+    description: "ยกเลิก RFI เนื่องจากเปลี่ยนแปลงแผนงาน",
+    status: "Cancel",
+    remarks: "โครงการมีการเปลี่ยนแปลงแผนงาน RFI นี้จึงถูกยกเลิก",
+    requestDate: "2024-10-15",
+    documentType: "Open RFI",
+    surveyReport: "",
+    surveyReportRemarks: "",
+    labReport: "",
+    labReportRemarks: "",
+    qcReport: "",
+    qcReportRemarks: ""
+  });
+}
+
+// 9. แสดงรายการ Status ทั้งหมดที่รองรับ
 function showAllRFIStatuses() {
   const statuses = [
     "Open RFI Pending Attachment",
@@ -628,9 +768,60 @@ function showAllRFIStatuses() {
     "Cancel"
   ];
   
-  statuses.forEach(status => {
+  Logger.log("=".repeat(60));
+  Logger.log("📋 รายการ Status ทั้งหมดพร้อมสีและไอคอน");
+  Logger.log("=".repeat(60));
+  
+  statuses.forEach((status, index) => {
     const color = getStatusColor(status);
     const icon = getStatusIcon(status);
-    Logger.log(`${icon} ${status} - Color: ${color}`);
+    Logger.log(`${index + 1}. ${icon} ${status}`);
+    Logger.log(`   Color: ${color}`);
+    Logger.log("");
   });
+  
+  Logger.log("=".repeat(60));
+}
+
+// 10. ทดสอบทุกฟังก์ชันพร้อมกัน (ระวัง quota!)
+function testAllFunctions() {
+  Logger.log("🧪 เริ่มการทดสอบทุกฟังก์ชัน...");
+  Logger.log("⚠️ การทดสอบนี้จะใช้ Email Quota หลายอัน!");
+  Logger.log("");
+  
+  const quota = checkEmailQuota();
+  Logger.log(`📊 Email Quota คงเหลือ: ${quota}`);
+  
+  if (quota < 10) {
+    Logger.log("❌ Email Quota ไม่เพียงพอ! ต้องการอย่างน้อย 10 quota");
+    return;
+  }
+  
+  Logger.log("");
+  Logger.log("1️⃣ ทดสอบส่งคนเดียว...");
+  testSingleEmail();
+  Utilities.sleep(2000);
+  
+  Logger.log("");
+  Logger.log("2️⃣ ทดสอบส่งหลายคน...");
+  testMultipleEmails();
+  Utilities.sleep(2000);
+  
+  Logger.log("");
+  Logger.log("3️⃣ ทดสอบไม่มีสถานะเอกสาร...");
+  testNoDocumentStatus();
+  Utilities.sleep(2000);
+  
+  Logger.log("");
+  Logger.log("4️⃣ ทดสอบ Open RFI...");
+  testOpenRFI();
+  Utilities.sleep(2000);
+  
+  Logger.log("");
+  Logger.log("5️⃣ ทดสอบ Close RFI...");
+  testCloseRFI();
+  
+  Logger.log("");
+  Logger.log("✅ ทดสอบเสร็จสิ้น!");
+  Logger.log(`📊 Email Quota คงเหลือ: ${checkEmailQuota()}`);
 }
