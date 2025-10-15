@@ -1,4 +1,4 @@
-// ===== ฟังก์ชันหลักส่งอีเมล (เพิ่ม parameter สถานะเอกสาร) =====
+// ===== ฟังก์ชันหลักส่งอีเมล (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
 function sendRFIEmailFromAppSheet(params) {
   const { 
     email, 
@@ -7,6 +7,7 @@ function sendRFIEmailFromAppSheet(params) {
     status, 
     remarks, 
     requestDate,
+    documentType = '',  // เพิ่ม parameter ประเภทเอกสาร (Open RFI / Close RFI)
     surveyReport = '',  // เพิ่ม parameter สถานะเอกสาร
     labReport = '',
     qcReport = ''
@@ -36,6 +37,7 @@ function sendRFIEmailFromAppSheet(params) {
     Logger.log("🔢 RFI: " + rfiNumber);
     Logger.log("📝 Description: " + description);
     Logger.log("📊 Status: " + status);
+    Logger.log("📁 Document Type: " + documentType);
     Logger.log("✉️ Subject: " + subject);
     
     const htmlMessage = createRFIEmailHTML(
@@ -46,6 +48,7 @@ function sendRFIEmailFromAppSheet(params) {
       requestDate, 
       statusColor, 
       statusIcon,
+      documentType,
       surveyReport,
       labReport,
       qcReport
@@ -74,8 +77,8 @@ function sendRFIEmailFromAppSheet(params) {
   }
 }
 
-// ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter สถานะเอกสาร) =====
-function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, surveyReport = '', labReport = '', qcReport = '') {
+// ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', labReport = '', qcReport = '') {
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -115,6 +118,7 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       requestDate, 
       statusColor, 
       statusIcon,
+      documentType,
       surveyReport,
       labReport,
       qcReport
@@ -236,8 +240,8 @@ function getStatusIcon(status) {
   return '📄';
 }
 
-// ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนสถานะเอกสาร) =====
-function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, surveyReport, labReport, qcReport) {
+// ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนประเภทเอกสารและสถานะเอกสาร) =====
+function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, labReport, qcReport) {
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -258,6 +262,20 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
     } catch (error) {
       formattedRequestDate = requestDate;
     }
+  }
+  
+  // สร้าง HTML สำหรับประเภทเอกสาร
+  let documentTypeHTML = '';
+  if (documentType && documentType.trim() !== '') {
+    const typeColor = documentType.toLowerCase().includes('close') ? '#2ed573' : '#3742fa';
+    const typeIcon = documentType.toLowerCase().includes('close') ? '📁' : '📂';
+    documentTypeHTML = `
+      <div style="text-align: center; margin-bottom: 15px;">
+        <span style="display: inline-block; background-color: ${typeColor}; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+          ${typeIcon} ${documentType}
+        </span>
+      </div>
+    `;
   }
   
   // สร้าง HTML สำหรับสถานะเอกสาร (แสดงเฉพาะที่มีข้อมูล)
@@ -462,6 +480,8 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
               ${statusIcon} RFI #${rfiNumber}
             </div>
             
+            ${documentTypeHTML}
+            
             <div class="status-badge">
               Status: ${status}
             </div>
@@ -487,13 +507,13 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
             
             ${requestDate ? `
             <div class="info-row">
-              <span class="label">วันที่ตรวจสอบ:</span>
+              <span class="label">วันที่นัดหมายตรวจสอบ:</span>
               <span class="value">📅 ${formattedRequestDate}</span>
             </div>
             ` : ''}
             
             <div class="info-row">
-              <span class="label">วันที่ส่ง:</span>
+              <span class="label">วันที่ส่งอัปเดต:</span>
               <span class="value">${currentDate}</span>
             </div>
             
@@ -552,6 +572,7 @@ function testSingleEmail() {
     status: "Open RFI Pending Attachment",
     remarks: "ทดสอบการส่งแบบ batch พร้อมแสดงสถานะเอกสาร",
     requestDate: "2024-10-15",
+    documentType: "Open RFI",
     surveyReport: "Approved",
     labReport: "Rejected - ต้องแก้ไข",
     qcReport: "Approved"
@@ -566,6 +587,7 @@ function testMultipleEmails() {
     "Inspection Started",
     "ส่งให้หลายคนพร้อมกัน - ใช้ quota แค่ 1",
     "2024-10-15",
+    "Close RFI",
     "Approved",
     "",  // LAB Report ว่าง - จะไม่แสดง
     "Rejected - กรุณาแก้ไข"
@@ -579,7 +601,8 @@ function testNoDocumentStatus() {
     description: "ทดสอบโดยไม่มีสถานะเอกสาร",
     status: "Pending QC Review",
     remarks: "ยังไม่มีสถานะเอกสาร - จะไม่แสดงส่วนนี้",
-    requestDate: "2024-10-15"
+    requestDate: "2024-10-15",
+    documentType: "Open RFI"
     // ไม่ใส่ surveyReport, labReport, qcReport
   });
 }
