@@ -9,8 +9,10 @@ function sendRFIEmailFromAppSheet(params) {
     requestDate,
     documentType = '',  // เพิ่ม parameter ประเภทเอกสาร (Open RFI / Close RFI)
     surveyReport = '',  // เพิ่ม parameter สถานะเอกสาร
+    surveyReportNumber = '',  // เลขที่เอกสาร Survey Report
     surveyReportRemarks = '',  // หมายเหตุ Survey Report
     labReport = '',
+    labReportNumber = '',  // เลขที่เอกสาร LAB Report
     labReportRemarks = '',  // หมายเหตุ LAB Report
     qcReport = '',
     qcReportRemarks = ''  // หมายเหตุ QC Report
@@ -53,8 +55,10 @@ function sendRFIEmailFromAppSheet(params) {
       statusIcon,
       documentType,
       surveyReport,
+      surveyReportNumber,
       surveyReportRemarks,
       labReport,
+      labReportNumber,
       labReportRemarks,
       qcReport,
       qcReportRemarks
@@ -84,7 +88,7 @@ function sendRFIEmailFromAppSheet(params) {
 }
 
 // ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
-function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportRemarks = '', labReport = '', labReportRemarks = '', qcReport = '', qcReportRemarks = '') {
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportRemarks = '') {
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -126,8 +130,10 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       statusIcon,
       documentType,
       surveyReport,
+      surveyReportNumber,
       surveyReportRemarks,
       labReport,
+      labReportNumber,
       labReportRemarks,
       qcReport,
       qcReportRemarks
@@ -250,7 +256,7 @@ function getStatusIcon(status) {
 }
 
 // ===== ฟังก์ชันสร้าง HTML (เพิ่มส่วนประเภทเอกสารและสถานะเอกสาร) =====
-function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportRemarks, labReport, labReportRemarks, qcReport, qcReportRemarks) {
+function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportRemarks) {
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -303,6 +309,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
       documentStatusHTML += `
         <div class="doc-status-item" style="border-left-color: ${surveyColor};">
           <div class="doc-label">📊 Survey Report</div>
+          ${surveyReportNumber && surveyReportNumber.trim() !== '' ? `
+          <div class="doc-number">
+            📋 เลขที่: ${surveyReportNumber}
+          </div>
+          ` : ''}
           <div class="doc-status" style="background-color: ${surveyColor};">
             ${surveyIcon} ${surveyReport}
           </div>
@@ -322,6 +333,11 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
       documentStatusHTML += `
         <div class="doc-status-item" style="border-left-color: ${labColor};">
           <div class="doc-label">🧪 LAB Report</div>
+          ${labReportNumber && labReportNumber.trim() !== '' ? `
+          <div class="doc-number">
+            📋 เลขที่: ${labReportNumber}
+          </div>
+          ` : ''}
           <div class="doc-status" style="background-color: ${labColor};">
             ${labIcon} ${labReport}
           </div>
@@ -469,6 +485,15 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
           font-size: 14px;
           margin-bottom: 8px;
         }
+        .doc-number {
+          font-size: 13px;
+          color: #666;
+          margin-bottom: 8px;
+          padding: 5px 10px;
+          background-color: #e8f4f8;
+          border-radius: 4px;
+          display: inline-block;
+        }
         .doc-status {
           display: inline-block;
           color: white;
@@ -610,8 +635,10 @@ function testSingleEmail() {
     requestDate: "2024-10-15",
     documentType: "Open RFI",
     surveyReport: "Approved",
+    surveyReportNumber: "SUR-2024-001",
     surveyReportRemarks: "ผ่านการตรวจสอบเรียบร้อยแล้ว",
     labReport: "Rejected",
+    labReportNumber: "LAB-2024-055",
     labReportRemarks: "ต้องแก้ไขข้อมูลในหน้า 3 และส่งใหม่ภายใน 3 วัน",
     qcReport: "Approved",
     qcReportRemarks: ""  // ไม่มีหมายเหตุ - จะไม่แสดง
@@ -629,8 +656,10 @@ function testMultipleEmails() {
     "2024-10-15",
     "Close RFI",
     "Approved",
+    "SUR-2024-003",
     "ตรวจสอบครบถ้วนแล้ว",
     "",  // LAB Report ว่าง - จะไม่แสดง
+    "",
     "",
     "Rejected",
     "กรุณาแก้ไขและส่งใหม่"
@@ -662,8 +691,10 @@ function testOpenRFI() {
     requestDate: "2024-10-15",
     documentType: "Open RFI",
     surveyReport: "Approved",
+    surveyReportNumber: "SUR-2024-004",
     surveyReportRemarks: "Survey Report ผ่านการตรวจสอบจาก Surveyor แล้ว",
     labReport: "Approved",
+    labReportNumber: "LAB-2024-088",
     labReportRemarks: "ผลแล้บออกมาตรงตามข้อกำหนด ไม่พบสิ่งผิดปกติ",
     qcReport: "Approved",
     qcReportRemarks: "QC ตรวจสอบแล้วเห็นชอบให้ดำเนินการต่อได้"
