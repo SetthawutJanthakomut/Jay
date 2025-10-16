@@ -1,6 +1,5 @@
 // ===== POSTPONE RFI INSPECTION =====
 // ใช้งาน: เลือนตรวจ RFI พร้อมอัปเดต Calendar และส่งอีเมลแจ้ง
-// ✅ เวอร์ชันสมบูรณ์: ส่งอีเมลหา Requester + ทีมเก่า + ทีมใหม่
 
 const SURVEY_SPREADSHEET_ID = '1rWMUNNDbbLbHljs2GsU6fzrJDjHsutS7nMvElGUNTQk';
 const CALENDAR_ID = 'primary';
@@ -37,7 +36,7 @@ function postponeRFIInspection(
   searchDays = 60
 ) {
   Logger.log(`📅 [POSTPONE] Starting RFI postponement for: ${rfiNumber}`);
-  Logger.log(`👥 New Team: ${Assigned_Inspector}`);
+  Logger.log(`👥 Assigned Inspector: ${Assigned_Inspector}`);
   
   const validation = validatePostponeInputs(rfiNumber, Description, newDate, newStartTime, newEndTime);
   if (!validation.valid) {
@@ -68,7 +67,6 @@ function postponeRFIInspection(
     error: null,
     message: '',
     originalDate: null,
-    originalTeam: null,  // ⭐ เพิ่ม: เก็บทีมเก่า
     newDate: newDate,
     newStartTime: newStartTime,
     newEndTime: newEndTime
@@ -82,18 +80,11 @@ function postponeRFIInspection(
     if (rfiSearchResult.success && rfiSearchResult.events.length > 0) {
       result.rfiEventsFound = rfiSearchResult.events.length;
       result.originalDate = rfiSearchResult.events[0].startTime.toDateString();
-      
-      // ⭐ ดึงทีมเก่าจาก Calendar Event title
-      const originalTitle = rfiSearchResult.events[0].title || '';
-      const originalTeam = extractInspectorFromTitle(originalTitle);
-      result.originalTeam = originalTeam;
-      
       Logger.log(`✅ Found ${result.rfiEventsFound} RFI calendar events`);
-      Logger.log(`👥 Original Team: ${originalTeam || 'N/A'}`);
     } else {
       result.error = `No calendar events found for RFI: ${cleanRfiNumber} / ${cleanDescription}`;
       result.message = result.error;
-      Logger.log(⚠️ ${result.error}`);
+      Logger.log(`⚠️ ${result.error}`);
       return result;
     }
 
@@ -107,14 +98,20 @@ function postponeRFIInspection(
       return result;
     }
 
-    // Step 3: อัปเดต Primary Calendar Events
-    Logger.log("📝 Step 3: Updating Primary Calendar Events...");
+    // Step 3: ดึง Guest list จาก Calendar Events
+    Logger.log("👥 Step 3: Extracting guest list from calendar events...");
+    const calendarGuests = extractGuestsFromEvents(rfiSearchResult.events);
+    
+    Logger.log(`👥 Found ${calendarGuests.length} guests from calendar`);
+    result.participants = calendarGuests;
+
+    // Step 4: อัปเดต Primary Calendar Events
+    Logger.log("📝 Step 4: Updating Primary Calendar Events...");
     
     for (let i = 0; i < rfiSearchResult.events.length; i++) {
       const eventInfo = rfiSearchResult.events[i];
       
       try {
-        // ⭐ ส่ง requesterEmail ไปด้วย
         const updateSuccess = updateCalendarEventV2(
           eventInfo,
           CALENDAR_ID,
@@ -122,8 +119,7 @@ function postponeRFIInspection(
           newDateTime.endTime,
           postponeReason,
           newLocation,
-          Assigned_Inspector,
-          requesterEmail  // ⭐ เพิ่ม parameter
+          Assigned_Inspector
         );
         
         if (updateSuccess.success) {
@@ -141,57 +137,58 @@ function postponeRFIInspection(
       }
     }
 
-    // Step 4: ส่งอีเมลแจ้งทั้งทีมเก่าและทีมใหม่
-    if (sendEmail && result.rfiEventsUpdated > 0) {
-      Logger.log("📧 Step 4: Sending notification to Requester + OLD Team + NEW Team...");
-      
-      const scheduleInfo = {
-        originalDate: result.originalDate || 'N/A',
-        originalTime: rfiSearchResult.events[0] ? 
-          `${formatTime(rfiSearchResult.events[0].startTime)} - ${formatTime(rfiSearchResult.events[0].endTime)}` : 'N/A',
-        originalLocation: rfiSearchResult.events[0] ? (rfiSearchResult.events[0].location || '') : '',
-        originalInspector: result.originalTeam || '',
-        
-        newDate: formatDateThai(newDate),
-        newTime: `${newStartTime} - ${newEndTime}`,
-        newLocation: newLocation || '',
-        newInspector: Assigned_Inspector || ''
-      };
-      
-      Logger.log('📊 Schedule Info:', JSON.stringify(scheduleInfo));
-      
-      // ⭐ ส่งทีมเก่าไปด้วย
-      const emailResult = sendPostponementNotification(
-        cleanRfiNumber,
-        cleanDescription,
-        postponeReason,
-        result.updatedRFIEvents,
-        requesterEmail,
-        scheduleInfo,
-        result.originalTeam  // ⭐ ส่งทีมเก่า
-      );
-      
-      result.emailsSent = emailResult.success;
-      Logger.log(`📧 Email: ${emailResult.success ? 'SENT' : 'FAILED'}`);
-      Logger.log(`📧 Total recipients: ${emailResult.totalRecipients || 0} (Requester + OLD + NEW Team)`);
-      
-      if (emailResult.recipientsList && emailResult.recipientsList.length > 0) {
-        Logger.log(`📧 Recipients: ${emailResult.recipientsList.join(', ')}`);
-      }
-    }
+   // ในส่วน Step 5 ของ postponeRFIInspection
+if (sendEmail && result.rfiEventsUpdated > 0) {
+  Logger.log("📧 Step 5: Sending postponement notification to ALL participants...");
+  
+  // ✅ เตรียมข้อมูล Schedule สำหรับแสดงในอีเมล
+  const scheduleInfo = {
+    originalDate: result.originalDate || 'N/A',
+    originalTime: rfiSearchResult.events[0] ? 
+      `${formatTime(rfiSearchResult.events[0].startTime)} - ${formatTime(rfiSearchResult.events[0].endTime)}` : 'N/A',
+    originalLocation: rfiSearchResult.events[0] ? (rfiSearchResult.events[0].location || '') : '',
+    originalInspector: rfiSearchResult.events[0] ? extractInspectorFromTitle(rfiSearchResult.events[0].title) : '',
+    
+    newDate: formatDateThai(newDate),
+    newTime: `${newStartTime} - ${newEndTime}`,
+    newLocation: newLocation || '',
+    newInspector: Assigned_Inspector || ''
+  };
+  
+  Logger.log('📊 Schedule Info:', JSON.stringify(scheduleInfo));
+  
+  const emailResult = sendPostponementNotification(
+    cleanRfiNumber,
+    cleanDescription,
+    postponeReason,
+    result.updatedRFIEvents,
+    requesterEmail,
+    calendarGuests,
+    scheduleInfo  // ✅ ส่งข้อมูล schedule
+  );
+  
+  result.emailsSent = emailResult.success;
+  Logger.log(`📧 Email: ${emailResult.success ? 'SENT' : 'FAILED'}`);
+  Logger.log(`📧 Total recipients: ${emailResult.totalRecipients || 0} (Requester + Guests)`);
+  
+  if (emailResult.recipientsList && emailResult.recipientsList.length > 0) {
+    Logger.log(`📧 Recipients: ${emailResult.recipientsList.join(', ')}`);
+  }
+}
 
     // กำหนดผลลัพธ์
     result.success = result.rfiEventsUpdated > 0;
     
     if (result.success) {
-      result.message = `เลือนตรวจ ${result.rfiEventsUpdated} event(s) ไปวันที่ ${newDate} ${newStartTime}-${newEndTime}`;
+      result.message = `Postponed ${result.rfiEventsUpdated} event(s) to ${newDate} ${newStartTime}-${newEndTime}`;
     } else {
-      result.message = `ไม่สามารถเลือนตรวจ RFI ${cleanRfiNumber} ได้`;
+      result.message = `No appointments were postponed for RFI ${cleanRfiNumber}`;
     }
 
   } catch (error) {
+    // ✅ เพิ่ม catch block
     result.error = error.toString();
-    result.message = `เกิดข้อผิดพลาดในการเลือนตรวจ RFI ${cleanRfiNumber}: ${result.error}`;
+    result.message = `Error postponing RFI ${cleanRfiNumber}: ${result.error}`;
     Logger.log(`❌ Unexpected error: ${result.error}`);
   }
 
@@ -200,11 +197,9 @@ function postponeRFIInspection(
   Logger.log("📅 RFI POSTPONEMENT SUMMARY:");
   Logger.log(`🆔 RFI Number: ${result.rfiNumber}`);
   Logger.log(`📅 New Date: ${result.newDate} ${result.newStartTime}-${result.newEndTime}`);
-  Logger.log(`👥 OLD Team: ${result.originalTeam || 'N/A'} → ⚠️ REPLACED`);
-  Logger.log(`👥 NEW Team: ${Assigned_Inspector || 'N/A'} → ✅ ASSIGNED`);
   Logger.log(`📅 Events Updated: ${result.rfiEventsUpdated}/${result.rfiEventsFound}`);
-  Logger.log(`👥 Guest List: Updated (Requester + NEW Team only)`);
-  Logger.log(`📧 Emails Sent: ${result.emailsSent ? 'YES (Requester + OLD + NEW)' : 'NO'}`);
+  Logger.log(`👥 Participants: ${result.participants.length}`);
+  Logger.log(`📧 Emails Sent: ${result.emailsSent ? 'YES (ALL participants)' : 'NO'}`);
   Logger.log(`✅ Overall Success: ${result.success ? 'YES' : 'NO'}`);
 
   return result;
@@ -212,6 +207,12 @@ function postponeRFIInspection(
 
 /**
  * ✅ Validate Postpone Inputs
+ * @param {string} rfiNumber - RFI Number
+ * @param {string} description - Description
+ * @param {string} newDate - New Date (YYYY-MM-DD)
+ * @param {string} newStartTime - New Start Time (HH:MM)
+ * @param {string} newEndTime - New End Time (HH:MM)
+ * @return {Object} Validation result
  */
 function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, newEndTime) {
   try {
@@ -219,10 +220,12 @@ function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, n
     
     const errors = [];
     
+    // 1. ตรวจสอบ RFI Number
     if (!rfiNumber || String(rfiNumber).trim() === '') {
       errors.push('RFI Number is required');
     }
     
+    // 2. ตรวจสอบ New Date
     if (!newDate || String(newDate).trim() === '') {
       errors.push('New Date is required');
     } else {
@@ -237,6 +240,7 @@ function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, n
       }
     }
     
+    // 3. ตรวจสอบ New Start Time
     if (!newStartTime || String(newStartTime).trim() === '') {
       errors.push('New Start Time is required');
     } else {
@@ -246,6 +250,7 @@ function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, n
       }
     }
     
+    // 4. ตรวจสอบ New End Time
     if (!newEndTime || String(newEndTime).trim() === '') {
       errors.push('New End Time is required');
     } else {
@@ -254,6 +259,7 @@ function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, n
         errors.push('Invalid End Time format (must be HH:MM)');
       }
       
+      // เช็คว่า End Time > Start Time
       if (newStartTime) {
         const startMinutes = timeToMinutes(newStartTime);
         const endMinutes = timeToMinutes(newEndTime);
@@ -288,7 +294,6 @@ function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, n
     };
   }
 }
-
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -371,9 +376,9 @@ function searchCalendarEventsByRFIAndDescription(rfiNumber, description, calenda
 }
 
 /**
- * ⭐ อัปเดต Calendar Event พร้อมอัปเดต Guest List
+ * อัปเดต Calendar Event พร้อมตั้งสีตามทีมงาน
  */
-function updateCalendarEventV2(eventInfo, calendarId, newStartTime, newEndTime, postponeReason, newLocation, assignedInspector, requesterEmail) {
+function updateCalendarEventV2(eventInfo, calendarId, newStartTime, newEndTime, postponeReason, newLocation, assignedInspector) {
   Logger.log(`📝 Updating event in "${calendarId}": ${eventInfo.eventId}`);
   
   try {
@@ -414,83 +419,33 @@ function updateCalendarEventV2(eventInfo, calendarId, newStartTime, newEndTime, 
       Logger.log(`🏷️ Updated title: ${newTitle}`);
     }
     
-    // อัปเดตสี
+    // ✅ ดึงทีมงานจาก title เดิม (ถ้ามี [Team Name])
     const teamMatch = currentTitle.match(/\[([^\]]+)\]$/);
     const currentTeam = teamMatch ? teamMatch[1] : null;
     
+    // ✅ อัปเดตสีถ้ามีทีมงานใหม่
     if (assignedInspector && String(assignedInspector).trim() !== '') {
       const teams = String(assignedInspector).trim().split(',').map(t => t.trim());
       const teamColors = getTeamColors(assignedInspector);
       
+      // ถ้า event นี้มีทีมเดิม ให้อัปเดตสีตามทีมเดิม
       if (currentTeam && teams.includes(currentTeam) && teamColors[currentTeam]) {
         event.setColor(teamColors[currentTeam]);
         Logger.log(`🎨 Updated color for team: ${currentTeam}`);
       } else if (teams.length > 0 && teamColors[teams[0]]) {
+        // ถ้าไม่มีทีมเดิม ใช้สีของทีมแรก
         event.setColor(teamColors[teams[0]]);
         Logger.log(`🎨 Set color for team: ${teams[0]}`);
       }
-      
-      // ⭐⭐⭐ อัปเดต Guest List ⭐⭐⭐
-      Logger.log('👥 Updating Guest list...');
-      
-      // 1. ดึง Guest list ปัจจุบัน
-      const currentGuests = event.getGuestList(true);
-      Logger.log(`Current guests: ${currentGuests.length}`);
-      
-      // 2. ลบ Guest ทั้งหมด (ยกเว้น Requester)
-      const requesterEmailClean = requesterEmail ? String(requesterEmail).trim().toLowerCase() : '';
-      
-      currentGuests.forEach(function(guest) {
-        try {
-          const guestEmail = guest.getEmail().toLowerCase();
-          
-          if (guestEmail !== requesterEmailClean) {
-            event.removeGuest(guestEmail);
-            Logger.log(`🗑️ Removed guest: ${guestEmail}`);
-          }
-        } catch (e) {
-          Logger.log(`⚠️ Could not remove guest: ${e.toString()}`);
-        }
-      });
-      
-      // 3. เพิ่ม Requester (ถ้ายังไม่มี)
-      if (requesterEmailClean && requesterEmailClean.includes('@')) {
-        try {
-          event.addGuest(requesterEmailClean);
-          Logger.log(`✅ Added Requester: ${requesterEmailClean}`);
-        } catch (e) {
-          Logger.log(`⚠️ Could not add Requester: ${e.toString()}`);
-        }
-      }
-      
-      // 4. เพิ่ม Team members ใหม่
-      const teamEmails = getTeamEmailsByTeamNames(assignedInspector);
-      Logger.log(`Team members to add: ${teamEmails.length}`);
-      
-      teamEmails.forEach(function(teamMember) {
-        try {
-          const teamEmail = String(teamMember.email).trim().toLowerCase();
-          
-          if (teamEmail !== requesterEmailClean) {
-            event.addGuest(teamEmail);
-            Logger.log(`✅ Added team member: ${teamMember.name} (${teamEmail})`);
-          }
-        } catch (e) {
-          Logger.log(`⚠️ Could not add team member: ${e.toString()}`);
-        }
-      });
-      
-      Logger.log('✅ Guest list updated successfully');
-      // ⭐⭐⭐ จบส่วนอัปเดต Guest List ⭐⭐⭐
     }
     
     // สร้าง Postponement Record
     const postponementRecord = `
 ┌─────────────────────────────────────
-📅 เลื่อนการตรวจงาน (INSPECTION POSTPONED)
+📅 INSPECTION POSTPONED
 └─────────────────────────────────────┘
 
-⏰ กำหนดการเดิม:
+⏰ Original Schedule:
    📅 ${originalStartTime.toLocaleDateString('th-TH', { 
       year: 'numeric', 
       month: 'long', 
@@ -503,9 +458,9 @@ function updateCalendarEventV2(eventInfo, calendarId, newStartTime, newEndTime, 
       hour: '2-digit', 
       minute: '2-digit' 
    })}
-   📍 ${originalLocation || 'ไม่ระบุสถานที่'}
+   📍 ${originalLocation || 'No location'}
 
-🔄 กำหนดการใหม่:
+🔄 New Schedule:
    📅 ${newStartTime.toLocaleDateString('th-TH', { 
       year: 'numeric', 
       month: 'long', 
@@ -518,12 +473,12 @@ function updateCalendarEventV2(eventInfo, calendarId, newStartTime, newEndTime, 
       hour: '2-digit', 
       minute: '2-digit' 
    })}
-   📍 ${finalLocation || 'ไม่ระบุสถานที่'}
+   📍 ${finalLocation || 'No location'}
 
 ${assignedInspector && String(assignedInspector).trim() !== '' ? `👥 ทีมงานตรวจ: ${assignedInspector}\n` : ''}
-${postponeReason ? `💬 เหตุผล:\n   ${postponeReason}\n` : ''}
-📌 เลื่อนเมื่อ: ${new Date().toLocaleString('th-TH')}
-🤖 อัปเดตโดย: RFI System
+${postponeReason ? `💬 Reason:\n   ${postponeReason}\n` : ''}
+📌 Postponed on: ${new Date().toLocaleString('th-TH')}
+🤖 Updated by: RFI System
 
 ┌─────────────────────────────────────
 `;
@@ -536,8 +491,7 @@ ${postponeReason ? `💬 เหตุผล:\n   ${postponeReason}\n` : ''}
     return {
       success: true,
       newTitle: newTitle,
-      newLocation: finalLocation,
-      guestsUpdated: true
+      newLocation: finalLocation
     };
     
   } catch (error) {
@@ -550,16 +504,15 @@ ${postponeReason ? `💬 เหตุผล:\n   ${postponeReason}\n` : ''}
 }
 
 /**
- * ⭐ ส่งอีเมลแจ้งการเลือนตรวจ (ภาษาไทย) - เช็คว่าเปลี่ยนทีมหรือไม่
+ * ส่งอีเมลแจ้งการเลือนตรวจ (แสดงวันเวลาและ Reason)
  */
-function sendPostponementNotification(rfiNumber, Description, postponeReason, updatedEvents, requesterEmail, scheduleInfo, originalTeamNames) {
+function sendPostponementNotification(rfiNumber, Description, postponeReason, updatedEvents, requesterEmail, calendarGuests, scheduleInfo) {
   Logger.log('\n' + '='.repeat(50));
-  Logger.log('📧 SENDING POSTPONEMENT NOTIFICATION (TH)');
+  Logger.log('📧 SENDING POSTPONEMENT NOTIFICATION');
   Logger.log('='.repeat(50));
   
-  Logger.log(`📧 Requester: ${requesterEmail || 'NOT PROVIDED'}`);
-  Logger.log(`👥 OLD Team: ${originalTeamNames || 'NOT PROVIDED'}`);
-  Logger.log(`👥 NEW Team: ${scheduleInfo?.newInspector || 'NOT PROVIDED'}`);
+  Logger.log(`📧 Requester Email: ${requesterEmail || 'NOT PROVIDED'}`);
+  Logger.log(`📧 Calendar Guests: ${calendarGuests ? calendarGuests.length : 0}`);
   
   try {
     const quota = checkEmailQuota();
@@ -570,75 +523,47 @@ function sendPostponementNotification(rfiNumber, Description, postponeReason, up
       return { success: false, message: "Email quota exceeded" };
     }
 
-    // ⭐ เช็คว่าเปลี่ยนทีมหรือไม่
-    const oldTeamClean = (originalTeamNames || '').trim();
-    const newTeamClean = (scheduleInfo?.newInspector || '').trim();
-    const isTeamChanged = oldTeamClean !== newTeamClean && oldTeamClean !== '';
-    
-    Logger.log(`\n🔍 Team changed: ${isTeamChanged}`);
-    if (isTeamChanged) {
-      Logger.log(`   OLD: "${oldTeamClean}"`);
-      Logger.log(`   NEW: "${newTeamClean}"`);
-    } else {
-      Logger.log(`   Same team: "${newTeamClean}"`);
-    }
-
-    // รวมผู้รับอีเมล
+    // รวมทุกคน: Requester + Guests จาก Calendar
     const allRecipients = new Set();
-    const oldTeamEmails = [];
-    const newTeamEmails = [];
     
-    // 1. เพิ่ม Requester
+    // เพิ่ม Requester
     if (requesterEmail && String(requesterEmail).trim() !== '' && String(requesterEmail).includes('@')) {
       const cleanEmail = String(requesterEmail).trim();
       allRecipients.add(cleanEmail);
       Logger.log(`✅ Added Requester: ${cleanEmail}`);
+    } else {
+      Logger.log(`⚠️ Requester email invalid or empty: "${requesterEmail}"`);
     }
     
-    // 2. ⭐ เพิ่มทีมเก่า (เฉพาะตอนที่มีการเปลี่ยนทีม)
-    if (isTeamChanged && oldTeamClean !== '') {
-      Logger.log(`\n👥 Processing OLD Team (will be notified): ${oldTeamClean}`);
-      
-      const oldTeamResult = getTeamEmailsByTeamNames(oldTeamClean);
-      
-      if (oldTeamResult && oldTeamResult.length > 0) {
-        oldTeamResult.forEach((teamMember, index) => {
-          const teamEmail = teamMember.email;
-          if (teamEmail && teamEmail.includes('@')) {
-            allRecipients.add(teamEmail);
-            oldTeamEmails.push(teamEmail);
-            Logger.log(`✅ Added OLD Team ${index + 1}: ${teamMember.name} -> ${teamEmail}`);
-          }
-        });
-      }
-    } else if (!isTeamChanged) {
-      Logger.log(`\n👥 Team unchanged - OLD team will NOT receive separate notification`);
-    }
+    // เพิ่ม Guests จาก Calendar
+    Logger.log(`\n📋 Processing ${calendarGuests ? calendarGuests.length : 0} calendar guests...`);
     
-    // 3. เพิ่มทีมใหม่ (หรือทีมเดิม ถ้าไม่ได้เปลี่ยน)
-    if (scheduleInfo && scheduleInfo.newInspector) {
-      Logger.log(`\n👥 Processing ${isTeamChanged ? 'NEW' : 'Current'} Team: ${scheduleInfo.newInspector}`);
-      
-      const newTeamResult = getTeamEmailsByTeamNames(scheduleInfo.newInspector);
-      
-      if (newTeamResult && newTeamResult.length > 0) {
-        newTeamResult.forEach((teamMember, index) => {
-          const teamEmail = teamMember.email;
-          if (teamEmail && teamEmail.includes('@')) {
-            allRecipients.add(teamEmail);
-            newTeamEmails.push(teamEmail);
-            Logger.log(`✅ Added ${isTeamChanged ? 'NEW' : 'Current'} Team ${index + 1}: ${teamMember.name} -> ${teamEmail}`);
-          }
-        });
-      }
+    if (calendarGuests && Array.isArray(calendarGuests)) {
+      calendarGuests.forEach((guestEmail, index) => {
+        Logger.log(`🔍 Guest ${index + 1}: "${guestEmail}"`);
+        
+        if (guestEmail && guestEmail.includes('@')) {
+          const cleanEmail = String(guestEmail).trim();
+          allRecipients.add(cleanEmail);
+          Logger.log(`✅ Added Guest: ${cleanEmail}`);
+        } else {
+          Logger.log(`⚠️ Invalid guest email: "${guestEmail}"`);
+        }
+      });
+    } else {
+      Logger.log(`⚠️ Calendar guests is not an array or is null`);
     }
     
     const finalRecipients = Array.from(allRecipients);
     
-    Logger.log(`\n📊 FINAL: ${finalRecipients.length} recipients`);
+    Logger.log(`\n📊 FINAL RECIPIENTS COUNT: ${finalRecipients.length}`);
+    Logger.log('📧 Final recipient list:');
+    finalRecipients.forEach((email, index) => {
+      Logger.log(`   ${index + 1}. ${email}`);
+    });
     
     if (finalRecipients.length === 0) {
-      Logger.log('❌ No recipients');
+      Logger.log('❌ ERROR: No recipients found - cannot send email');
       return { 
         success: false, 
         message: "No recipients",
@@ -646,51 +571,48 @@ function sendPostponementNotification(rfiNumber, Description, postponeReason, up
       };
     }
 
-    const subject = isTeamChanged 
-      ? `📅 เลื่อนตรวจงาน + เปลี่ยนทีม - RFI #${rfiNumber}`
-      : `📅 เลื่อนตรวจงาน - RFI #${rfiNumber}`;
+    const subject = `📅 POSTPONED - RFI #${rfiNumber} Inspection Rescheduled`;
     
-    // สร้างรายการ Events
     let eventsList = '<ul style="margin: 10px 0;">';
     updatedEvents.forEach(evt => {
       eventsList += `<li style="margin: 5px 0;"><strong>${evt.title}</strong></li>`;
     });
     eventsList += '</ul>';
     
-    // ตารางเปรียบเทียบ
+    // ✅ สร้างตารางแสดงการเปลี่ยนแปลงวันเวลา
     let scheduleComparisonHtml = '';
     if (scheduleInfo) {
       scheduleComparisonHtml = `
-<h3>📅 การเปลี่ยนแปลง:</h3>
+<h3>📅 Schedule Changes:</h3>
 <table style="margin: 15px 0; width: 100%;">
 <thead>
 <tr style="background-color: #f8f9fa;">
-  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">รายการ</th>
-  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">เดิม</th>
-  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">ใหม่</th>
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Item</th>
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Original</th>
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">New (Rescheduled)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📅 วันที่</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📅 Date</strong></td>
   <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalDate}</td>
   <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newDate}</strong></td>
 </tr>
 <tr>
-  <td style="padding: 10px; border: 1px solid #ddd;"><strong>🕐 เวลา</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>🕐 Time</strong></td>
   <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalTime}</td>
   <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newTime}</strong></td>
 </tr>
 ${scheduleInfo.originalLocation || scheduleInfo.newLocation ? `
 <tr>
-  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📍 สถานที่</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📍 Location</strong></td>
   <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalLocation || '-'}</td>
   <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newLocation || '-'}</strong></td>
 </tr>
 ` : ''}
 ${scheduleInfo.originalInspector || scheduleInfo.newInspector ? `
 <tr>
-  <td style="padding: 10px; border: 1px solid #ddd;"><strong>👥 ทีมงาน</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>👥 Inspector Team</strong></td>
   <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalInspector || '-'}</td>
   <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newInspector || '-'}</strong></td>
 </tr>
@@ -699,43 +621,31 @@ ${scheduleInfo.originalInspector || scheduleInfo.newInspector ? `
 </table>`;
     }
     
-    // เหตุผล
+    // ✅ แสดง Reason
     let reasonHtml = '';
     if (postponeReason && String(postponeReason).trim() !== '') {
       reasonHtml = `
 <div style="background-color: #fffacd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px;">
-  <strong style="color: #856404;">💬 เหตุผลในการเลือน:</strong>
+  <strong style="color: #856404;">💬 Reason for Postponement:</strong>
   <p style="margin: 8px 0 0 0; color: #333;">${postponeReason}</p>
 </div>`;
     }
     
-    // รายชื่อผู้รับ (แยกสี)
+    // สร้างรายชื่อผู้รับสำหรับแสดงในเมล
     let recipientListHtml = '';
     if (finalRecipients.length > 0) {
       recipientListHtml = `
-<h3>👥 รายชื่อผู้รับอีเมล:</h3>
+<h3>👥 Email Recipients:</h3>
 <table style="margin: 10px 0;">
 <tr style="background-color: #f2f2f5;">
-  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">อีเมล</th>
-  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">บทบาท</th>
+  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Email</th>
+  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Role</th>
 </tr>`;
       
       finalRecipients.forEach(email => {
-        let role = 'ผู้เกี่ยวข้อง';
-        let bgColor = '';
-        
-        if (email === requesterEmail) {
-          role = '<strong>ผู้ขอตรวจงาน</strong>';
-          bgColor = 'background-color: #d1ecf1;';
-        } else if (oldTeamEmails.includes(email)) {
-          role = '<span style="color: #856404;">⚠️ ทีมเก่า (ถูกเปลี่ยน)</span>';
-          bgColor = 'background-color: #fff3cd;';
-        } else if (newTeamEmails.includes(email)) {
-          role = '<span style="color: #155724;">✅ ทีมใหม่ (รับมอบหมาย)</span>';
-          bgColor = 'background-color: #d4edda;';
-        }
-        
-        recipientListHtml += `<tr style="${bgColor}"><td style="padding: 8px; border: 1px solid #ddd;">${email}</td><td style="padding: 8px; border: 1px solid #ddd;">${role}</td></tr>`;
+        const isRequester = email === requesterEmail;
+        const role = isRequester ? '<strong>Requester</strong>' : 'Participant';
+        recipientListHtml += `<tr><td style="padding: 8px; border: 1px solid #ddd;">${email}</td><td style="padding: 8px; border: 1px solid #ddd;">${role}</td></tr>`;
       });
       
       recipientListHtml += `</table>`;
@@ -744,7 +654,7 @@ ${scheduleInfo.originalInspector || scheduleInfo.newInspector ? `
     const htmlMessage = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><style>
-body { font-family: 'Sarabun', Arial, sans-serif; margin: 20px; line-height: 1.6; }
+body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
 h2 { color: #ff6b35; margin-bottom: 10px; }
 h3 { color: #333; margin-top: 25px; margin-bottom: 12px; }
 table { border-collapse: collapse; width: 100%; margin: 10px 0; }
@@ -752,87 +662,55 @@ td, th { border: 1px solid #ddd; padding: 10px; text-align: left; }
 th { background-color: #f2f2f5; font-weight: 600; }
 .info-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px; }
 .note { background-color: #e7f3ff; border-left: 4px solid #1877f2; padding: 15px; margin: 15px 0; border-radius: 5px; }
-.warning-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px; }
-.success-box { background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; border-radius: 5px; }
+.highlight { background-color: #e7f3ff; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
 ul { padding-left: 20px; }
 li { margin: 5px 0; }
 </style></head>
 <body>
-<h2>📅 ${isTeamChanged ? 'แจ้งเลื่อนตรวจงาน RFI และเปลี่ยนทีมงาน' : 'แจ้งเลื่อนตรวจงาน RFI'}</h2>
+<h2>📅 RFI Inspection Postponed</h2>
 
 <div class="info-box">
-  <strong>⚠️ ประกาศสำคัญ:</strong> ${isTeamChanged 
-    ? 'การตรวจงานได้ถูกเลื่อนไปวันใหม่ พร้อมเปลี่ยนทีมงานที่รับผิดชอบ'
-    : 'การตรวจงานได้ถูกเลื่อนไปยังวันที่และเวลาใหม่'}
+  <strong>⚠️ Important Notice:</strong> The scheduled inspection has been postponed to a new date and time.
 </div>
 
-${isTeamChanged && oldTeamEmails.length > 0 ? `
-<div class="warning-box">
-  <strong>📢 สำหรับทีมเก่า (${scheduleInfo.originalInspector || 'ทีมเดิม'}):</strong><br>
-  ⚠️ ท่านได้ถูก<strong>เปลี่ยนแปลง</strong>และ<strong>ไม่ต้อง</strong>รับผิดชอบงานตรวจนี้อีกต่อไป<br>
-  ℹ️ อีเมลนี้เป็นการแจ้งเพื่อทราบเท่านั้น - ไม่ต้องดำเนินการใดๆ
-</div>
-` : ''}
-
-${isTeamChanged && newTeamEmails.length > 0 ? `
-<div class="success-box">
-  <strong>📢 สำหรับทีมใหม่ (${scheduleInfo.newInspector || 'ทีมใหม่'}):</strong><br>
-  ✅ ท่านได้รับ<strong>มอบหมาย</strong>ให้ดำเนินการตรวจงานนี้<br>
-  📅 กรุณาตรวจสอบปฏิทินและเตรียมความพร้อมตามกำหนดการใหม่ด้านล่าง
-</div>
-` : ''}
-
-${!isTeamChanged && newTeamEmails.length > 0 ? `
-<div class="note">
-  <strong>📢 สำหรับทีมงาน (${scheduleInfo.newInspector || 'ทีมปัจจุบัน'}):</strong><br>
-  📅 กรุณาตรวจสอบปฏิทินและเตรียมความพร้อมตามกำหนดการใหม่ด้านล่าง<br>
-  ℹ️ ทีมงานยังคงเดิม - เปลี่ยนเฉพาะวันที่และเวลา
-</div>
-` : ''}
-
-<h3>รายละเอียด RFI:</h3>
+<h3>RFI Details:</h3>
 <table>
 <tr><th style="width: 30%;">RFI Number</th><td><strong>${rfiNumber}</strong></td></tr>
-<tr><th>รายละเอียด</th><td>${Description}</td></tr>
+<tr><th>Description</th><td>${Description}</td></tr>
 </table>
 
 ${scheduleComparisonHtml}
 
 ${reasonHtml}
 
-<h3>📅 Calendar Events ที่อัปเดต:</h3>
+<h3>📅 Updated Calendar Events:</h3>
 ${eventsList}
 
 ${recipientListHtml}
 
 <div class="note">
-  <strong>📌 หมายเหตุสำคัญ:</strong> 
+  <strong>📌 Important Notes:</strong> 
   <ul style="margin: 10px 0; padding-left: 20px;">
-    ${isTeamChanged ? `
-    <li>อีเมลนี้ส่งถึง <strong>ทุกฝ่ายที่เกี่ยวข้อง</strong> (ผู้ขอ + ทีมเก่า + ทีมใหม่)</li>
-    <li><strong style="color: #856404;">ทีมเก่า:</strong> ท่านไม่ต้องรับผิดชอบอีกต่อไป - เพื่อทราบเท่านั้น</li>
-    <li><strong style="color: #155724;">ทีมใหม่:</strong> ท่านได้รับมอบหมายแล้ว - กรุณาตรวจสอบปฏิทิน</li>
-    ` : `
-    <li>อีเมลนี้ส่งถึง <strong>ผู้ขอและทีมงาน</strong></li>
-    <li><strong>ทีมงาน:</strong> ยังคงเดิม - เปลี่ยนเฉพาะวันที่และเวลา</li>
-    `}
-    <li>Calendar events ถูกอัปเดตอัตโนมัติแล้ว</li>
-    <li>หากมีข้อสงสัย กรุณาติดต่อผู้ขอหรือทีม QC</li>
+    <li>This notification is sent to <strong>all participants</strong> (Requester + Guests)</li>
+    <li>Your calendar has been automatically updated with the new schedule</li>
+    <li>Please check your Google Calendar to confirm the new appointment</li>
+    <li>If you have any questions, please contact the requester or QC team</li>
   </ul>
 </div>
 
 <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
 <p style="color: #666; font-size: 12px; margin: 5px 0;">
-📨 <strong>ผู้รับ:</strong> ${finalRecipients.length} คน ${isTeamChanged ? '(ผู้ขอ + ทีมเก่า + ทีมใหม่)' : '(ผู้ขอ + ทีมงาน)'}<br>
-🤖 <strong>ส่งโดย:</strong> ระบบ RFI - ${isTeamChanged ? 'แจ้งเลื่อนตรวจและเปลี่ยนทีม' : 'แจ้งเลื่อนตรวจ'}<br>
-🕐 <strong>ส่งเมื่อ:</strong> ${new Date().toLocaleString('th-TH')}
+📨 <strong>Recipients:</strong> ${finalRecipients.length} person(s) (Requester + Guests)<br>
+🤖 <strong>Sent by:</strong> RFI System - Postponement Notification<br>
+🕐 <strong>Sent at:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok', hour12: false })} (Bangkok Time)
 </p>
 </body>
 </html>`;
     
+    // ส่งถึงทุกคน
     const recipientList = finalRecipients.join(',');
     
-    Logger.log(`\n📤 Sending email...`);
+    Logger.log(`\n📤 Attempting to send email...`);
     Logger.log(`📧 To: ${recipientList}`);
     Logger.log(`📧 Subject: ${subject}`);
     
@@ -840,13 +718,14 @@ ${recipientListHtml}
       to: recipientList,
       subject: subject,
       htmlBody: htmlMessage,
-      name: 'ระบบ RFI - แจ้งเลื่อนตรวจ'
+      name: 'RFI System - Postponement Notification'
     });
     
     if (sent) {
-      Logger.log(`✅ EMAIL SENT to ${finalRecipients.length} recipients`);
+      Logger.log(`✅ EMAIL SENT SUCCESSFULLY`);
+      Logger.log(`📧 Delivered to ${finalRecipients.length} recipients`);
     } else {
-      Logger.log(`❌ EMAIL FAILED`);
+      Logger.log(`❌ EMAIL FAILED TO SEND`);
     }
     
     return {
@@ -858,6 +737,7 @@ ${recipientListHtml}
     
   } catch (error) {
     Logger.log(`❌ EMAIL ERROR: ${error.toString()}`);
+    Logger.log(`Stack trace: ${error.stack}`);
     return { 
       success: false, 
       error: error.toString(),
@@ -890,98 +770,12 @@ function createNewDateTime(dateStr, startTimeStr, endTimeStr) {
   }
 }
 
-// ===== UTILITY FUNCTIONS =====
-
-function timeToMinutes(timeString) {
-  if (!timeString) return 0;
-  const parts = timeString.split(':');
-  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-}
-
-function checkEmailQuota() {
-  try {
-    const remainingQuota = MailApp.getRemainingDailyQuota();
-    console.log('Remaining email quota:', remainingQuota);
-    return remainingQuota;
-  } catch (error) {
-    console.error('Error checking email quota:', error);
-    return 0;
-  }
-}
-
-function safeSendEmail(emailParams) {
-  try {
-    const quota = checkEmailQuota();
-    if (quota <= 0) {
-      console.log('Email quota exceeded, skipping email');
-      return false;
-    }
-    
-    MailApp.sendEmail(emailParams);
-    return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
-  }
-}
-
-/**
- * ดึงชื่อทีมจาก Title
- */
-function extractInspectorFromTitle(title) {
-  if (!title) return '';
-  
-  const match = title.match(/\[([^\]]+)\]/);
-  if (match && match[1]) {
-    return match[1];
-  }
-  
-  return '';
-}
-
-/**
- * Format Date เป็นภาษาไทย
- */
-function formatDateThai(dateString) {
-  if (!dateString) return '';
-  
-  const months = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ];
-  
-  const date = new Date(dateString + 'T00:00:00');
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear() + 543;
-  
-  return `${day} ${month} ${year}`;
-}
-
-/**
- * Format Time (HH:MM)
- */
-function formatTime(timeValue) {
-  if (!timeValue) return '';
-  
-  if (typeof timeValue === 'string') {
-    return timeValue;
-  }
-  
-  if (timeValue instanceof Date) {
-    const hours = String(timeValue.getHours()).padStart(2, '0');
-    const minutes = String(timeValue.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
-  
-  return timeValue.toString();
-}
-
 // ===== COLOR FUNCTIONS (จาก Resources Sheet) =====
 
 function getTeamColors(assignedInspector) {
   try {
     if (!assignedInspector || String(assignedInspector).trim() === '') {
+      console.log('⚠️ No assigned inspector');
       return {};
     }
     
@@ -989,17 +783,22 @@ function getTeamColors(assignedInspector) {
     const requestedTeams = teamString.split(',').map(t => t.trim()).filter(t => t.length > 0);
     
     if (requestedTeams.length === 0) {
+      console.log('⚠️ No valid teams in assigned inspector');
       return {};
     }
+    
+    console.log(`🔍 Looking for colors for teams: ${requestedTeams.join(', ')}`);
     
     const sheet = SpreadsheetApp.openById(SURVEY_SPREADSHEET_ID).getSheetByName('Resources');
     
     if (!sheet) {
+      console.log('⚠️ Resources sheet not found, using default colors');
       return {};
     }
     
     const lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
+      console.log('⚠️ No data in Resources sheet');
       return {};
     }
     
@@ -1014,15 +813,18 @@ function getTeamColors(assignedInspector) {
       
       if (requestedTeams.includes(teamName) && colorValue) {
         teamColors[teamName] = getCalendarColor(colorValue);
+        console.log(`✅ Team: ${teamName} → Color: ${colorValue}`);
       }
     }
     
     requestedTeams.forEach(function(team) {
       if (!teamColors[team]) {
+        console.log(`⚠️ Color not found for team: ${team} (using default BLUE)`);
         teamColors[team] = CalendarApp.EventColor.BLUE;
       }
     });
     
+    console.log(`✅ Loaded ${Object.keys(teamColors).length} team colors`);
     return teamColors;
     
   } catch (error) {
@@ -1061,6 +863,7 @@ function getCalendarColor(colorHex) {
 function hexToCalendarColor(hexColor) {
   const inputRGB = hexToRGB(hexColor);
   if (!inputRGB) {
+    console.log('⚠️ Invalid hex color:', hexColor);
     return CalendarApp.EventColor.BLUE;
   }
   
@@ -1089,6 +892,7 @@ function hexToCalendarColor(hexColor) {
     }
   }
   
+  console.log(`🎨 ${hexColor} → ${closestColor.name}`);
   return closestColor.color;
 }
 
@@ -1109,14 +913,480 @@ function colorDistance(rgb1, rgb2) {
   );
 }
 
-// ===== TEST FUNCTIONS =====
+
+
+// ===== UTILITY FUNCTIONS =====
+
+function timeToMinutes(timeString) {
+  if (!timeString) return 0;
+  const parts = timeString.split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+
+function checkEmailQuota() {
+  try {
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+    console.log('Remaining email quota:', remainingQuota);
+    return remainingQuota;
+  } catch (error) {
+    console.error('Error checking email quota:', error);
+    return 0;
+  }
+}
+
+function safeSendEmail(emailParams) {
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      console.log('Email quota exceeded, skipping email');
+      return false;
+    }
+    
+    MailApp.sendEmail(emailParams);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
+}
+
+
+// ===== เพิ่มฟังก์ชันนี้ก่อน sendPostponementNotification =====
 
 /**
- * 🧪 ทดสอบการเลื่อนตรวจ + เปลี่ยนทีม (ส่งอีเมลหาทั้งทีมเก่าและทีมใหม่)
+ * ดึงรายชื่อ Guests จาก Calendar Events
  */
-function testPostponeWithTeamChange() {
-  Logger.log('🧪 TEST: Postpone with Team Change');
+/**
+ * ดึงรายชื่อ Guests จาก Calendar Events (Fixed Version)
+ */
+/**
+ * ดึงรายชื่อ Guests จาก Calendar Events (Correct Version)
+ */
+function extractGuestsFromEvents(eventInfoList) {
+  Logger.log('👥 Extracting guests from calendar events...');
+  Logger.log(`📊 Events to process: ${eventInfoList.length}`);
+  
+  const allGuests = new Set();
+  
+  try {
+    eventInfoList.forEach((eventInfo, index) => {
+      try {
+        Logger.log(`\n🔍 Processing event ${index + 1}/${eventInfoList.length}`);
+        Logger.log(`📋 Event Title: ${eventInfo.title}`);
+        
+        const event = eventInfo.event;
+        
+        if (!event) {
+          Logger.log(`⚠️ Event object is null/undefined`);
+          return;
+        }
+        
+        // ✅ getGuestList(true) returns array of EventGuest objects
+        const guests = event.getGuestList(true);
+        Logger.log(`👥 Guest list length: ${guests.length}`);
+        
+        if (guests.length === 0) {
+          Logger.log(`⚠️ No guests found in this event`);
+        }
+        
+        // ✅ Loop through EventGuest objects and call .getEmail()
+        guests.forEach((guest, guestIndex) => {
+          try {
+            // ✅ Use .getEmail() for EventGuest objects
+            const guestEmail = guest.getEmail();
+            const guestName = guest.getName();
+            
+            Logger.log(`👤 Guest ${guestIndex + 1}: ${guestName} <${guestEmail}>`);
+            
+            if (guestEmail && guestEmail.includes('@')) {
+              allGuests.add(guestEmail);
+              Logger.log(`✅ Added: ${guestEmail}`);
+            } else {
+              Logger.log(`⚠️ Invalid email: ${guestEmail}`);
+            }
+          } catch (guestError) {
+            Logger.log(`❌ Error processing guest: ${guestError.toString()}`);
+          }
+        });
+        
+        // ✅ ดึง Creator/Owner ด้วย
+        try {
+          const creators = event.getCreators();
+          Logger.log(`👨‍💼 Creators: ${creators.length > 0 ? creators.join(', ') : 'None'}`);
+          
+          creators.forEach(creator => {
+            if (creator && creator.includes('@')) {
+              allGuests.add(String(creator).trim());
+              Logger.log(`✅ Added creator: ${creator}`);
+            }
+          });
+        } catch (creatorError) {
+          Logger.log(`⚠️ Could not get creators: ${creatorError.toString()}`);
+        }
+        
+      } catch (eventError) {
+        Logger.log(`❌ Error extracting guests from event: ${eventError.toString()}`);
+      }
+    });
+    
+    const guestArray = Array.from(allGuests);
+    Logger.log(`\n📊 TOTAL UNIQUE GUESTS FOUND: ${guestArray.length}`);
+    
+    if (guestArray.length > 0) {
+      Logger.log('📧 Guest list:');
+      guestArray.forEach(email => {
+        Logger.log(`   - ${email}`);
+      });
+    } else {
+      Logger.log('⚠️ WARNING: No guests found in any calendar event!');
+    }
+    
+    return guestArray;
+    
+  } catch (error) {
+    Logger.log(`❌ Error extracting guests: ${error.toString()}`);
+    return [];
+  }
+}
+
+/**
+ * ส่งอีเมลแจ้งการเลือนตรวจ (แค่ Requester เท่านั้น แต่แสดงรายชื่อ Guests ในเมล)
+ */
+/**
+ * ส่งอีเมลแจ้งการเลือนตรวจ (ถึงทุกคน: Requester + Guests)
+ */
+/**
+ * ส่งอีเมลแจ้งการเลือนตรวจ (ถึงทุกคน: Requester + Guests)
+ */
+function sendPostponementNotification(rfiNumber, Description, postponeReason, updatedEvents, requesterEmail, calendarGuests, scheduleInfo) {
+  Logger.log('\n' + '='.repeat(50));
+  Logger.log('📧 SENDING POSTPONEMENT NOTIFICATION');
   Logger.log('='.repeat(50));
+  
+  Logger.log(`📧 Requester Email: ${requesterEmail || 'NOT PROVIDED'}`);
+  Logger.log(`📧 Calendar Guests: ${calendarGuests ? calendarGuests.length : 0}`);
+  
+  try {
+    const quota = checkEmailQuota();
+    Logger.log(`📊 Email quota remaining: ${quota}`);
+    
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return { success: false, message: "Email quota exceeded" };
+    }
+
+    // รวมทุกคน: Requester + Guests จาก Calendar + Team Emails
+    const allRecipients = new Set();
+    
+    // เพิ่ม Requester
+    if (requesterEmail && String(requesterEmail).trim() !== '' && String(requesterEmail).includes('@')) {
+      const cleanEmail = String(requesterEmail).trim();
+      allRecipients.add(cleanEmail);
+      Logger.log(`✅ Added Requester: ${cleanEmail}`);
+    } else {
+      Logger.log(`⚠️ Requester email invalid or empty: "${requesterEmail}"`);
+    }
+    
+    // เพิ่ม Guests จาก Calendar
+    Logger.log(`\n📋 Processing ${calendarGuests ? calendarGuests.length : 0} calendar guests...`);
+    
+    if (calendarGuests && Array.isArray(calendarGuests)) {
+      calendarGuests.forEach((guestEmail, index) => {
+        Logger.log(`📝 Guest ${index + 1}: "${guestEmail}"`);
+        
+        if (guestEmail && guestEmail.includes('@')) {
+          const cleanEmail = String(guestEmail).trim();
+          allRecipients.add(cleanEmail);
+          Logger.log(`✅ Added Guest: ${cleanEmail}`);
+        } else {
+          Logger.log(`⚠️ Invalid guest email: "${guestEmail}"`);
+        }
+      });
+    } else {
+      Logger.log(`⚠️ Calendar guests is not an array or is null`);
+    }
+    
+    // ✅ เพิ่ม Team Emails จาก Resources sheet
+    if (scheduleInfo && scheduleInfo.newInspector) {
+      Logger.log(`\n👥 Processing Team Emails for: ${scheduleInfo.newInspector}`);
+      
+      // ⭐ เรียก getTeamEmailsByTeamNames จาก Code.gs
+      const teamEmailsResult = getTeamEmailsByTeamNames(scheduleInfo.newInspector);
+      
+      if (teamEmailsResult && teamEmailsResult.length > 0) {
+        teamEmailsResult.forEach((teamMember, index) => {
+          const teamEmail = teamMember.email;
+          if (teamEmail && teamEmail.includes('@')) {
+            allRecipients.add(teamEmail);
+            Logger.log(`✅ Added Team Member ${index + 1}: ${teamMember.name} -> ${teamEmail}`);
+          }
+        });
+      } else {
+        Logger.log(`⚠️ No team emails found for: ${scheduleInfo.newInspector}`);
+      }
+    }
+    
+    const finalRecipients = Array.from(allRecipients);
+    
+    Logger.log(`\n📊 FINAL RECIPIENTS COUNT: ${finalRecipients.length}`);
+    Logger.log('📧 Final recipient list:');
+    finalRecipients.forEach((email, index) => {
+      Logger.log(`   ${index + 1}. ${email}`);
+    });
+    
+    if (finalRecipients.length === 0) {
+      Logger.log('❌ ERROR: No recipients found - cannot send email');
+      return { 
+        success: false, 
+        message: "No recipients",
+        totalRecipients: 0
+      };
+    }
+
+    const subject = `📅 POSTPONED - RFI #${rfiNumber} Inspection Rescheduled`;
+    
+    let eventsList = '<ul style="margin: 10px 0;">';
+    updatedEvents.forEach(evt => {
+      eventsList += `<li style="margin: 5px 0;"><strong>${evt.title}</strong></li>`;
+    });
+    eventsList += '</ul>';
+    
+    // ✅ สร้างตารางแสดงการเปลี่ยนแปลงวันเวลา
+    let scheduleComparisonHtml = '';
+    if (scheduleInfo) {
+      scheduleComparisonHtml = `
+<h3>📅 Schedule Changes:</h3>
+<table style="margin: 15px 0; width: 100%;">
+<thead>
+<tr style="background-color: #f8f9fa;">
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Item</th>
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Original</th>
+  <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">New (Rescheduled)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📅 Date</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalDate}</td>
+  <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newDate}</strong></td>
+</tr>
+<tr>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>🕐 Time</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalTime}</td>
+  <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newTime}</strong></td>
+</tr>
+${scheduleInfo.originalLocation || scheduleInfo.newLocation ? `
+<tr>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>📍 Location</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalLocation || '-'}</td>
+  <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newLocation || '-'}</strong></td>
+</tr>
+` : ''}
+${scheduleInfo.originalInspector || scheduleInfo.newInspector ? `
+<tr>
+  <td style="padding: 10px; border: 1px solid #ddd;"><strong>👥 Inspector Team</strong></td>
+  <td style="padding: 10px; border: 1px solid #ddd;">${scheduleInfo.originalInspector || '-'}</td>
+  <td style="padding: 10px; border: 1px solid #ddd; background-color: #e7f3ff;"><strong>${scheduleInfo.newInspector || '-'}</strong></td>
+</tr>
+` : ''}
+</tbody>
+</table>`;
+    }
+    
+    // ✅ แสดง Reason
+    let reasonHtml = '';
+    if (postponeReason && String(postponeReason).trim() !== '') {
+      reasonHtml = `
+<div style="background-color: #fffacd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px;">
+  <strong style="color: #856404;">💬 Reason for Postponement:</strong>
+  <p style="margin: 8px 0 0 0; color: #333;">${postponeReason}</p>
+</div>`;
+    }
+    
+    // สร้างรายชื่อผู้รับสำหรับแสดงในเมล
+    let recipientListHtml = '';
+    if (finalRecipients.length > 0) {
+      recipientListHtml = `
+<h3>👥 Email Recipients:</h3>
+<table style="margin: 10px 0;">
+<tr style="background-color: #f2f2f5;">
+  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Email</th>
+  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Role</th>
+</tr>`;
+      
+      finalRecipients.forEach(email => {
+        const isRequester = email === requesterEmail;
+        const role = isRequester ? '<strong>Requester</strong>' : 'Participant/Team Member';
+        recipientListHtml += `<tr><td style="padding: 8px; border: 1px solid #ddd;">${email}</td><td style="padding: 8px; border: 1px solid #ddd;">${role}</td></tr>`;
+      });
+      
+      recipientListHtml += `</table>`;
+    }
+    
+    const htmlMessage = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>
+body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+h2 { color: #ff6b35; margin-bottom: 10px; }
+h3 { color: #333; margin-top: 25px; margin-bottom: 12px; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+td, th { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background-color: #f2f2f5; font-weight: 600; }
+.info-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px; }
+.note { background-color: #e7f3ff; border-left: 4px solid #1877f2; padding: 15px; margin: 15px 0; border-radius: 5px; }
+.highlight { background-color: #e7f3ff; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+ul { padding-left: 20px; }
+li { margin: 5px 0; }
+</style></head>
+<body>
+<h2>📅 RFI Inspection Postponed</h2>
+
+<div class="info-box">
+  <strong>⚠️ Important Notice:</strong> The scheduled inspection has been postponed to a new date and time.
+</div>
+
+<h3>RFI Details:</h3>
+<table>
+<tr><th style="width: 30%;">RFI Number</th><td><strong>${rfiNumber}</strong></td></tr>
+<tr><th>Description</th><td>${Description}</td></tr>
+</table>
+
+${scheduleComparisonHtml}
+
+${reasonHtml}
+
+<h3>📅 Updated Calendar Events:</h3>
+${eventsList}
+
+${recipientListHtml}
+
+<div class="note">
+  <strong>📌 Important Notes:</strong> 
+  <ul style="margin: 10px 0; padding-left: 20px;">
+    <li>This notification is sent to <strong>all participants</strong> (Requester + Guests + Team Members)</li>
+    <li>Your calendar has been automatically updated with the new schedule</li>
+    <li>Please check your Google Calendar to confirm the new appointment</li>
+    <li>If you have any questions, please contact the requester or QC team</li>
+  </ul>
+</div>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+<p style="color: #666; font-size: 12px; margin: 5px 0;">
+📨 <strong>Recipients:</strong> ${finalRecipients.length} person(s) (Requester + Guests + Teams)<br>
+🤖 <strong>Sent by:</strong> RFI System - Postponement Notification<br>
+🕐 <strong>Sent at:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok', hour12: false })} (Bangkok Time)
+</p>
+</body>
+</html>`;
+    
+    // ส่งถึงทุกคน
+    const recipientList = finalRecipients.join(',');
+    
+    Logger.log(`\n📤 Attempting to send email...`);
+    Logger.log(`📧 To: ${recipientList}`);
+    Logger.log(`📧 Subject: ${subject}`);
+    
+    const sent = safeSendEmail({
+      to: recipientList,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'RFI System - Postponement Notification'
+    });
+    
+    if (sent) {
+      Logger.log(`✅ EMAIL SENT SUCCESSFULLY`);
+      Logger.log(`📧 Delivered to ${finalRecipients.length} recipients`);
+    } else {
+      Logger.log(`❌ EMAIL FAILED TO SEND`);
+    }
+    
+    return {
+      success: sent,
+      totalSent: sent ? finalRecipients.length : 0,
+      totalRecipients: finalRecipients.length,
+      recipientsList: finalRecipients
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ EMAIL ERROR: ${error.toString()}`);
+    Logger.log(`Stack trace: ${error.stack}`);
+    return { 
+      success: false, 
+      error: error.toString(),
+      totalRecipients: 0
+    };
+  }
+}
+
+/**
+ * ทดสอบการดึง Guests จาก Calendar Event (Fixed)
+ */
+/**
+ * ทดสอบการดึง Guests จาก Calendar Event (Correct)
+ */
+function testExtractGuests() {
+  Logger.log('🧪 TEST: Extract Guests from Calendar');
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    const now = new Date();
+    const endDate = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+    
+    const events = calendar.getEvents(now, endDate);
+    Logger.log(`📊 Found ${events.length} events`);
+    
+    if (events.length > 0) {
+      const testEvent = events[0];
+      Logger.log(`\n🔍 Testing with event: "${testEvent.getTitle()}"`);
+      
+      // ✅ Test getGuestList - returns array of EventGuest objects
+      const guests = testEvent.getGuestList(true);
+      Logger.log(`👥 Guests (includeOwner=true): ${guests.length}`);
+      
+      // ✅ Loop through EventGuest objects
+      guests.forEach((guest, i) => {
+        try {
+          const email = guest.getEmail();
+          const name = guest.getName();
+          const status = guest.getGuestStatus();
+          Logger.log(`  ${i + 1}. ${name} <${email}> [${status}]`);
+        } catch (e) {
+          Logger.log(`  ${i + 1}. Error: ${e.toString()}`);
+        }
+      });
+      
+      // Test getCreators
+      const creators = testEvent.getCreators();
+      Logger.log(`\n👨‍💼 Creators (${creators.length}): ${creators.join(', ')}`);
+      
+      // Test with extractGuestsFromEvents
+      Logger.log('\n🔧 Testing extractGuestsFromEvents...');
+      const eventInfoList = [{
+        event: testEvent,
+        title: testEvent.getTitle()
+      }];
+      
+      const extracted = extractGuestsFromEvents(eventInfoList);
+      Logger.log(`\n✅ Extracted ${extracted.length} unique emails:`);
+      extracted.forEach((email, i) => {
+        Logger.log(`  ${i + 1}. ${email}`);
+      });
+      
+    } else {
+      Logger.log('⚠️ No events found for testing');
+    }
+    
+  } catch (error) {
+    Logger.log(`❌ Test error: ${error.toString()}`);
+    Logger.log(`Stack: ${error.stack}`);
+  }
+}
+
+/**
+ * ทดสอบ Postpone ด้วย RFI จริง (10-RFI-0022)
+ */
+function testPostponeRealRFI() {
+  Logger.log('🧪 TEST: Postpone Real RFI with Email');
   
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1125,21 +1395,18 @@ function testPostponeWithTeamChange() {
   const testData = {
     rfiNumber: '10-RFI-0022',
     description: 'test',
-    newDate: tomorrowStr,
+    newDate: tomorrowStr,  // พรุ่งนี้
     newStartTime: '14:00',
     newEndTime: '16:00',
-    postponeReason: '🧪 ทดสอบระบบ - แจ้งทีมเก่าว่าถูกเปลี่ยน',
-    requesterEmail: 'setthawut.se11@gmail.com',
-    newLocation: 'สถานที่ทดสอบใหม่',
-    newTeam: 'Survey Team B, Lab Team B',  // ⭐ ทีมใหม่
-    sendEmail: true,
+    postponeReason: '🧪 Testing postponement notification system',
+    requesterEmail: 'setthawut.se11@gmail.com',  // จาก Guest list
+    newLocation: 'Updated Test Location',
+    assignedInspector: 'Survey Team A, Lab Team A, Inspector Team A',
+    sendEmail: true,  // ✅ ส่งเมลจริง
     searchDays: 30
   };
   
-  Logger.log(`📅 Date: ${testData.newDate}`);
-  Logger.log(`🕐 Time: ${testData.newStartTime} - ${testData.newEndTime}`);
-  Logger.log(`👥 NEW Team: ${testData.newTeam}`);
-  Logger.log('');
+  Logger.log(`📅 Testing with date: ${testData.newDate} ${testData.newStartTime}-${testData.newEndTime}`);
   
   const result = postponeRFIInspection(
     testData.rfiNumber,
@@ -1149,47 +1416,84 @@ function testPostponeWithTeamChange() {
     testData.newEndTime,
     testData.postponeReason,
     testData.requesterEmail,
-    '',
+    '',  // guestEmails (ไม่ใช้)
     testData.newLocation,
-    testData.newTeam,
+    testData.assignedInspector,
     testData.sendEmail,
     testData.searchDays
   );
   
   Logger.log('\n' + '='.repeat(50));
-  Logger.log('📊 TEST RESULT:');
+  Logger.log('📊 POSTPONE TEST RESULT:');
   Logger.log('='.repeat(50));
   Logger.log(`✅ Success: ${result.success}`);
-  Logger.log(`📅 Events: ${result.rfiEventsUpdated}/${result.rfiEventsFound}`);
-  Logger.log(`👥 OLD Team: ${result.originalTeam || 'N/A'} → ⚠️ แจ้งแล้ว`);
-  Logger.log(`👥 NEW Team: ${testData.newTeam} → ✅ แจ้งแล้ว`);
-  Logger.log(`📧 Email Sent: ${result.emailsSent}`);
+  Logger.log(`📅 Events Found: ${result.rfiEventsFound}`);
+  Logger.log(`📅 Events Updated: ${result.rfiEventsUpdated}`);
+  Logger.log(`👥 Participants: ${result.participants ? result.participants.length : 0}`);
+  Logger.log(`📧 Emails Sent: ${result.emailsSent}`);
   Logger.log(`💬 Message: ${result.message}`);
+  
+  if (result.participants && result.participants.length > 0) {
+    Logger.log('\n📧 Email Recipients:');
+    result.participants.forEach((email, i) => {
+      Logger.log(`  ${i + 1}. ${email}`);
+    });
+  }
   
   if (result.error) {
     Logger.log(`\n❌ Error: ${result.error}`);
   }
-  
-  Logger.log('\n📧 Expected Email Recipients:');
-  Logger.log('  1. 👤 Requester');
-  Logger.log('  2. 👥 OLD Team → ⚠️ แจ้งว่าถูกเปลี่ยน');
-  Logger.log('  3. 👥 NEW Team → ✅ แจ้งการมอบหมาย');
-  Logger.log('='.repeat(50));
 }
 
 /**
- * 🧪 ทดสอบส่วนต่างๆ แยกกัน
+ * ดึงชื่อทีมจาก Title
  */
-function testExtractTeamFromTitle() {
-  const testTitles = [
-    'RFI #10-RFI-0022 [Survey Team A]',
-    'RFI #10-RFI-0023 [Lab Team B, Inspector Team A]',
-    'RFI #10-RFI-0024'
+function extractInspectorFromTitle(title) {
+  if (!title) return '';
+  
+  // หา [Team Name] ในชื่อ
+  const match = title.match(/\[(.*?)\]/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  return '';
+}
+
+/**
+ * Format Date เป็นภาษาไทย (สำหรับอีเมล)
+ */
+function formatDateThai(dateString) {
+  if (!dateString) return '';
+  
+  const months = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
   ];
   
-  Logger.log('🧪 TEST: Extract Team from Title');
-  testTitles.forEach(title => {
-    const team = extractInspectorFromTitle(title);
-    Logger.log(`"${title}" → Team: "${team}"`);
-  });
+  const date = new Date(dateString + 'T00:00:00');
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear() + 543;
+  
+  return `${day} ${month} ${year}`;
+}
+
+/**
+ * Format Time (HH:MM)
+ */
+function formatTime(timeValue) {
+  if (!timeValue) return '';
+  
+  if (typeof timeValue === 'string') {
+    return timeValue;
+  }
+  
+  if (timeValue instanceof Date) {
+    const hours = String(timeValue.getHours()).padStart(2, '0');
+    const minutes = String(timeValue.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  
+  return timeValue.toString();
 }
