@@ -966,6 +966,7 @@ function loadUserEmail() {
       resetEndTimeSelect();
       
       loadWorkTypes();
+      loadUserEmail();
       setMinDate();
     }
   </script>
