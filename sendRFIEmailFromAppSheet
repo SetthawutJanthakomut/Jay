@@ -41,9 +41,9 @@ function sendRFIEmailFromAppSheet(params) {
     
     Logger.log("=== RFI Email Info ===");
     Logger.log("📧 To: " + email);
-    if (cc && cc.trim() !== '') {
-      Logger.log("📧 CC: " + cc);
-    }
+    if (cc && String(cc).trim() !== '') {
+  Logger.log("📧 CC: " + cc);
+}
     Logger.log("🔢 RFI: " + rfiNumber);
     Logger.log("📝 Description: " + description);
     Logger.log("📊 Status: " + status);
@@ -79,9 +79,9 @@ function sendRFIEmailFromAppSheet(params) {
     };
     
     // เพิ่ม CC ถ้ามี
-    if (cc && cc.trim() !== '') {
-      emailOptions.cc = cc;
-    }
+    if (cc && String(cc).trim() !== '') {
+  emailOptions.cc = String(cc).trim();
+}
     
     const sent = safeSendEmail(emailOptions);
     
@@ -129,10 +129,9 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
     }
     
     Logger.log(`📧 Sending batch email to ${emails.length} recipient(s): ${emails.join(', ')}`);
-    if (cc && cc.trim() !== '') {
-      Logger.log(`📧 CC: ${cc}`);
-    }
-    
+    if (cc && String(cc).trim() !== '') {
+  Logger.log(`📧 CC: ${cc}`);
+}
     const statusColor = getStatusColor(status);
     const statusIcon = getStatusIcon(status);
     const subject = `RFI #${rfiNumber} - ${description}`;
@@ -167,10 +166,9 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
     };
     
     // เพิ่ม CC ถ้ามี
-    if (cc && cc.trim() !== '') {
-      emailOptions.cc = cc;
-    }
-    
+    if (cc && String(cc).trim() !== '') {
+  emailOptions.cc = String(cc).trim();
+}
     const sent = safeSendEmail(emailOptions);
     
     if (!sent) {
