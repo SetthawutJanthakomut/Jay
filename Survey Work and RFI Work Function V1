@@ -1,4 +1,4 @@
-//v9
+//v10
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -3162,7 +3162,6 @@ function getPostponedRFIList() {
       return [];
     }
     
-    // ✅ ดึงถึง column AJ (column 36)
     const data = sheet.getRange(2, 1, lastRow - 1, 36).getValues();
     const postponedList = [];
     
@@ -3171,8 +3170,23 @@ function getPostponedRFIList() {
       const id = String(row[0] || '').trim();
       const status = String(row[14] || '').trim();
       
-      // กรองเฉพาะ Status = "Inspection Postponed"
-      if (status === 'Inspection Postponed') {
+      // ⭐ เพิ่ม logging
+      if (i < 5) {
+        console.log('Row ' + (i + 2) + ': ID=' + id + ', Status="' + status + '"');
+      }
+      
+      // ✅ ค้นหาแบบยืดหยุ่น (case-insensitive + partial match)
+      const statusLower = status.toLowerCase();
+      const isPostponed = (
+        status === 'Inspection Postponed' ||
+        statusLower.includes('postpone') ||
+        statusLower.includes('เลื่อน') ||
+        statusLower === 'postponed'
+      );
+      
+      if (isPostponed) {
+        console.log('✅ Found postponed RFI:', id, 'Status:', status);
+        
         let createdTimestamp = '';
         if (row[15]) {
           try {
@@ -3196,12 +3210,11 @@ function getPostponedRFIList() {
           assignedInspector: String(row[11] || '').trim(),
           status: status,
           createdTimestamp: createdTimestamp,
-          postponeReason: String(row[35] || '').trim()  // ✅ Column AJ (index 35)
+          postponeReason: String(row[35] || '').trim()
         });
       }
     }
     
-    // เรียงตามวันที่สร้าง (ล่าสุดก่อน)
     postponedList.sort(function(a, b) {
       if (!a.createdTimestamp || !b.createdTimestamp) return 0;
       return new Date(b.createdTimestamp).getTime() - new Date(a.createdTimestamp).getTime();
@@ -3296,35 +3309,53 @@ function reschedulePostponedRFI(rfiId, data) {
     // ========== ✅ เรียก Postpone Calendar Function ==========
     
     let calendarPostponeResult = null;
-    try {
-      console.log('========== Calling postponeRFIInspection ==========');
-      
-      // ✅ ใช้ postponeReason จาก Sheet (Column AJ)
-      const postponeReasonFromSheet = rfiData.postponeReason || 'เลือนตรวจจากระบบ RFI';
-      console.log('Using postpone reason from sheet:', postponeReasonFromSheet);
-      
-      calendarPostponeResult = postponeRFIInspection(
-        rfiData.rfiNo,                    // RFI Number
-        rfiData.description,              // Description
-        data.requestDate,                 // New Date (YYYY-MM-DD)
-        data.startTime,                   // New Start Time
-        endTime,                          // New End Time
-        postponeReasonFromSheet,          // ✅ Postpone Reason จาก Column AJ
-        rfiData.requesterEmail,           // Requester Email
-        '',                               // Guest Emails (ไม่ใช้)
-        rfiData.location,                 // New Location
-        data.assignedInspector,           // Assigned Inspector (ทีมงาน)
-        true,                             // Send Email = true
-        60                                // Search Days = 60
-      );
-      
-      console.log('========== Postpone Calendar Result ==========');
-      console.log('Success:', calendarPostponeResult.success);
-      console.log('Events Updated:', calendarPostponeResult.rfiEventsUpdated);
-      console.log('Emails Sent:', calendarPostponeResult.emailsSent);
-      
-    } catch (calendarError) {
-      console.error('⌫ Error calling postponeRFIInspection:', calendarError);
+    
+    // ✅ เช็คว่ามี postponeRFIInspection() หรือไม่
+    if (typeof postponeRFIInspection === 'function') {
+      try {
+        console.log('========== Calling postponeRFIInspection ==========');
+        
+        // ✅ ใช้ postponeReason จาก Sheet (Column AJ)
+        const postponeReasonFromSheet = rfiData.postponeReason || 'เลือนตรวจจากระบบ RFI';
+        console.log('Using postpone reason from sheet:', postponeReasonFromSheet);
+        
+        calendarPostponeResult = postponeRFIInspection(
+          rfiData.rfiNo,                    // RFI Number
+          rfiData.description,              // Description
+          data.requestDate,                 // New Date (YYYY-MM-DD)
+          data.startTime,                   // New Start Time
+          endTime,                          // New End Time
+          postponeReasonFromSheet,          // ✅ Postpone Reason จาก Column AJ
+          rfiData.requesterEmail,           // Requester Email
+          '',                               // Guest Emails (ไม่ใช้)
+          rfiData.location,                 // New Location
+          data.assignedInspector,           // Assigned Inspector (ทีมงาน)
+          true,                             // Send Email = true
+          60                                // Search Days = 60
+        );
+        
+        console.log('========== Postpone Calendar Result ==========');
+        console.log('Success:', calendarPostponeResult.success);
+        console.log('Events Updated:', calendarPostponeResult.rfiEventsUpdated);
+        console.log('Emails Sent:', calendarPostponeResult.emailsSent);
+        
+      } catch (calendarError) {
+        console.error('⚠️ Error calling postponeRFIInspection:', calendarError);
+        console.error('Stack:', calendarError.stack);
+        
+        // ⚠️ ไม่ให้ error นี้หยุดการทำงาน - แค่แจ้ง warning
+        calendarPostponeResult = {
+          success: false,
+          message: 'Calendar update failed: ' + calendarError.toString(),
+          error: calendarError.toString()
+        };
+      }
+    } else {
+      console.log('⚠️ postponeRFIInspection() not found - skipping calendar update');
+      calendarPostponeResult = {
+        success: false,
+        message: 'Calendar integration not available'
+      };
     }
     
     // ========== ✅ END: Postpone Calendar Integration ==========
@@ -3341,8 +3372,8 @@ function reschedulePostponedRFI(rfiId, data) {
       message += '\n\n✅ อัปเดต Calendar สำเร็จ:';
       message += '\n• Events Updated: ' + calendarPostponeResult.rfiEventsUpdated;
       message += '\n• Emails Sent: ' + (calendarPostponeResult.emailsSent ? 'Yes' : 'No');
-    } else if (calendarPostponeResult) {
-      message += '\n\n⚠️ Calendar Update: ' + (calendarPostponeResult.message || 'ไม่สำเร็จ');
+    } else if (calendarPostponeResult && calendarPostponeResult.message) {
+      message += '\n\n⚠️ Calendar: ' + calendarPostponeResult.message;
     }
     
     console.log('========== reschedulePostponedRFI SUCCESS ==========');
@@ -3358,6 +3389,7 @@ function reschedulePostponedRFI(rfiId, data) {
   } catch (error) {
     console.error('========== reschedulePostponedRFI FAILED ==========');
     console.error('Error:', error);
+    console.error('Stack:', error.stack);
     
     return {
       success: false,
@@ -5455,4 +5487,247 @@ function testSurveyNo() {
   console.log('📋 Next Survey_NO:', nextSurveyNo);
   
   console.log('\n====================================');
+}
+
+/**
+ * 🔍 Debug: ดูว่ามี Status อะไรบ้างในระบบ
+ */
+function debugPostponedStatus() {
+  try {
+    console.log('========== Debug Postponed Status ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('❌ RFI_List sheet not found');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    console.log('Total rows:', lastRow);
+    
+    if (lastRow <= 1) {
+      console.log('❌ No data rows');
+      return;
+    }
+    
+    // ดึง Column A (ID), B (RFI_NO), O (Status)
+    const idData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const rfiNoData = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    const statusData = sheet.getRange(2, 15, lastRow - 1, 1).getValues(); // Column O = index 15
+    
+    console.log('\n📊 Status Summary:');
+    console.log('─────────────────────────────────────────');
+    
+    const statusCount = {};
+    const examples = {};
+    
+    for (let i = 0; i < idData.length; i++) {
+      const id = String(idData[i][0] || '').trim();
+      const rfiNo = String(rfiNoData[i][0] || '').trim();
+      const status = String(statusData[i][0] || '').trim();
+      
+      // นับจำนวน
+      if (!statusCount[status]) {
+        statusCount[status] = 0;
+        examples[status] = [];
+      }
+      statusCount[status]++;
+      
+      // เก็บตัวอย่าง 2 รายการแรก
+      if (examples[status].length < 2) {
+        examples[status].push(id + ' (' + rfiNo + ')');
+      }
+    }
+    
+    // แสดงผลเรียงตามจำนวน
+    const sortedStatuses = Object.keys(statusCount).sort((a, b) => statusCount[b] - statusCount[a]);
+    
+    sortedStatuses.forEach(function(status) {
+      const icon = status.toLowerCase().includes('postpone') ? '🎯' : '📋';
+      console.log(icon + ' "' + status + '": ' + statusCount[status] + ' records');
+      console.log('   Examples: ' + examples[status].join(', '));
+      console.log('');
+    });
+    
+    // เช็คเฉพาะ "Inspection Postponed"
+    console.log('─────────────────────────────────────────');
+    if (statusCount['Inspection Postponed']) {
+      console.log('✅ Found "Inspection Postponed": ' + statusCount['Inspection Postponed'] + ' records');
+    } else {
+      console.log('❌ No "Inspection Postponed" found');
+      
+      // หา Status ที่คล้ายกัน
+      const similar = sortedStatuses.filter(s => 
+        s.toLowerCase().includes('postpone') || 
+        s.toLowerCase().includes('เลื่อน')
+      );
+      
+      if (similar.length > 0) {
+        console.log('\n⚠️ Found similar statuses:');
+        similar.forEach(s => console.log('   - "' + s + '"'));
+      }
+    }
+    
+    console.log('============================================');
+    
+    // แสดง Alert
+    const ui = SpreadsheetApp.getUi();
+    let msg = 'Total Records: ' + (lastRow - 1) + '\n\n';
+    msg += 'Top 5 Statuses:\n';
+    
+    for (let i = 0; i < Math.min(5, sortedStatuses.length); i++) {
+      const s = sortedStatuses[i];
+      msg += '• "' + s + '": ' + statusCount[s] + ' records\n';
+    }
+    
+    if (statusCount['Inspection Postponed']) {
+      msg += '\n✅ "Inspection Postponed": ' + statusCount['Inspection Postponed'];
+    } else {
+      msg += '\n❌ No "Inspection Postponed" found';
+    }
+    
+    ui.alert('Debug Result', msg, ui.ButtonSet.OK);
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  }
+}
+
+/**
+ * 🔍 Debug: ดูข้อมูล RFI ล่าสุด 10 รายการ
+ */
+function debugRecentRFI() {
+  try {
+    console.log('========== Recent 10 RFI ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    
+    if (!sheet) {
+      console.log('❌ Sheet not found');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('❌ No data');
+      return;
+    }
+    
+    const startRow = Math.max(2, lastRow - 9);
+    const numRows = lastRow - startRow + 1;
+    
+    const data = sheet.getRange(startRow, 1, numRows, 15).getValues();
+    
+    console.log('Latest ' + numRows + ' records:');
+    console.log('─────────────────────────────────────────');
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = String(row[0] || '').trim();
+      const rfiNo = String(row[1] || '').trim();
+      const status = String(row[14] || '').trim();
+      
+      console.log((i + 1) + '. ID: ' + id);
+      console.log('   RFI NO: ' + rfiNo);
+      console.log('   Status: "' + status + '"');
+      console.log('   Is Postponed: ' + (status === 'Inspection Postponed' ? 'YES ✅' : 'NO'));
+      console.log('');
+    }
+    
+    console.log('============================================');
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  }
+}
+
+/**
+ * 🔍 Debug: ค้นหา Calendar Event ด้วย RFI Number
+ */
+function debugSearchCalendarEvent() {
+  Logger.log('========== Debug: Search Calendar Event ==========');
+  
+  const testRfiNumber = '10-RFI-0001';  // ⭐ RFI Number ที่ต้องการทดสอบ
+  
+  Logger.log('🔍 Searching for RFI Number:', testRfiNumber);
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    
+    if (!calendar) {
+      Logger.log('❌ Cannot access calendar:', CALENDAR_ID);
+      return;
+    }
+    
+    // ค้นหา 60 วันข้างหน้า + ข้างหลัง
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 60);
+    
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 60);
+    
+    const allEvents = calendar.getEvents(startDate, endDate);
+    Logger.log('📊 Total events in range:', allEvents.length);
+    
+    if (allEvents.length === 0) {
+      Logger.log('⚠️ No events found in calendar');
+      return;
+    }
+    
+    // ค้นหา event ที่มี RFI Number
+    const searchPatterns = [
+      `RFI #${testRfiNumber}`,
+      `RFI-${testRfiNumber}`,
+      `#${testRfiNumber}`,
+      testRfiNumber
+    ];
+    
+    Logger.log('🔎 Search patterns:', searchPatterns.join(', '));
+    Logger.log('');
+    
+    let foundCount = 0;
+    
+    allEvents.forEach((event, index) => {
+      const title = event.getTitle() || '';
+      const description = event.getDescription() || '';
+      const searchableText = (title + ' ' + description).toLowerCase();
+      
+      const matches = searchPatterns.some(pattern => 
+        searchableText.includes(pattern.toLowerCase())
+      );
+      
+      if (matches) {
+        foundCount++;
+        Logger.log(`✅ Found Event ${foundCount}:`);
+        Logger.log(`   Title: ${title}`);
+        Logger.log(`   Date: ${event.getStartTime().toLocaleString('th-TH')}`);
+        Logger.log(`   Description: ${description.substring(0, 100)}...`);
+        Logger.log('');
+      }
+    });
+    
+    Logger.log('─────────────────────────────────────────');
+    Logger.log(`📊 Summary: Found ${foundCount} events for RFI: ${testRfiNumber}`);
+    
+    if (foundCount === 0) {
+      Logger.log('');
+      Logger.log('⚠️ No events found! Possible reasons:');
+      Logger.log('   1. Calendar Event ยังไม่ได้สร้าง');
+      Logger.log('   2. RFI Number ใน Calendar เขียนต่างจากใน Sheet');
+      Logger.log('   3. Event อยู่นอกช่วง 60 วัน');
+      Logger.log('');
+      Logger.log('📋 Recent 5 events in calendar:');
+      
+      for (let i = 0; i < Math.min(5, allEvents.length); i++) {
+        const evt = allEvents[i];
+        Logger.log(`   ${i + 1}. "${evt.getTitle()}" - ${evt.getStartTime().toLocaleDateString('th-TH')}`);
+      }
+    }
+    
+    Logger.log('==================================================');
+    
+  } catch (error) {
+    Logger.log('❌ Error:', error.toString());
+  }
 }
