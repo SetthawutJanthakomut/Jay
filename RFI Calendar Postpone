@@ -204,6 +204,96 @@ if (sendEmail && result.rfiEventsUpdated > 0) {
 
   return result;
 }
+
+/**
+ * ✅ Validate Postpone Inputs
+ * @param {string} rfiNumber - RFI Number
+ * @param {string} description - Description
+ * @param {string} newDate - New Date (YYYY-MM-DD)
+ * @param {string} newStartTime - New Start Time (HH:MM)
+ * @param {string} newEndTime - New End Time (HH:MM)
+ * @return {Object} Validation result
+ */
+function validatePostponeInputs(rfiNumber, description, newDate, newStartTime, newEndTime) {
+  try {
+    Logger.log('🔍 Validating postpone inputs...');
+    
+    const errors = [];
+    
+    // 1. ตรวจสอบ RFI Number
+    if (!rfiNumber || String(rfiNumber).trim() === '') {
+      errors.push('RFI Number is required');
+    }
+    
+    // 2. ตรวจสอบ New Date
+    if (!newDate || String(newDate).trim() === '') {
+      errors.push('New Date is required');
+    } else {
+      const dateObj = new Date(newDate + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (isNaN(dateObj.getTime())) {
+        errors.push('Invalid date format (must be YYYY-MM-DD)');
+      } else if (dateObj < today) {
+        errors.push('New Date must be today or in the future');
+      }
+    }
+    
+    // 3. ตรวจสอบ New Start Time
+    if (!newStartTime || String(newStartTime).trim() === '') {
+      errors.push('New Start Time is required');
+    } else {
+      const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timePattern.test(newStartTime)) {
+        errors.push('Invalid Start Time format (must be HH:MM)');
+      }
+    }
+    
+    // 4. ตรวจสอบ New End Time
+    if (!newEndTime || String(newEndTime).trim() === '') {
+      errors.push('New End Time is required');
+    } else {
+      const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timePattern.test(newEndTime)) {
+        errors.push('Invalid End Time format (must be HH:MM)');
+      }
+      
+      // เช็คว่า End Time > Start Time
+      if (newStartTime) {
+        const startMinutes = timeToMinutes(newStartTime);
+        const endMinutes = timeToMinutes(newEndTime);
+        
+        if (endMinutes <= startMinutes) {
+          errors.push('End Time must be after Start Time');
+        }
+      }
+    }
+    
+    if (errors.length > 0) {
+      Logger.log('❌ Validation failed:');
+      errors.forEach(err => Logger.log(`   - ${err}`));
+      
+      return {
+        valid: false,
+        error: errors.join('; ')
+      };
+    }
+    
+    Logger.log('✅ Validation passed');
+    return {
+      valid: true,
+      error: null
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Validation error: ${error.toString()}`);
+    return {
+      valid: false,
+      error: `Validation error: ${error.toString()}`
+    };
+  }
+}
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -821,6 +911,79 @@ function colorDistance(rgb1, rgb2) {
     Math.pow(rgb1.g - rgb2.g, 2) +
     Math.pow(rgb1.b - rgb2.b, 2)
   );
+}
+
+/**
+ * ✨ ดึง Email ของ Team งานจาก Resources sheet ตาม Team Names
+ * @param {string} teamNames - ชื่อทีมที่คั่นด้วย comma (เช่น "Survey Team A,Lab Team B")
+ * @returns {Array} รายการอีเมลของ Team
+ */
+function getTeamEmailsByTeamNames(teamNames) {
+  try {
+    if (!teamNames || String(teamNames).trim() === '') {
+      Logger.log('No team names provided');
+      return [];
+    }
+    
+    const teamString = String(teamNames).trim();
+    const requestedTeams = teamString.split(',').map(function(t) { 
+      return t.trim(); 
+    }).filter(function(t) { 
+      return t.length > 0; 
+    });
+    
+    if (requestedTeams.length === 0) {
+      Logger.log('No valid teams in team names');
+      return [];
+    }
+    
+    Logger.log('Looking for emails for teams:', requestedTeams.join(', '));
+    
+    // ⭐ เปิด Sheet Resources จาก SURVEY_SPREADSHEET_ID
+    const resourceSheet = SpreadsheetApp.openById(SURVEY_SPREADSHEET_ID)
+                                        .getSheetByName('Resources');
+    
+    if (!resourceSheet) {
+      Logger.log('Resources sheet not found');
+      return [];
+    }
+    
+    const lastRow = resourceSheet.getLastRow();
+    if (lastRow <= 1) {
+      Logger.log('No data in Resources sheet');
+      return [];
+    }
+    
+    // ดึง Column B (Resource_Name), E (Status), F (Contact_Email)
+    const data = resourceSheet.getRange(2, 2, lastRow - 1, 5).getValues();
+    const teamEmails = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const resourceName = String(data[i][0] || '').trim();  // Column B
+      const status = String(data[i][3] || '').trim();        // Column E
+      const contactEmail = String(data[i][4] || '').trim();  // Column F
+      
+      // ✅ เช็คว่า Team นี้อยู่ในรายการที่ต้องการ, Status = Activated, และมีอีเมล
+      if (requestedTeams.indexOf(resourceName) !== -1 && 
+          status === 'Activated' && 
+          contactEmail && 
+          contactEmail.includes('@')) {
+        teamEmails.push({
+          email: contactEmail,
+          name: resourceName,
+          role: 'Team Member'
+        });
+        Logger.log('Found team email:', resourceName, '->', contactEmail);
+      }
+    }
+    
+    Logger.log('Total team emails found:', teamEmails.length);
+    return teamEmails;
+    
+  } catch (error) {
+    Logger.log('Error getting team emails:', error.toString());
+    return [];
+  }
 }
 
 // ===== UTILITY FUNCTIONS =====
