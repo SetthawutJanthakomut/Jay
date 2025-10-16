@@ -175,11 +175,43 @@
   
   <script>
 var availableTeams = [];
+var currentUserEmail = ''; // ← เพิ่มบรรทัดนี้
 
 window.onload = function() {
   loadPostponedRFIList();
+  getCurrentUserEmail();           // ← เพิ่มบรรทัดนี้
+  checkQCRole();                   // ← เพิ่มบรรทัดนี้
   setupRescheduleFormListeners();
 };
+
+function checkQCRole() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) {
+        showMessage(result.message, 'error', 10000);
+        document.querySelector('.btn-primary').disabled = true;
+        document.getElementById('rfiTableContainer').style.opacity = '0.5';
+        document.getElementById('rfiTableContainer').style.pointerEvents = 'none';
+      } else {
+        showMessage('ยินดีต้อนรับ ' + result.name + ' (' + result.role + ')', 'success', 3000);
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('ไม่สามารถตรวจสอบสิทธิ์ได้', 'error');
+    })
+    .validateQCRole();
+}
+
+function getCurrentUserEmail() {
+  google.script.run
+    .withSuccessHandler(function(email) {
+      currentUserEmail = email;
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error getting user email:', error);
+    })
+    .getCurrentUserEmail();
+}
 
 function setupRescheduleFormListeners() {
   var dateInput = document.getElementById('rescheduleDate');
