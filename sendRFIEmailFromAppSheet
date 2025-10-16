@@ -1,8 +1,7 @@
-// ===== ฟังก์ชันหลักส่งอีเมล (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
+// ===== ฟังก์ชันหลักส่งอีเมล (ตัด CC ออกเพื่อประหยัด Quota) =====
 function sendRFIEmailFromAppSheet(params) {
   const { 
     email, 
-    cc = '',  // เพิ่ม parameter CC (สำเนา)
     rfiNumber, 
     description, 
     status, 
@@ -41,9 +40,6 @@ function sendRFIEmailFromAppSheet(params) {
     
     Logger.log("=== RFI Email Info ===");
     Logger.log("📧 To: " + email);
-    if (cc && String(cc).trim() !== '') {
-  Logger.log("📧 CC: " + cc);
-}
     Logger.log("🔢 RFI: " + rfiNumber);
     Logger.log("📝 Description: " + description);
     Logger.log("📊 Status: " + status);
@@ -78,11 +74,6 @@ function sendRFIEmailFromAppSheet(params) {
       name: 'RFI System - Notification'
     };
     
-    // เพิ่ม CC ถ้ามี
-    if (cc && String(cc).trim() !== '') {
-  emailOptions.cc = String(cc).trim();
-}
-    
     const sent = safeSendEmail(emailOptions);
     
     if (!sent) {
@@ -100,8 +91,8 @@ function sendRFIEmailFromAppSheet(params) {
   }
 }
 
-// ===== ฟังก์ชันส่งหลายคน (เพิ่ม parameter ประเภทเอกสารและสถานะเอกสาร) =====
-function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', cc = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportNumber = '', qcReportRemarks = '') {
+// ===== ฟังก์ชันส่งหลายคน (ตัด CC ออกเพื่อประหยัด Quota) =====
+function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportNumber = '', qcReportRemarks = '') {
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -129,9 +120,6 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
     }
     
     Logger.log(`📧 Sending batch email to ${emails.length} recipient(s): ${emails.join(', ')}`);
-    if (cc && String(cc).trim() !== '') {
-  Logger.log(`📧 CC: ${cc}`);
-}
     const statusColor = getStatusColor(status);
     const statusIcon = getStatusIcon(status);
     const subject = `RFI #${rfiNumber} - ${description}`;
@@ -165,10 +153,6 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       name: 'RFI System - Notification'
     };
     
-    // เพิ่ม CC ถ้ามี
-    if (cc && String(cc).trim() !== '') {
-  emailOptions.cc = String(cc).trim();
-}
     const sent = safeSendEmail(emailOptions);
     
     if (!sent) {
@@ -703,11 +687,10 @@ function safeSendEmail(emailParams) {
 
 // ===== ฟังก์ชันทดสอบ =====
 
-// 1. ทดสอบส่งคนเดียว + มีหมายเหตุเอกสารครบ + มี CC
+// 1. ทดสอบส่งคนเดียว + มีหมายเหตุเอกสารครบ
 function testSingleEmail() {
   sendRFIEmailFromAppSheet({
     email: "surveymarine048@gmail.com",
-    cc: "manager@example.com, supervisor@example.com",  // CC หลายคน
     rfiNumber: "10-RFI-001",
     description: "ทดสอบระบบ RFI - Batch Email พร้อมสถานะเอกสาร",
     status: "Open RFI Pending Attachment",
@@ -726,7 +709,7 @@ function testSingleEmail() {
   });
 }
 
-// 2. ทดสอบส่งหลายคน + มีหมายเหตุบางส่วน + มี CC
+// 2. ทดสอบส่งหลายคน + มีหมายเหตุบางส่วน
 function testMultipleEmails() {
   sendRFIEmailToMultipleRecipients(
     "surveymarine048@gmail.com, surveymarine049@gmail.com",
@@ -736,7 +719,6 @@ function testMultipleEmails() {
     "ส่งให้หลายคนพร้อมกัน - ใช้ quota แค่ 1",
     "2024-10-15",
     "Close RFI",
-    "director@example.com",  // CC
     "Approved",
     "SUR-2024-003",
     "ตรวจสอบครบถ้วนแล้ว",
