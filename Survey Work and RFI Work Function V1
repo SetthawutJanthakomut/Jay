@@ -1227,161 +1227,7 @@ function sendRFINotificationEmail(data, rfiId) {
   }
 }
 
-/**
- * ✅ FIXED V3: ดึง Email ของ Team งานจาก Resources sheet
- * Version: 2025-10-16 (Working Version)
- */
-function getTeamEmailsByTeamNames(teamNames) {
-  try {
-    console.log('========== getTeamEmailsByTeamNames START ==========');
-    console.log('Input teamNames:', teamNames);
-    console.log('Type:', typeof teamNames);
-    
-    // Check 1: teamNames is valid
-    if (!teamNames) {
-      console.log('❌ No team names provided (null/undefined)');
-      return [];
-    }
-    
-    const teamString = String(teamNames).trim();
-    console.log('Team string (trimmed):', teamString);
-    
-    if (teamString === '') {
-      console.log('❌ Empty team names');
-      return [];
-    }
-    
-    // Check 2: Parse team names
-    const requestedTeams = teamString.split(',').map(function(t) { 
-      return t.trim(); 
-    }).filter(function(t) { 
-      return t.length > 0; 
-    });
-    
-    console.log('Parsed teams:', JSON.stringify(requestedTeams));
-    console.log('Number of teams:', requestedTeams.length);
-    
-    if (requestedTeams.length === 0) {
-      console.log('❌ No valid teams after parsing');
-      return [];
-    }
-    
-    // Check 3: Access spreadsheet
-    console.log('Accessing spreadsheet...');
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    console.log('✅ Spreadsheet name:', spreadsheet.getName());
-    
-    // Check 4: Get Resources sheet
-    console.log('Looking for Resources sheet...');
-    const resourceSheet = spreadsheet.getSheetByName('Resources');
-    
-    if (!resourceSheet) {
-      console.log('❌ Resources sheet not found!');
-      
-      // Debug: List all sheets
-      const allSheets = spreadsheet.getSheets();
-      console.log('Available sheets:', allSheets.map(function(s) { 
-        return s.getName(); 
-      }).join(', '));
-      
-      return [];
-    }
-    
-    console.log('✅ Resources sheet found!');
-    
-    // Check 5: Get data
-    const lastRow = resourceSheet.getLastRow();
-    const lastColumn = resourceSheet.getLastColumn();
-    
-    console.log('Last row:', lastRow);
-    console.log('Last column:', lastColumn);
-    
-    if (lastRow <= 1) {
-      console.log('⚠️ No data rows in Resources sheet');
-      return [];
-    }
-    
-    if (lastColumn < 6) {
-      console.log('❌ Resources sheet missing columns (need at least 6)');
-      console.log('   Current columns:', lastColumn);
-      console.log('   Required: 6 (A-F with Contact_Email in column F)');
-      return [];
-    }
-    
-    // Check 6: Read data (B-F = Name, SubType, TeamNo, Status, Email)
-    console.log('Reading data from rows 2 to', lastRow, '...');
-    const data = resourceSheet.getRange(2, 2, lastRow - 1, 5).getValues();
-    console.log('✅ Data rows read:', data.length);
-    
-    // Check 7: Process data
-    const teamEmails = [];
-    let rowsChecked = 0;
-    let activatedCount = 0;
-    let matchedCount = 0;
-    
-    for (let i = 0; i < data.length; i++) {
-      rowsChecked++;
-      
-      const resourceName = String(data[i][0] || '').trim();  // Column B
-      const subType = String(data[i][1] || '').trim();       // Column C
-      const teamNo = data[i][2];                              // Column D
-      const status = String(data[i][3] || '').trim();        // Column E
-      const contactEmail = String(data[i][4] || '').trim();  // Column F
-      
-      // Debug first 3 rows
-      if (i < 3) {
-        console.log('Row ' + (i + 2) + ':');
-        console.log('  Name:', resourceName);
-        console.log('  Status:', status);
-        console.log('  Email:', contactEmail);
-      }
-      
-      if (status === 'Activated') {
-        activatedCount++;
-      }
-      
-      // Check if this team is in requested list
-      const isRequested = requestedTeams.indexOf(resourceName) !== -1;
-      
-      if (isRequested) {
-        matchedCount++;
-        console.log('✓ Matched team:', resourceName);
-        console.log('  Status:', status);
-        console.log('  Email:', contactEmail);
-      }
-      
-      if (isRequested && 
-          status === 'Activated' && 
-          contactEmail && 
-          contactEmail.includes('@')) {
-        
-        teamEmails.push({
-          email: contactEmail,
-          name: resourceName,
-          role: 'Team Member'
-        });
-        
-        console.log('✅ Added:', resourceName, '→', contactEmail);
-      }
-    }
-    
-    console.log('─────────────────────────────────────────────');
-    console.log('Summary:');
-    console.log('  Rows checked:', rowsChecked);
-    console.log('  Activated teams:', activatedCount);
-    console.log('  Matched teams:', matchedCount);
-    console.log('  Final result:', teamEmails.length, 'emails');
-    console.log('========== getTeamEmailsByTeamNames END ==========');
-    
-    return teamEmails;
-    
-  } catch (error) {
-    console.error('❌❌❌ ERROR in getTeamEmailsByTeamNames ❌❌❌');
-    console.error('Error message:', error.toString());
-    console.error('Error stack:', error.stack);
-    return [];
-  }
-}
+
 
 function createRFIEmailHTML(data, rfiId) {
   const categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
@@ -3304,33 +3150,33 @@ function getCurrentUserEmail() {
 function getPostponedRFIList() {
   try {
     console.log('========== Getting Postponed RFI List ==========');
-    
+
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-    
+
     if (!sheet) {
       console.log('RFI_List sheet not found');
       return [];
     }
-    
+
     const lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
       console.log('No data rows');
       return [];
     }
-    
+
     const data = sheet.getRange(2, 1, lastRow - 1, 36).getValues();
     const postponedList = [];
-    
+
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       const id = String(row[0] || '').trim();
       const status = String(row[14] || '').trim();
-      
+
       // ⭐ เพิ่ม logging
       if (i < 5) {
         console.log('Row ' + (i + 2) + ': ID=' + id + ', Status="' + status + '"');
       }
-      
+
       // ✅ ค้นหาแบบยืดหยุ่น (case-insensitive + partial match)
       const statusLower = status.toLowerCase();
       const isPostponed = (
@@ -3339,10 +3185,10 @@ function getPostponedRFIList() {
         statusLower.includes('เลื่อน') ||
         statusLower === 'postponed'
       );
-      
+
       if (isPostponed) {
         console.log('✅ Found postponed RFI:', id, 'Status:', status);
-        
+
         let createdTimestamp = '';
         if (row[15]) {
           try {
@@ -3351,7 +3197,7 @@ function getPostponedRFIList() {
             createdTimestamp = String(row[15]);
           }
         }
-        
+
         postponedList.push({
           id: id,
           rfiNo: String(row[1] || '').trim(),
@@ -3370,15 +3216,15 @@ function getPostponedRFIList() {
         });
       }
     }
-    
+
     postponedList.sort(function(a, b) {
       if (!a.createdTimestamp || !b.createdTimestamp) return 0;
       return new Date(b.createdTimestamp).getTime() - new Date(a.createdTimestamp).getTime();
     });
-    
+
     console.log('Found postponed RFI:', postponedList.length);
     return postponedList;
-    
+
   } catch (error) {
     console.error('Error getting postponed RFI list:', error);
     return [];
