@@ -3301,7 +3301,7 @@ function reschedulePostponedRFI(rfiId, data) {
     sheet.getRange(rfiData.rowIndex, 6).setValue(data.startTime);             // F - Start_Time
     sheet.getRange(rfiData.rowIndex, 7).setValue(endTime);                    // G - End_Time
     sheet.getRange(rfiData.rowIndex, 12).setValue(data.assignedInspector);    // L - Assigned_Inspector
-    sheet.getRange(rfiData.rowIndex, 15).setValue('Rescheduled');             // O - Status เปลี่ยนเป็น "Rescheduled"
+    sheet.getRange(rfiData.rowIndex, 15).setValue('Rescheduled – Proceed to Site Inspection');             // O - Status เปลี่ยนเป็น "Rescheduled – Proceed to Site Inspection"
     sheet.getRange(rfiData.rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
     
     console.log('Updated RFI at row:', rfiData.rowIndex);
@@ -3365,7 +3365,7 @@ function reschedulePostponedRFI(rfiId, data) {
     message += 'วันที่ใหม่: ' + formatDateThai(data.requestDate) + '\n';
     message += 'เวลาใหม่: ' + data.startTime + ' - ' + endTime + ' น.\n';
     message += 'ทีมงานใหม่: ' + data.assignedInspector + '\n';
-    message += 'สถานะ: Rescheduled';
+    message += 'สถานะ: Rescheduled – Proceed to Site Inspection';
     
     // เพิ่มข้อมูล Calendar Result
     if (calendarPostponeResult && calendarPostponeResult.success) {
@@ -4582,7 +4582,7 @@ function testNonCancelStatuses() {
     'Survey Work Request Submitted',
     'In Progress',
     'Approved',
-    'Rescheduled',
+    'Rescheduled – Proceed to Site Inspection',
     'Inspection Postponed'
   ];
   
@@ -5731,3 +5731,4 @@ function debugSearchCalendarEvent() {
     Logger.log('❌ Error:', error.toString());
   }
 }
+
