@@ -42,7 +42,7 @@ function onOpen() {
     .addItem('➕ สร้าง Sheet Resources (พร้อมตัวอย่าง)', 'createResourcesSheet')
     .addSeparator()
     .addItem('📊 เปิดหน้าจอง RFI (User)', 'openRFIForm')
-    .addItem('🌿 เปิดหน้าจอง Survey Work', 'openSurveyWorkForm')
+    .addItem('🗺️ เปิดหน้าจอง Survey Work', 'openSurveyWorkForm')
     .addItem('📝 เปิดหน้าจอง RFI (QC)', 'openQCRFIForm')
     .addSeparator()
     .addSubMenu(ui.createMenu('📊 Dashboard & Analytics')
@@ -176,7 +176,7 @@ function createColumnANReport() {
     reportSheet.getRange(row, 1, 1, 2).setBackground('#dbeafe');
     row++;
     
-    reportSheet.getRange(row, 1).setValue('🌿 Survey Work:');
+    reportSheet.getRange(row, 1).setValue('🗺️ Survey Work:');
     reportSheet.getRange(row, 2).setValue(surveyWorkCount);
     reportSheet.getRange(row, 1, 1, 2).setBackground('#d1fae5');
     row++;
@@ -206,7 +206,7 @@ function createColumnANReport() {
     
     // Survey Work by Status
     row += 2;
-    reportSheet.getRange(row, 1).setValue('🌿 Survey Work by Status').setFontWeight('bold').setFontSize(14);
+    reportSheet.getRange(row, 1).setValue('🗺️ Survey Work by Status').setFontWeight('bold').setFontSize(14);
     row++;
     
     reportSheet.getRange(row, 1).setValue('Status');
@@ -235,7 +235,7 @@ function createColumnANReport() {
       'สร้าง Sheet "Column_AN_Report" แล้ว\n\n' +
       'สรุป:\n' +
       '📋 RFI Work: ' + rfiWorkCount + ' records\n' +
-      '🌿 Survey Work: ' + surveyWorkCount + ' records\n' +
+      '🗺️ Survey Work: ' + surveyWorkCount + ' records\n' +
       (emptyCount > 0 ? '⚠️ Empty: ' + emptyCount + ' records\n' : '') +
       '\nกรุณาไปดูที่ Sheet "Column_AN_Report"',
       SpreadsheetApp.getUi().ButtonSet.OK
@@ -4248,12 +4248,12 @@ function createSurveyWorkCalendarEvent(data, rfiId, surveyNo) {  // ⭐ เพ�
     const endDateTime = new Date(year, month, day, endHour, endMinute, 0);
     
     // สร้าง Event Title
-const eventTitle = '🌿 Survey Work: ' + surveyNo + ' - ' + data.assignedTeam;  // ⭐ ใช้ surveyNo
+const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTeam;  // ⭐ ใช้ surveyNo
     
     // สร้าง Event Description
     const description = 
       '═══════════════════════════════════════\n' +
-      '🌿 SURVEY WORK REQUEST\n' +
+      '🗺️ SURVEY WORK REQUEST\n' +
       '═══════════════════════════════════════\n\n' +
       'Survey NO: ' + surveyNo + '\n' +  // ⭐ ใช้ surveyNo
       'ทีมงาน: ' + data.assignedTeam + '\n' +
@@ -4388,7 +4388,7 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {
     
     const sent = safeSendEmail({
       to: recipients.join(','),
-      subject: '🌿 Survey Work Request ใหม่ [ID: ' + surveyNo + ']',
+      subject: '🗺️ Survey Work Request ใหม่ [ID: ' + surveyNo + ']',
       htmlBody: emailHtml,
       name: 'Survey Work Requirement System'
     });
@@ -4448,7 +4448,7 @@ th { background-color: #ecfdf5; }
 </style>
 </head>
 <body>
-<h2>🌿 แจ้ง Survey Work Request ใหม่</h2>
+<h2>🗺️ แจ้ง Survey Work Request ใหม่</h2>
 <div class="id-badge">Survey NO: ${surveyNo}</div>
 <p>เรียน ทีม Survey</p>
 <p>มี Survey Work Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ</p>
@@ -4809,7 +4809,7 @@ function testColumnAN() {
         icon = '📋';
         rfiWorkCount++;
       } else if (type === 'Survey Work') {
-        icon = '🌿';
+        icon = '🗺️';
         surveyWorkCount++;
       } else {
         icon = '⚠️';
@@ -4823,7 +4823,7 @@ function testColumnAN() {
     console.log('');
     console.log('Summary:');
     console.log('📋 RFI Work:', rfiWorkCount);
-    console.log('🌿 Survey Work:', surveyWorkCount);
+    console.log('🗺️ Survey Work:', surveyWorkCount);
     console.log('⚠️ Empty/Other:', emptyCount);
     console.log('');
     
