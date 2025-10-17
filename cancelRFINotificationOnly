@@ -1,14 +1,28 @@
+// Version 1 17/10/2025 15:51
 // ===== CANCEL WORK - SEND NOTIFICATION ONLY (ไม่ลบ Events) =====
 
 /**
  * ฟังก์ชันส่งอีเมลแจ้งยกเลิกงาน (ไม่ลบ Calendar Events)
+ * @param {string} rfiId - หมายเลข RFI ID
  * @param {Array|string} emailList - รายชื่ออีเมลที่ต้องการแจ้งเตือน (Array หรือ comma-separated string)
  * @param {string} workDescription - คำอธิบายงาน / รายละเอียดงาน
  * @param {boolean} sendEmail - ส่งอีเมลแจ้งยกเลิกหรือไม่ (default: true)
  * @returns {Object} ผลลัพธ์การส่งอีเมล
  */
-function cancelWorkNotification(emailList, workDescription = '', sendEmail = true) {
-  Logger.log(`📧 [AppSheet] Starting work cancellation notification`);
+function cancelWorkNotification(rfiId, emailList, workDescription = '', sendEmail = true) {
+  Logger.log(`📧 [AppSheet] Starting work cancellation notification for RFI: ${rfiId}`);
+  
+  // Validate RFI ID
+  if (!rfiId || String(rfiId).trim() === '') {
+    const error = "RFI ID is required";
+    Logger.log(`❌ ${error}`);
+    return {
+      success: false,
+      error: error,
+      emailsSent: false,
+      recipients: []
+    };
+  }
   
   // Validate Email List
   if (!emailList || (Array.isArray(emailList) && emailList.length === 0) || 
@@ -25,6 +39,7 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
 
   let result = {
     success: false,
+    rfiId: String(rfiId).trim(),
     emailsSent: false,
     recipients: [],
     quotaUsed: 0,
@@ -64,6 +79,7 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
       Logger.log("📧 Sending cancellation notification email...");
       
       const emailResult = sendCancellationEmail(
+        result.rfiId,
         recipientList,
         workDescription
       );
@@ -73,7 +89,7 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
       
       if (emailResult.success) {
         result.success = true;
-        result.message = `Cancellation notification sent successfully to ${recipientList.length} recipient(s)`;
+        result.message = `Cancellation notification sent successfully to ${recipientList.length} recipient(s) for RFI #${result.rfiId}`;
         Logger.log(`✅ ${result.message}`);
       } else {
         result.error = emailResult.error || "Failed to send email";
@@ -82,7 +98,7 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
       }
       
     } else {
-      result.message = `Email sending disabled. Would notify ${recipientList.length} recipient(s)`;
+      result.message = `Email sending disabled. Would notify ${recipientList.length} recipient(s) for RFI #${result.rfiId}`;
       Logger.log(`⚠️ ${result.message}`);
     }
 
@@ -95,6 +111,7 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
   // แสดงสรุปผล
   Logger.log("\n" + "=".repeat(50));
   Logger.log("📧 WORK CANCELLATION NOTIFICATION SUMMARY:");
+  Logger.log(`🆔 RFI ID: ${result.rfiId}`);
   Logger.log(`📧 Emails Sent: ${result.emailsSent ? 'YES' : 'NO'}`);
   Logger.log(`👥 Recipients: ${result.recipients.length}`);
   Logger.log(`📊 Quota Used: ${result.quotaUsed}`);
@@ -105,33 +122,34 @@ function cancelWorkNotification(emailList, workDescription = '', sendEmail = tru
 }
 
 /**
- * ฟังก์ชันส่งอีเมลแจ้งยกเลิกงาน
+ * ฟังก์ชันส่งอีเมลแจ้งยกเลิกงาน RFI
+ * @param {string} rfiId - หมายเลข RFI ID
  * @param {Array} recipients - รายชื่อผู้รับอีเมล
  * @param {string} workDescription - คำอธิบายงาน / รายละเอียดงาน
  * @returns {Object} ผลลัพธ์การส่งอีเมล
  */
-function sendCancellationEmail(recipients, workDescription) {
-  Logger.log(`📧 Preparing cancellation email`);
+function sendCancellationEmail(rfiId, recipients, workDescription) {
+  Logger.log(`📧 กำลังเตรียมอีเมลแจ้งยกเลิกงาน RFI #${rfiId}`);
   
   if (!recipients || recipients.length === 0) {
-    Logger.log("⚠️ No recipients to notify");
-    return { success: false, error: "No recipients to notify" };
+    Logger.log("⚠️ ไม่มีผู้รับอีเมล");
+    return { success: false, error: "ไม่มีผู้รับอีเมล" };
   }
 
   try {
     // ตรวจสอบ quota
     const quota = checkEmailQuota();
-    Logger.log(`📊 Current email quota: ${quota}`);
+    Logger.log(`📊 Email quota คงเหลือ: ${quota}`);
     
     if (quota <= 0) {
-      Logger.log('❌ Email quota exceeded');
+      Logger.log('❌ Email quota เกินขันตอน');
       return { success: false, error: "Email quota exceeded" };
     }
 
-    // สร้าง recipient list (BCC เพื่อปกป้องความเป็นส่วนตัว)
+    // สร้าง recipient list
     const recipientList = recipients.join(',');
     
-    const subject = `RFI Request - ${workDescription || 'Work Appointment'}`;
+    const subject = `🚫 ยกเลิกคำขอ RFI #${rfiId} - ${workDescription || 'งาน RFI'}`;
     
     const currentDate = new Date().toLocaleString('th-TH', {
       year: 'numeric',
@@ -142,43 +160,49 @@ function sendCancellationEmail(recipients, workDescription) {
     });
     
     const htmlMessage = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-          <h1 style="margin: 0; font-size: 28px; font-weight: 300;">🚫 Appointment Cancelled</h1>
-          <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">RFI Management System Notification</p>
+          <h1 style="margin: 0; font-size: 28px; font-weight: 300;">🚫 ยกเลิกคำขอ RFI</h1>
+          <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">ระบบจัดการ RFI แจ้งเตือน</p>
         </div>
         
         <!-- Main Content -->
         <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           
           <!-- Alert Box -->
-          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 4px; margin-bottom: 25px;">
-            <h2 style="margin: 0 0 10px 0; color: #856404; font-size: 20px;">⚠️ Important Notification</h2>
-            <p style="margin: 0; color: #856404; font-size: 16px;">The following work appointment has been cancelled</p>
+          <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; border-radius: 4px; margin-bottom: 25px;">
+            <h2 style="margin: 0 0 10px 0; color: #721c24; font-size: 20px;">⚠️ ประกาศสำคัญ</h2>
+            <p style="margin: 0; color: #721c24; font-size: 16px; line-height: 1.6;">
+              คำขอ RFI ของท่านได้ถูก<strong>ยกเลิก</strong>แล้ว
+            </p>
           </div>
           
           <!-- Work Info -->
           <div style="background: #f8f9fa; border: 2px solid #dee2e6; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
-            <h3 style="margin: 0 0 15px 0; color: #495057; font-size: 18px;">📋 Work Details</h3>
+            <h3 style="margin: 0 0 15px 0; color: #495057; font-size: 18px;">📋 รายละเอียดงาน</h3>
             <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6c757d; font-weight: 500; vertical-align: top; width: 35%;">RFI ID:</td>
+                <td style="padding: 8px 0; color: #212529; line-height: 1.6; font-weight: 600;">#${rfiId}</td>
+              </tr>
               ${workDescription ? `
               <tr>
-                <td style="padding: 8px 0; color: #6c757d; font-weight: 500; vertical-align: top;">Work Description:</td>
+                <td style="padding: 8px 0; color: #6c757d; font-weight: 500; vertical-align: top;">รายละเอียดงาน:</td>
                 <td style="padding: 8px 0; color: #212529; line-height: 1.6; font-weight: 600;">${workDescription}</td>
               </tr>
               ` : ''}
               <tr>
-                <td style="padding: 8px 0; color: #6c757d; font-weight: 500;">Status:</td>
+                <td style="padding: 8px 0; color: #6c757d; font-weight: 500;">สถานะ:</td>
                 <td style="padding: 8px 0;">
                   <span style="background: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 14px;">
-                    CANCELLED
+                    ยกเลิกแล้ว
                   </span>
                 </td>
               </tr>
               <tr>
-                <td style="padding: 8px 0; color: #6c757d; font-weight: 500;">Cancelled on:</td>
+                <td style="padding: 8px 0; color: #6c757d; font-weight: 500;">วันที่ยกเลิก:</td>
                 <td style="padding: 8px 0; color: #212529;">${currentDate}</td>
               </tr>
             </table>
@@ -186,24 +210,21 @@ function sendCancellationEmail(recipients, workDescription) {
           
           <!-- Action Items -->
           <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
-            <h3 style="margin: 0 0 15px 0; color: #0c5460; font-size: 16px;">✅ What You Need to Know</h3>
+            <h3 style="margin: 0 0 15px 0; color: #0c5460; font-size: 16px;">📌 สิ่งที่ท่านควรทราบ</h3>
             <ul style="margin: 0; padding-left: 20px; color: #0c5460; line-height: 1.8;">
-              <li><strong>All related appointments have been cancelled</strong></li>
-              <li>Please remove any corresponding events from your calendar</li>
-              <li>No further action is required from you at this time</li>
-              <li>You will be notified if new appointments are scheduled</li>
-              <li>Contact the project team if you have any questions</li>
+              <li><strong>คำนัดหมาย งาน RFI นี้ได้ถูกยกเลิกแล้ว</strong></li>
+              <li>หากมีข้อสงสัย กรุณาติดต่อทีมงาน</li>
             </ul>
           </div>
           
           <!-- Contact Info -->
           <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 6px;">
             <p style="margin: 0 0 10px 0; font-size: 16px; color: #495057; font-weight: 500;">
-              📱 Need Assistance?
+              📱 ต้องการความช่วยเหลือ?
             </p>
             <p style="margin: 0; font-size: 14px; color: #6c757d; line-height: 1.6;">
-              Please contact the project team for any questions or concerns<br>
-              regarding this cancellation
+              กรุณาติดต่อทีมงานหากมีคำถามหรือข้อสงสัย<br>
+              เกี่ยวกับการยกเลิกครั้งนี้
             </p>
           </div>
           
@@ -211,26 +232,26 @@ function sendCancellationEmail(recipients, workDescription) {
         
         <!-- Footer -->
         <div style="text-align: center; padding: 20px; color: #6c757d; font-size: 12px; line-height: 1.6;">
-          <p style="margin: 0 0 5px 0;">📧 This is an automated notification from the Work Management System</p>
-          <p style="margin: 0;">Generated by AppSheet Integration • ${currentDate}</p>
+          <p style="margin: 0 0 5px 0;">📧 อีเมลนี้ถูกส่งอัตโนมัติจากระบบจัดการ RFI</p>
+          <p style="margin: 0;">ส่งโดย AppSheet Integration • ${currentDate}</p>
         </div>
         
       </div>
     `;
     
-    // ส่งอีเมล (ใช้ To)
+    // ส่งอีเมล
     const sent = safeSendEmail({
       to: recipientList,
       subject: subject,
       htmlBody: htmlMessage,
-      name: 'Work Management System - Cancellation Notification'
+      name: 'ระบบจัดการ RFI - แจ้งการยกเลิก'
     });
 
     if (sent) {
-      Logger.log(`✅ Email sent successfully to ${recipients.length} recipient(s)`);
-      Logger.log(`📊 Email quota used: 1`);
+      Logger.log(`✅ ส่งอีเมลสำเร็จถึง ${recipients.length} คน`);
+      Logger.log(`📊 Email quota ที่ใช้: 1`);
     } else {
-      Logger.log('❌ Failed to send email');
+      Logger.log('❌ ส่งอีเมลไม่สำเร็จ');
     }
 
     return {
@@ -241,7 +262,7 @@ function sendCancellationEmail(recipients, workDescription) {
     };
 
   } catch (error) {
-    Logger.log(`❌ Error sending email: ${error.toString()}`);
+    Logger.log(`❌ เกิดข้อผิดพลาดในการส่งอีเมล: ${error.toString()}`);
     return {
       success: false,
       error: error.toString(),
@@ -306,6 +327,7 @@ function testCancelNotificationArray() {
   Logger.log("🧪 Testing Cancel Work Notification (Array)...");
   
   const result = cancelWorkNotification(
+    "RFI-2025-001",
     ["test1@example.com", "test2@example.com", "test3@example.com"],
     "ติดตั้งระบบไฟฟ้าชั้น 3 อาคาร A",
     false // ตั้งเป็น true เมื่อต้องการส่งจริง
@@ -322,6 +344,7 @@ function testCancelNotificationString() {
   Logger.log("🧪 Testing Cancel Work Notification (String)...");
   
   const result = cancelWorkNotification(
+    "RFI-2025-002",
     "test1@example.com, test2@example.com, test3@example.com",
     "ซ่อมแซมท่อประปาชั้น 2",
     false // ตั้งเป็น true เมื่อต้องการส่งจริง
@@ -338,10 +361,12 @@ function testFromAppSheet() {
   Logger.log("🧪 Testing from AppSheet...");
   
   // จำลอง parameters ที่ส่งมาจาก AppSheet
+  const rfiId = "RFI-2025-003";
   const emailList = "john@example.com,mary@example.com,bob@example.com";
   const workDescription = "งานติดตั้งระบบปรับอากาศ ชั้น 5-7 อาคาร B";
   
   const result = cancelWorkNotification(
+    rfiId,
     emailList,
     workDescription,
     false // ตั้งเป็น true เมื่อต้องการส่งจริง
