@@ -6142,3 +6142,49 @@ function getTeamEmailsByTeamNames(teamNames) {
     return [];
   }
 }
+
+/**
+ * ⭐ ลบ Meeting Links และข้อความที่เกี่ยวข้องออกจาก Description
+ */
+function removeMeetingLinksFromDescription(description) {
+  if (!description) return '';
+  
+  Logger.log('🧹 Cleaning description from meeting links...');
+  
+  let cleaned = String(description);
+  
+  // ลบ Google Meet links
+  cleaned = cleaned.replace(/https:\/\/meet\.google\.com\/[a-z\-]+/gi, '');
+  
+  // ลบ Zoom links
+  cleaned = cleaned.replace(/https:\/\/[^\s]*zoom\.us\/[^\s)]+/gi, '');
+  
+  // ลบ Microsoft Teams links
+  cleaned = cleaned.replace(/https:\/\/teams\.microsoft\.com\/[^\s)]+/gi, '');
+  
+  // ลบ "Join with Google Meet" และข้อความที่เกี่ยวข้อง
+  cleaned = cleaned.replace(/Join (?:with )?Google Meet[^\n]*/gi, '');
+  cleaned = cleaned.replace(/─{5,}Join with Google Meet─{5,}/gi, '');
+  
+  // ลบ "Video call link:" และ link ที่ตามมา
+  cleaned = cleaned.replace(/Video call link:\s*https?:\/\/[^\s]+/gi, '');
+  cleaned = cleaned.replace(/Video call link:[^\n]*/gi, '');
+  
+  // ลบ "View your event at:" และ link
+  cleaned = cleaned.replace(/View your event at:\s*https?:\/\/[^\s]+/gi, '');
+  cleaned = cleaned.replace(/View your event at:[^\n]*/gi, '');
+  
+  // ลบบรรทัด divider ที่เหลือ
+  cleaned = cleaned.replace(/─{10,}/g, '');
+  cleaned = cleaned.replace(/━{10,}/g, '');
+  
+  // ลบบรรทัดว่างซ้ำซ้อน (เหลือแค่ 1-2 บรรทัด)
+  cleaned = cleaned.replace(/\n\n\n+/g, '\n\n');
+  
+  // ลบช่องว่างที่หัวและท้าย
+  cleaned = cleaned.trim();
+  
+  Logger.log('✅ Description cleaned');
+  
+  return cleaned;
+}
