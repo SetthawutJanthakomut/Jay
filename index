@@ -1,3 +1,4 @@
+<!-- Version 1 17/10/2025 8:59-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -537,10 +538,14 @@
   <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
 </div>
       
-      <div class="form-group">
-        <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
-        <input type="text" id="requesterName" name="requesterName" required placeholder="กรอกชื่อ-นามสกุล">
-      </div>
+      <!-- ✅ อัปเดต: ชื่อผู้ขอ (ดึงจากระบบ + แก้ไขได้) -->
+<div class="form-group">
+  <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
+  <input type="text" id="requesterName" name="requesterName" required 
+         placeholder="กำลังโหลด..." readonly
+         style="background: #f0f7ff; cursor: wait;">
+  <div class="time-info" id="nameInfo">🔍 กำลังตรวจสอบข้อมูลผู้ใช้...</div>
+</div>
       
 <!-- ✅ ใหม่ -->
 <div class="form-group">
@@ -577,7 +582,7 @@ window.onload = function() {
   loadWorkTypes();
   initTeamCategoryButtons();
   initCheckboxes();
-  loadUserEmail();  // ⭐ เพิ่มบรรทัดนี้
+  loadUserEmailAndName();  // ⭐ เพิ่มบรรทัดนี้
   showMessage('กรุณาเลือกหมวดงานและวันถัดไปจากวันที่ทำการจอง', 'info');
 };
     
@@ -655,21 +660,85 @@ window.onload = function() {
     }
 
     // ⭐ เพิ่ม function นี้
-function loadUserEmail() {
+function loadUserEmailAndName() {
   const emailInput = document.getElementById('requesterEmail');
+  const nameInput = document.getElementById('requesterName');
+  const nameInfo = document.getElementById('nameInfo');
+  
   emailInput.value = 'กำลังโหลด...';
   emailInput.disabled = true;
   
+  nameInput.value = '';
+  nameInput.placeholder = 'กำลังโหลด...';
+  nameInput.readOnly = true;
+  nameInput.style.background = '#f0f7ff';
+  nameInput.style.cursor = 'wait';
+  
+  // 1. โหลดอีเมล
   google.script.run
     .withSuccessHandler(function(email) {
       if (email) {
         emailInput.value = email;
         emailInput.disabled = true;
         console.log('✅ User email loaded:', email);
+        
+        // 2. โหลดชื่อจากอีเมล
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success && result.name) {
+              // ✅ เจอชื่อในระบบ
+              nameInput.value = result.name;
+              nameInput.readOnly = false;
+              nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+              nameInput.style.cursor = 'text';
+              nameInfo.innerHTML = '✅ พบข้อมูลในระบบ - สามารถแก้ไขได้';
+              nameInfo.style.color = '#16a34a';
+              console.log('✅ User name loaded:', result.name);
+            } else if (!result.success && result.message) {
+              // ❌ อีเมลมีปัญหา (Role/Status ไม่ถูกต้อง)
+              nameInput.value = '';
+              nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
+              nameInput.readOnly = true;
+              nameInput.style.background = '#fee2e2';
+              nameInfo.innerHTML = '❌ ' + result.message;
+              nameInfo.style.color = '#dc2626';
+              showMessage(result.message, 'error');
+            } else {
+              // ⚠️ ไม่เจอชื่อ → ให้กรอกเอง
+              nameInput.value = '';
+              nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
+              nameInput.readOnly = false;
+              nameInput.style.background = '#ffffff';
+              nameInput.style.cursor = 'text';
+              nameInfo.innerHTML = '📝 กรอกชื่อผู้ขอ - ระบบจะบันทึกในฐานข้อมูล';
+              nameInfo.style.color = '#1877f2';
+              console.log('⚠️ User not found - manual entry required');
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('❌ Error loading name:', error);
+            nameInput.value = '';
+            nameInput.placeholder = 'เกิดข้อผิดพลาด';
+            nameInput.readOnly = false;
+            nameInput.style.background = '#ffffff';
+            nameInput.style.cursor = 'text';
+            nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาด - กรุณากรอกชื่อ';
+            nameInfo.style.color = '#f59e0b';
+          })
+          .getUserNameFromEmail(email);
+        
       } else {
         emailInput.value = '';
         emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
         emailInput.disabled = false;
+        
+        nameInput.value = '';
+        nameInput.placeholder = 'กรุณา Login ก่อน';
+        nameInput.readOnly = true;
+        nameInput.style.background = '#fee2e2';
+        nameInfo.innerHTML = '⚠️ กรุณา Login ด้วย Google Account';
+        nameInfo.style.color = '#dc2626';
+        
         showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
       }
     })
@@ -678,9 +747,17 @@ function loadUserEmail() {
       emailInput.value = '';
       emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
       emailInput.disabled = false;
+      
+      nameInput.value = '';
+      nameInput.placeholder = 'กรุณา Login ก่อน';
+      nameInput.readOnly = true;
+      nameInput.style.background = '#fee2e2';
+      nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาดในการดึงข้อมูล';
+      nameInfo.style.color = '#dc2626';
+      
       showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
     })
-    .getCurrentUserEmail();  // ✅ เรียก function ที่มีอยู่แล้ว
+    .getCurrentUserEmail();
 }
 
 // function loadWorkTypes() อยู่ต่อด้านล่าง...
@@ -966,7 +1043,7 @@ function loadUserEmail() {
       resetEndTimeSelect();
       
       loadWorkTypes();
-      loadUserEmail();
+      loadUserEmailAndName();
       setMinDate();
     }
   </script>
