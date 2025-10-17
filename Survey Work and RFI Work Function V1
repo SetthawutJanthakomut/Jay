@@ -1,9 +1,50 @@
-//Version 11 17/10/2025 9:00
+//Version 11 17/10/2025 9:15
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
  * อัปเดต doGet() เพื่อเพิ่มหน้า Survey Work
  */
+// ===== Global Variables for Load Balancing =====
+/**
+ * ⭐ Cache สำหรับเก็บ workload ชั่วคราวในหน่วยความจำ
+ * ใช้เมื่อยังไม่ได้บันทึกลง Sheet (เช่น ระหว่างการทดสอบ)
+ */
+var WORKLOAD_CACHE = {};
+
+/**
+ * ⭐ Cache สำหรับเก็บ last selected team (Round Robin)
+ */
+var LAST_SELECTED_TEAM = {};
+
+/**
+ * ⭐ Reset cache (ใช้ก่อนทดสอบ)
+ */
+function resetWorkloadCache() {
+  WORKLOAD_CACHE = {};
+  LAST_SELECTED_TEAM = {};
+  console.log('✅ Workload cache reset');
+}
+
+/**
+ * ⭐ เพิ่ม workload ใน cache
+ */
+function incrementWorkloadCache(resourceId, date) {
+  const key = resourceId + '_' + date;
+  if (!WORKLOAD_CACHE[key]) {
+    WORKLOAD_CACHE[key] = 0;
+  }
+  WORKLOAD_CACHE[key]++;
+  console.log('📊 Cache updated:', resourceId, 'on', date, '→', WORKLOAD_CACHE[key], 'tasks');
+}
+
+/**
+ * ⭐ ดึง workload จาก cache
+ */
+function getWorkloadFromCache(resourceId, date) {
+  const key = resourceId + '_' + date;
+  return WORKLOAD_CACHE[key] || 0;
+}
+
 function doGet(e) {
   const page = e.parameter.page;
   
@@ -98,6 +139,8 @@ function onOpen() {
       .addItem('🗑️ ลบข้อมูล Test', 'clearTestData'))
     .addToUi();
 }
+
+
 /**
  * ⭐ สร้าง Report แยกตาม Column AN
  */
@@ -730,9 +773,183 @@ function testSpecificStatus() {
   console.log('=================================');
 }
 
-function assignTeamAutomatically(category, date, startTime, endTime) {
+/**
+ * ✅ อัปเดต: นับจำนวนงานที่ทีมมี (รวม cache)
+ */
+function getTeamWorkload(resourceId, date, useCache) {
   try {
-    console.log('Auto-assigning team for category:', category);
+    if (typeof useCache === 'undefined') useCache = true;
+    
+    // 1. นับจาก Sheet
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    let sheetWorkload = 0;
+    
+    if (sheet) {
+      const lastRow = sheet.getLastRow();
+      
+      if (lastRow > 1) {
+        const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+        
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          const rfiDate = formatDate(new Date(row[4]));
+          const assignedTeams = String(row[11] || '').trim();
+          const status = String(row[14] || '').trim();
+          
+          if (isStatusInactive(status)) continue;
+          
+          if (rfiDate === date) {
+            const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+            if (!resourceSheet) continue;
+            
+            const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+            
+            const nameToId = {};
+            for (let j = 0; j < resourceData.length; j++) {
+              const rid = String(resourceData[j][0] || '').trim();
+              const rname = String(resourceData[j][1] || '').trim();
+              if (rid && rname) {
+                nameToId[rname] = rid;
+              }
+            }
+            
+            const teamNamesList = assignedTeams.split(',').map(function(name) {
+              return name.trim();
+            });
+            
+            for (let k = 0; k < teamNamesList.length; k++) {
+              const teamName = teamNamesList[k];
+              if (nameToId[teamName] === resourceId) {
+                sheetWorkload++;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // 2. เพิ่มจาก cache (ถ้าใช้)
+    const cacheWorkload = useCache ? getWorkloadFromCache(resourceId, date) : 0;
+    const totalWorkload = sheetWorkload + cacheWorkload;
+    
+    return totalWorkload;
+    
+  } catch (error) {
+    console.error('Error getting team workload:', error);
+    return 0;
+  }
+}
+
+/**
+ * ✅ อัปเดต: เรียงทีมตาม Workload + Round Robin
+ */
+function sortTeamsByWorkload(teams, date, useCache) {
+  try {
+    if (typeof useCache === 'undefined') useCache = true;
+    
+    console.log('Sorting teams by workload for date:', date, '(Cache:', useCache ? 'ON' : 'OFF' + ')');
+    
+    // คำนวณ workload ของแต่ละทีม
+    const teamsWithWorkload = teams.map(function(team) {
+      const workload = getTeamWorkload(team.resourceId, date, useCache);
+      console.log('Team:', team.resourceName, 'Workload:', workload, 'Team No:', team.teamNo);
+      
+      return {
+        resourceId: team.resourceId,
+        resourceName: team.resourceName,
+        subType: team.subType,
+        teamNo: team.teamNo,
+        workload: workload
+      };
+    });
+    
+    // หา min workload
+    let minWorkload = Infinity;
+    teamsWithWorkload.forEach(function(t) {
+      if (t.workload < minWorkload) {
+        minWorkload = t.workload;
+      }
+    });
+    
+    // แยกทีมที่มี workload น้อยที่สุด
+    const minWorkloadTeams = teamsWithWorkload.filter(function(t) {
+      return t.workload === minWorkload;
+    });
+    
+    // ถ้ามีหลายทีมที่ workload เท่ากัน → ใช้ Round Robin
+    if (minWorkloadTeams.length > 1) {
+      console.log('⚖️ Found', minWorkloadTeams.length, 'teams with same workload (', minWorkload, ')');
+      
+      const categoryKey = teams[0].subType + '_' + date;
+      const lastSelected = LAST_SELECTED_TEAM[categoryKey];
+      
+      console.log('Last selected:', lastSelected);
+      
+      // หา index ของทีมที่เลือกครั้งก่อน
+      let startIndex = 0;
+      if (lastSelected) {
+        for (let i = 0; i < minWorkloadTeams.length; i++) {
+          if (minWorkloadTeams[i].resourceId === lastSelected) {
+            startIndex = (i + 1) % minWorkloadTeams.length; // เลือกทีมถัดไป
+            break;
+          }
+        }
+      }
+      
+      // เรียงใหม่โดยเริ่มจากทีมถัดไป
+      const rotated = minWorkloadTeams.slice(startIndex).concat(minWorkloadTeams.slice(0, startIndex));
+      
+      console.log('🔄 Round Robin order:', rotated.map(function(t) {
+        return t.resourceName;
+      }).join(' → '));
+      
+      // นำทีมที่ workload สูงกว่ามาต่อท้าย
+      const higherWorkloadTeams = teamsWithWorkload.filter(function(t) {
+        return t.workload > minWorkload;
+      }).sort(function(a, b) {
+        if (a.workload !== b.workload) return a.workload - b.workload;
+        return a.teamNo - b.teamNo;
+      });
+      
+      return rotated.concat(higherWorkloadTeams);
+    }
+    
+    // ถ้ามีทีมเดียวที่ workload น้อยที่สุด หรือ workload ไม่เท่ากัน
+    teamsWithWorkload.sort(function(a, b) {
+      if (a.workload !== b.workload) {
+        return a.workload - b.workload;
+      }
+      return a.teamNo - b.teamNo;
+    });
+    
+    console.log('Teams sorted by workload:');
+    teamsWithWorkload.forEach(function(t) {
+      console.log('-', t.resourceName, '(Workload:', t.workload + ', Team No:', t.teamNo + ')');
+    });
+    
+    return teamsWithWorkload;
+    
+  } catch (error) {
+    console.error('Error sorting teams by workload:', error);
+    return teams;
+  }
+}
+
+/**
+ * ✅ FINAL: จัดทีมอัตโนมัติ (RFI Work) - Load Balanced
+ */
+function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiId, useCache) {
+  try {
+    // Set default values
+    if (typeof excludeRfiId === 'undefined') excludeRfiId = null;
+    if (typeof useCache === 'undefined') useCache = false;
+    
+    console.log('========== Auto-assigning team (Load Balanced) ==========');
+    console.log('Category:', category);
+    console.log('Date:', date);
+    console.log('Time:', startTime, '-', endTime);
+    console.log('Use Cache:', useCache);
     
     // แยกหมวดงาน
     const categories = category.split(',').map(function(c) {
@@ -753,17 +970,29 @@ function assignTeamAutomatically(category, date, startTime, endTime) {
         };
       }
       
-      // หาทีมที่ว่าง
-      for (let i = 0; i < teams.length; i++) {
-        const team = teams[i];
+      // ⭐ เรียงทีมตาม workload
+      const sortedTeams = sortTeamsByWorkload(teams, date, useCache);
+      
+      // หาทีมที่ว่าง (เลือกจากทีมที่มีงานน้อยที่สุดก่อน)
+      for (let i = 0; i < sortedTeams.length; i++) {
+        const team = sortedTeams[i];
         
-        if (isTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        if (isTeamAvailable(team.resourceId, date, startTime, endTime, excludeRfiId)) {
+          console.log('✅ Selected team:', team.resourceName, '(Workload:', team.workload + ')');
+          
+          // ⭐ อัปเดต cache (ถ้าใช้)
+          if (useCache) {
+            incrementWorkloadCache(team.resourceId, date);
+            LAST_SELECTED_TEAM[team.subType + '_' + date] = team.resourceId;
+          }
+          
           return {
             success: true,
-            assignedTeams: [team.resourceName], // เก็บเป็น array
+            assignedTeams: [team.resourceName],
             teamNames: team.resourceName,
             resourceIds: team.resourceId,
-            teamNo: team.teamNo
+            teamNo: team.teamNo,
+            workload: team.workload
           };
         }
       }
@@ -775,10 +1004,11 @@ function assignTeamAutomatically(category, date, startTime, endTime) {
     }
     
     // ถ้าเลือกหลายหมวด - ต้องหาทีมที่ว่างพร้อมกัน
-    return assignMultipleTeams(categories, date, startTime, endTime);
+    return assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache);
     
   } catch (error) {
     console.error('Error in assignTeamAutomatically:', error);
+    console.error('Stack:', error.stack);
     return {
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
@@ -786,14 +1016,18 @@ function assignTeamAutomatically(category, date, startTime, endTime) {
   }
 }
 
-
 /**
- * ⚡ UPDATED: จัดหลายทีม (Optimized)
- * ✅ รักษา function signature เดิม
+ * ✅ FINAL: จัดหลายทีม (Multi-Work) - Load Balanced
  */
-function assignMultipleTeams(categories, date, startTime, endTime) {
+function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache) {
   try {
-    console.log('Assigning multiple teams for:', categories);
+    // Set default values
+    if (typeof excludeRfiId === 'undefined') excludeRfiId = null;
+    if (typeof useCache === 'undefined') useCache = false;
+    
+    console.log('========== Assigning multiple teams (Load Balanced) ==========');
+    console.log('Categories:', categories);
+    console.log('Use Cache:', useCache);
     
     const teamsByCategory = {};
     
@@ -809,8 +1043,9 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
         };
       }
       
-      teamsByCategory[cat] = teams;
-      console.log('Category ' + cat + ': ' + teams.length + ' teams');
+      // ⭐ เรียงทีมตาม workload + Round Robin
+      teamsByCategory[cat] = sortTeamsByWorkload(teams, date, useCache);
+      console.log('Category ' + cat + ':', teamsByCategory[cat].length, 'teams');
     }
     
     // ⚡ จำกัด combinations: เอาแค่ 3 ทีมแรกของแต่ละหมวด
@@ -819,7 +1054,7 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
     Object.keys(teamsByCategory).forEach(function(cat) {
       if (teamsByCategory[cat].length > MAX_TEAMS_PER_CATEGORY) {
         teamsByCategory[cat] = teamsByCategory[cat].slice(0, MAX_TEAMS_PER_CATEGORY);
-        console.log('⚡ Limited ' + cat + ' to ' + MAX_TEAMS_PER_CATEGORY + ' teams for performance');
+        console.log('⚡ Limited ' + cat + ' to ' + MAX_TEAMS_PER_CATEGORY + ' teams');
       }
     });
     
@@ -828,7 +1063,7 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
     Object.keys(teamsByCategory).forEach(function(cat) {
       teamsByCategory[cat].forEach(function(team) {
         teamAvailability[team.resourceId] = isTeamAvailable(
-          team.resourceId, date, startTime, endTime
+          team.resourceId, date, startTime, endTime, excludeRfiId
         );
       });
     });
@@ -838,9 +1073,10 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
     // สร้างชุดค่าผสมทีมทั้งหมด
     function generateCombinations(index, currentCombo) {
       if (index === categories.length) {
-        // ⚡ เช็คจาก cache
+        // เช็คว่าทีมทั้งหมดว่างหรือไม่
         let allAvailable = true;
         let totalTeamNo = 0;
+        let totalWorkload = 0;
         
         for (let i = 0; i < currentCombo.length; i++) {
           const team = currentCombo[i];
@@ -851,12 +1087,14 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
           }
           
           totalTeamNo += team.teamNo;
+          totalWorkload += team.workload;
         }
         
         if (allAvailable) {
           availableCombinations.push({
             teams: currentCombo.slice(),
-            totalTeamNo: totalTeamNo
+            totalTeamNo: totalTeamNo,
+            totalWorkload: totalWorkload
           });
         }
         
@@ -884,9 +1122,12 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
       };
     }
     
-    // เลือกชุดที่มี Team No. รวมน้อยที่สุด
+    // ⭐ เลือกชุดที่มี workload รวมน้อยที่สุด (ถ้าเท่ากัน เลือกตาม Team No.)
     availableCombinations.sort(function(a, b) {
-      return a.totalTeamNo - b.totalTeamNo;
+      if (a.totalWorkload !== b.totalWorkload) {
+        return a.totalWorkload - b.totalWorkload; // workload น้อยก่อน
+      }
+      return a.totalTeamNo - b.totalTeamNo; // Team No. เล็กก่อน
     });
     
     const bestCombo = availableCombinations[0];
@@ -898,18 +1139,29 @@ function assignMultipleTeams(categories, date, startTime, endTime) {
       return t.resourceId;
     });
     
-    console.log('Selected teams:', teamNames.join(', '));
+    console.log('✅ Selected teams:', teamNames.join(', '));
+    console.log('Total workload:', bestCombo.totalWorkload);
+    
+    // ⭐ อัปเดต cache (ถ้าใช้)
+    if (useCache) {
+      bestCombo.teams.forEach(function(team) {
+        incrementWorkloadCache(team.resourceId, date);
+        LAST_SELECTED_TEAM[team.subType + '_' + date] = team.resourceId;
+      });
+    }
     
     return {
       success: true,
       assignedTeams: bestCombo.teams,
       teamNames: teamNames.join(','),
       resourceIds: resourceIds.join(','),
-      totalTeamNo: bestCombo.totalTeamNo
+      totalTeamNo: bestCombo.totalTeamNo,
+      totalWorkload: bestCombo.totalWorkload
     };
     
   } catch (error) {
     console.error('Error in assignMultipleTeams:', error);
+    console.error('Stack:', error.stack);
     return {
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดหลายทีม: ' + error.toString()
@@ -1584,13 +1836,25 @@ function saveRFIRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // จัดทีมอัตโนมัติ
-    const teamAssignment = assignTeamAutomatically(
-      data.teamCategory, 
-      data.requestDate, 
-      data.startTime, 
-      data.endTime
-    );
+    // จัดทีมอัตโนมัติ (ไม่ใช้ cache เพราะจะบันทึกลง Sheet)
+// จัดทีมอัตโนมัติ
+const teamAssignment = assignTeamAutomatically(
+  data.teamCategory, 
+  data.requestDate, 
+  data.startTime, 
+  data.endTime,
+  null,    // excludeRfiId
+  false    // useCache = false (บันทึกจริง)
+);
+
+// ⭐ เพิ่มการเช็ค
+if (!teamAssignment) {
+  console.error('teamAssignment is undefined!');
+  return {
+    success: false,
+    message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
+  };
+}
     
     if (!teamAssignment.success) {
       console.log('Team assignment failed:', teamAssignment.message);
@@ -3654,11 +3918,17 @@ function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
 }
 
 /**
- * ⭐ จัดทีม Survey อัตโนมัติ
+ * ✅ FINAL: จัดทีม Survey อัตโนมัติ - Load Balanced
  */
-function assignSurveyTeamAutomatically(date, startTime, endTime) {
+function assignSurveyTeamAutomatically(date, startTime, endTime, useCache) {
   try {
-    console.log('Auto-assigning Survey team');
+    // Set default value
+    if (typeof useCache === 'undefined') useCache = false;
+    
+    console.log('========== Auto-assigning Survey team (Load Balanced) ==========');
+    console.log('Date:', date);
+    console.log('Time:', startTime, '-', endTime);
+    console.log('Use Cache:', useCache);
     
     const teams = getSurveyTeams();
     
@@ -3669,16 +3939,28 @@ function assignSurveyTeamAutomatically(date, startTime, endTime) {
       };
     }
     
-    // หาทีมที่ว่าง
-    for (let i = 0; i < teams.length; i++) {
-      const team = teams[i];
+    // ⭐ เรียงทีมตาม workload + Round Robin
+    const sortedTeams = sortTeamsByWorkload(teams, date, useCache);
+    
+    // หาทีมที่ว่าง (เลือกจากทีมที่มีงานน้อยที่สุดก่อน)
+    for (let i = 0; i < sortedTeams.length; i++) {
+      const team = sortedTeams[i];
       
       if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        console.log('✅ Selected Survey team:', team.resourceName, '(Workload:', team.workload + ')');
+        
+        // ⭐ อัปเดต cache (ถ้าใช้)
+        if (useCache) {
+          incrementWorkloadCache(team.resourceId, date);
+          LAST_SELECTED_TEAM[team.subType + '_' + date] = team.resourceId;
+        }
+        
         return {
           success: true,
           teamName: team.resourceName,
           resourceId: team.resourceId,
-          teamNo: team.teamNo
+          teamNo: team.teamNo,
+          workload: team.workload
         };
       }
     }
@@ -3690,6 +3972,7 @@ function assignSurveyTeamAutomatically(date, startTime, endTime) {
     
   } catch (error) {
     console.error('Error in assignSurveyTeamAutomatically:', error);
+    console.error('Stack:', error.stack);
     return {
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
@@ -3967,12 +4250,22 @@ function saveSurveyWorkRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // จัดทีม Survey อัตโนมัติ
-    const teamAssignment = assignSurveyTeamAutomatically(
-      data.requestDate, 
-      data.startTime, 
-      data.endTime
-    );
+// จัดทีม Survey อัตโนมัติ
+const teamAssignment = assignSurveyTeamAutomatically(
+  data.requestDate, 
+  data.startTime, 
+  data.endTime,
+  false    // useCache = false (บันทึกจริง)
+);
+
+// ⭐ เพิ่มการเช็ค
+if (!teamAssignment) {
+  console.error('teamAssignment is undefined!');
+  return {
+    success: false,
+    message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
+  };
+}
     
     if (!teamAssignment.success) {
       console.log('Team assignment failed:', teamAssignment.message);
@@ -6356,4 +6649,157 @@ function validateAndGetUser(email, name) {
       message: 'เกิดข้อผิดพลาดในการตรวจสอบผู้ใช้: ' + error.toString()
     };
   }
+}
+
+/**
+ * ✅ อัปเดต: ทดสอบ Load Balancing พร้อม Cache
+ */
+function testLoadBalancing() {
+  console.log('========== Test Load Balancing (with Cache) ==========');
+  
+  // ⭐ Reset cache ก่อนทดสอบ
+  resetWorkloadCache();
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  const timeSlots = [
+    ['09:00', '10:00'],
+    ['10:00', '11:00'],
+    ['11:00', '12:00'],
+    ['13:00', '14:00'],
+    ['14:00', '15:00']
+  ];
+  
+  console.log('\nจอง Survey Team 5 ครั้งในวันเดียวกัน:');
+  console.log('Date:', date);
+  console.log('─────────────────────────────────────');
+  
+  timeSlots.forEach(function(slot, index) {
+    const result = assignSurveyTeamAutomatically(date, slot[0], slot[1], true); // ⭐ useCache = true
+    
+    if (result.success) {
+      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→', 
+                  result.teamName, 
+                  '(Workload before:', result.workload + ')');
+    } else {
+      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→ ไม่มีทีมว่าง');
+    }
+  });
+  
+  console.log('\n======================================');
+  console.log('ผลลัพธ์ที่คาดหวัง:');
+  console.log('1. ควรเลือกทีมที่มี workload น้อยที่สุดก่อน');
+  console.log('2. ถ้า workload เท่ากัน ใช้ Round Robin สลับกัน');
+  console.log('3. ทีมที่ถูกเลือกจะมี workload เพิ่มใน cache');
+  console.log('======================================');
+}
+
+/**
+ * ✅ อัปเดต: ทดสอบ Multi-Work พร้อม Cache
+ */
+function testMultiWorkLoadBalancing() {
+  console.log('========== Test Multi-Work Load Balancing (with Cache) ==========');
+  
+  // ⭐ Reset cache ก่อนทดสอบ
+  resetWorkloadCache();
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  // จอง Survey + Lab 3 ครั้ง
+  const categories = ['Survey', 'Lab'];
+  
+  console.log('\nจอง Survey+Lab 3 ครั้งในวันเดียวกัน:');
+  console.log('Date:', date);
+  console.log('─────────────────────────────────────');
+  
+  const timeSlots = [
+    ['09:00', '10:00'],
+    ['11:00', '12:00'],
+    ['14:00', '15:00']
+  ];
+  
+  timeSlots.forEach(function(slot, index) {
+    const result = assignMultipleTeams(categories, date, slot[0], slot[1], null, true); // ⭐ useCache = true
+    
+    if (result.success) {
+      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→', 
+                  result.teamNames,
+                  '(Total Workload:', result.totalWorkload + ')');
+    } else {
+      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→ ไม่มีทีมว่าง');
+    }
+  });
+  
+  console.log('\n======================================');
+  console.log('ผลลัพธ์ที่คาดหวัง:');
+  console.log('1. ควรเลือกชุดทีมที่มี total workload น้อยที่สุด');
+  console.log('2. ไม่ควรเลือกทีมเดิมซ้ำ (ควรสลับกัน)');
+  console.log('3. workload ใน cache ควรเพิ่มขึ้นทุกครั้ง');
+  console.log('======================================');
+}
+
+/**
+ * 🧪 ดู Workload ของแต่ละทีม
+ */
+function viewTeamWorkload() {
+  console.log('========== Team Workload Report ==========');
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  console.log('Date:', date);
+  console.log('─────────────────────────────────────');
+  
+  // Survey Teams
+  const surveyTeams = getSurveyTeams();
+  console.log('\n📋 Survey Teams:');
+  surveyTeams.forEach(function(team) {
+    const workload = getTeamWorkload(team.resourceId, date);
+    console.log('-', team.resourceName, '(Team No.', team.teamNo + '):', workload, 'tasks');
+  });
+  
+  // Lab Teams
+  const labTeams = getTeamsByCategory('Lab');
+  console.log('\n🧪 Lab Teams:');
+  labTeams.forEach(function(team) {
+    const workload = getTeamWorkload(team.resourceId, date);
+    console.log('-', team.resourceName, '(Team No.', team.teamNo + '):', workload, 'tasks');
+  });
+  
+  console.log('\n======================================');
+}
+
+
+
+function testQuickFix() {
+  console.log('========== Test Quick Fix ==========');
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const date = tomorrow.toISOString().split('T')[0];
+  
+  // Test 1: Single Team
+  console.log('\n1. Testing Single Team:');
+  const result1 = assignTeamAutomatically('Survey', date, '09:00', '10:00');
+  console.log('Result:', result1 ? 'OK' : 'UNDEFINED');
+  console.log('Success:', result1 ? result1.success : 'N/A');
+  
+  // Test 2: Multi Team
+  console.log('\n2. Testing Multi Team:');
+  const result2 = assignTeamAutomatically('Survey,Lab', date, '11:00', '12:00');
+  console.log('Result:', result2 ? 'OK' : 'UNDEFINED');
+  console.log('Success:', result2 ? result2.success : 'N/A');
+  
+  // Test 3: Survey Team
+  console.log('\n3. Testing Survey Team:');
+  const result3 = assignSurveyTeamAutomatically(date, '14:00', '15:00');
+  console.log('Result:', result3 ? 'OK' : 'UNDEFINED');
+  console.log('Success:', result3 ? result3.success : 'N/A');
+  
+  console.log('\n====================================');
 }
