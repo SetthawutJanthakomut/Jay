@@ -673,6 +673,7 @@
       document.getElementById('startTime').disabled = true;
       resetEndTimeSelect();
       loadWorkTypes();
+      loadUserEmail();
       setMinDate();
     }
   </script>
