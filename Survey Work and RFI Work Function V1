@@ -1,9 +1,40 @@
-//Version 11 17/10/2025 9:15
+//Version 12 17/10/2025 13:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
  * อัปเดต doGet() เพื่อเพิ่มหน้า Survey Work
  */
+
+function doGet(e) {
+  const page = e.parameter.page;
+  
+  if (page === 'qc') {
+    return HtmlService.createHtmlOutputFromFile('qc')
+      .setTitle('QC RFI System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'qc_edit') {
+    return HtmlService.createHtmlOutputFromFile('qc_edit')
+      .setTitle('QC - แก้ไข RFI')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'qc_postpone') {
+    return HtmlService.createHtmlOutputFromFile('qc_postpone')
+      .setTitle('QC - เลื่อนตรวจ RFI')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else if (page === 'survey') {
+    // ⭐ เพิ่มเส้นทางสำหรับ Survey Work
+    return HtmlService.createHtmlOutputFromFile('survey')
+      .setTitle('Survey Work Requirement System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('RFI Requirement System')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+}
+
+
+
+
 // ===== Global Variables for Load Balancing =====
 /**
  * ⭐ Cache สำหรับเก็บ workload ชั่วคราวในหน่วยความจำ
