@@ -179,6 +179,78 @@ function createRFICalendarOnly(data) {
   }
 }
 
+// ====== USER LOOKUP ======
+
+function getDisplayNameFromEmail(email) {
+  try {
+    if (!email || email.trim() === '') {
+      return '';
+    }
+    
+    const cleanEmail = email.trim().toLowerCase();
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!sheet) {
+      console.log('⚠️ User sheet not found');
+      return email; // ถ้าไม่มี sheet ให้ return email เดิม
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('⚠️ No data in User sheet');
+      return email;
+    }
+    
+    // อ่าน Column A (Email) และ Column C (DisplayName)
+    const emailData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const displayNameData = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+    
+    // ค้นหา email ที่ตรงกัน
+    for (let i = 0; i < emailData.length; i++) {
+      const sheetEmail = String(emailData[i][0] || '').trim().toLowerCase();
+      const displayName = String(displayNameData[i][0] || '').trim();
+      
+      if (sheetEmail === cleanEmail && displayName !== '') {
+        console.log(`✅ Found DisplayName for ${email}: ${displayName}`);
+        return displayName;
+      }
+    }
+    
+    console.log(`⚠️ No DisplayName found for ${email}`);
+    return email; // ถ้าหาไม่เจอให้ return email เดิม
+    
+  } catch (error) {
+    console.error('Error getting DisplayName:', error);
+    return email;
+  }
+}
+
+function getDisplayNamesFromEmails(emailString) {
+  try {
+    if (!emailString || emailString.trim() === '') {
+      return '';
+    }
+    
+    const emails = emailString
+      .split(/[,;\n]/)
+      .map(e => e.trim())
+      .filter(e => e.length > 0 && e.includes('@'));
+    
+    if (emails.length === 0) {
+      return '';
+    }
+    
+    const displayNames = emails.map(email => getDisplayNameFromEmail(email));
+    
+    return displayNames.join(', ');
+    
+  } catch (error) {
+    console.error('Error getting DisplayNames:', error);
+    return emailString;
+  }
+}
+
 // ====== TEAM COLORS ======
 
 function getTeamColors(assignedInspector) {
@@ -488,6 +560,9 @@ function sendWorkNotificationToSurveyEmail(data, rfiEventId) {
 }
 
 function createSurveyEmailHTML(data, rfiEventId) {
+  // ✅ ดึง DisplayName จาก Guest Emails
+  const guestDisplayNames = data.guest ? getDisplayNamesFromEmails(data.guest) : '';
+  
   const emailBody = `<!DOCTYPE html>
 <html>
 <head>
@@ -515,7 +590,7 @@ ${data.rfiId ? '<tr><th>RFI Number</th><td><strong>RFI #' + data.rfiId + '</stro
 <tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
 ${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
 ${data.assignedInspector ? '<tr><th>ทีมงาน</th><td>' + data.assignedInspector + '</td></tr>' : ''}
-${data.guest ? '<tr><th>ผู้ร่วมงาน</th><td>' + data.guest + '</td></tr>' : ''}
+${guestDisplayNames ? '<tr><th>ผู้ร่วมงาน</th><td>' + guestDisplayNames + '</td></tr>' : ''}
 ${data.note ? '<tr><th>หมายเหตุ</th><td>' + data.note + '</td></tr>' : ''}
 </table>
 
@@ -651,23 +726,23 @@ function cancelRFIInspection(
     result.success = result.rfiEventsDeleted > 0;
     
     if (result.success) {
-      result.message = `Cancelled RFI ${cleanRfiNumber}: ${result.rfiEventsDeleted} event(s) deleted`;
+      result.message = `ยกเลิก RFI ${cleanRfiNumber} สำเร็จ: ลบ ${result.rfiEventsDeleted} รายการ`;
     } else {
-      result.message = `No changes made for RFI ${cleanRfiNumber}`;
+      result.message = `ไม่มีการเปลี่ยนแปลงสำหรับ RFI ${cleanRfiNumber}`;
     }
 
   } catch (error) {
     result.error = error.toString();
-    result.message = `Error cancelling RFI ${cleanRfiNumber}: ${result.error}`;
+    result.message = `เกิดข้อผิดพลาดในการยกเลิก RFI ${cleanRfiNumber}: ${result.error}`;
     Logger.log(`❌ Unexpected error: ${result.error}`);
   }
 
   Logger.log("\n" + "=".repeat(50));
-  Logger.log("🚫 RFI CANCELLATION SUMMARY:");
+  Logger.log("🚫 สรุปการยกเลิก RFI:");
   Logger.log(`🆔 RFI Number: ${result.rfiNumber}`);
-  Logger.log(`🗑️ Events Deleted: ${result.rfiEventsDeleted}/${result.rfiEventsFound}`);
-  Logger.log(`📧 Emails Sent: ${result.emailsSent ? 'YES' : 'NO'}`);
-  Logger.log(`✅ Overall Success: ${result.success ? 'YES' : 'NO'}`);
+  Logger.log(`🗑️ ลบแล้ว: ${result.rfiEventsDeleted}/${result.rfiEventsFound}`);
+  Logger.log(`📧 ส่งอีเมล: ${result.emailsSent ? 'ใช่' : 'ไม่'}`);
+  Logger.log(`✅ สำเร็จ: ${result.success ? 'ใช่' : 'ไม่'}`);
 
   return result;
 }
@@ -782,7 +857,7 @@ function deleteCalendarEvent(eventInfo, calendarId) {
 }
 
 function sendCancellationNotification(rfiNumber, Description, cancelReason, deletedEvents, requesterEmail, guestEmails) {
-  Logger.log(`📧 Sending cancellation notification to RFI Participants`);
+  Logger.log(`📧 ส่งอีเมลแจ้งการยกเลิกถึงผู้เข้าร่วม RFI`);
   
   try {
     const quota = checkEmailQuota();
@@ -816,13 +891,13 @@ function sendCancellationNotification(rfiNumber, Description, cancelReason, dele
     const finalRecipients = Array.from(allRecipients);
     
     if (finalRecipients.length === 0) {
-      Logger.log('❌ No recipients found');
+      Logger.log('❌ ไม่มีผู้รับ');
       return { success: false, message: "No recipients" };
     }
     
-    Logger.log(`📧 Total recipients: ${finalRecipients.length}`);
+    Logger.log(`📧 ผู้รับทั้งหมด: ${finalRecipients.length}`);
 
-    const subject = `🚫 CANCELLED - RFI #${rfiNumber} Inspection Cancelled`;
+    const subject = `🚫 ยกเลิกแล้ว - RFI #${rfiNumber} ยกเลิกการตรวจสอบ`;
     
     let eventsList = '<ul>';
     deletedEvents.forEach(evt => {
@@ -833,37 +908,37 @@ function sendCancellationNotification(rfiNumber, Description, cancelReason, dele
     const htmlMessage = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><style>
-body { font-family: Arial, sans-serif; margin: 20px; }
+body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
 h2 { color: #dc3545; }
 table { border-collapse: collapse; width: 100%; margin: 10px 0; }
 td, th { border: 1px solid #ddd; padding: 8px; }
-th { background-color: #f2f2f2; }
+th { background-color: #f2f2f2; font-weight: bold; }
 .alert-box { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0; }
 </style></head>
 <body>
-<h2>🚫 RFI Inspection Cancelled</h2>
+<h2>🚫 ยกเลิกการตรวจสอบ RFI</h2>
 
 <div class="alert-box">
-  <strong>⚠️ Important Notice:</strong> The scheduled inspection has been <strong>cancelled</strong>.
+  <strong>⚠️ ประกาศสำคัญ:</strong> การตรวจสอบที่กำหนดไว้ได้ถูก<strong>ยกเลิก</strong>แล้ว
 </div>
 
-<h3>RFI Details:</h3>
+<h3>รายละเอียด RFI:</h3>
 <table>
 <tr><th style="width: 30%;">RFI Number</th><td><strong>${rfiNumber}</strong></td></tr>
-<tr><th>Description</th><td>${Description}</td></tr>
-${cancelReason ? `<tr><th>Reason for Cancellation</th><td>${cancelReason}</td></tr>` : ''}
+<tr><th>รายละเอียด</th><td>${Description}</td></tr>
+${cancelReason ? `<tr><th>เหตุผลในการยกเลิก</th><td>${cancelReason}</td></tr>` : ''}
 </table>
 
-<h3>Deleted Calendar Events:</h3>
+<h3>รายการที่ลบออกจาก Calendar:</h3>
 ${eventsList}
 
-<p style="margin-top: 20px;"><strong>Note:</strong> All related calendar events have been removed.</p>
+<p style="margin-top: 20px;"><strong>หมายเหตุ:</strong> Calendar Event ที่เกี่ยวข้องทั้งหมดถูกลบออกแล้ว</p>
 
 <hr>
 <p style="color: #666; font-size: 12px;">
-📨 <strong>Recipients:</strong> RFI Participants<br>
-🤖 Sent by: RFI System - Cancellation Notification<br>
-🕐 Time: ${new Date().toLocaleString('th-TH')}
+📨 <strong>ผู้รับ:</strong> ผู้เข้าร่วม RFI<br>
+🤖 ส่งโดย: ระบบ RFI - แจ้งการยกเลิก<br>
+🕐 เวลา: ${new Date().toLocaleString('th-TH')}
 </p>
 </body>
 </html>`;
@@ -874,11 +949,11 @@ ${eventsList}
       to: recipientList,
       subject: subject,
       htmlBody: htmlMessage,
-      name: 'RFI System - Cancellation Notification'
+      name: 'ระบบ RFI - แจ้งการยกเลิก'
     });
     
-    Logger.log(`📧 Cancellation email: ${sent ? 'SENT' : 'FAILED'}`);
-    Logger.log(`📧 Sent to ${finalRecipients.length} recipients`);
+    Logger.log(`📧 อีเมลการยกเลิก: ${sent ? 'ส่งแล้ว' : 'ล้มเหลว'}`);
+    Logger.log(`📧 ส่งถึง ${finalRecipients.length} คน`);
     
     return {
       success: sent,
@@ -980,7 +1055,7 @@ function testCancel() {
   const result = cancelRFIInspection(
     "RFI-TEST-001",
     "Test RFI Description",
-    "Testing cancellation",
+    "ทดสอบการยกเลิก",
     "requester@test.com",
     "guest1@test.com,guest2@test.com",
     false,
@@ -989,4 +1064,16 @@ function testCancel() {
   
   Logger.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+function testDisplayName() {
+  // ทดสอบการดึง DisplayName
+  const email = 'test@example.com';
+  const displayName = getDisplayNameFromEmail(email);
+  console.log(`Email: ${email} → DisplayName: ${displayName}`);
+  
+  const emailList = 'test1@example.com, test2@example.com';
+  const displayNames = getDisplayNamesFromEmails(emailList);
+  console.log(`Email List: ${emailList}`);
+  console.log(`DisplayNames: ${displayNames}`);
 }
