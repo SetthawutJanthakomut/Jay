@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspector - ตรวจสอบงาน RFI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Kanit', sans-serif; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 20px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); }
+    h1 { text-align: center; font-size: 32px; font-weight: 600; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 16px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.3s; }
+    .btn-primary { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+    
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e4e6eb; }
+    .tab { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; font-family: 'Kanit', sans-serif; font-size: 15px; cursor: pointer; transition: all 0.3s; }
+    .tab.active { border-bottom-color: #11998e; color: #11998e; font-weight: 600; }
+    .tab:hover { background: #f8f9fa; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    thead { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e4e6eb; font-size: 14px; }
+    tbody tr:hover { background: #f8f9fa; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status-approved { background: #d1f2eb; color: #0c5460; }
+    .status-rescheduled { background: #fff3cd; color: #856404; }
+    .status-started { background: #cce5ff; color: #004085; }
+    .btn-action { border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 12px; margin-right: 5px; }
+    .btn-start { background: #28a745; color: white; }
+    .btn-complete { background: #007bff; color: white; }
+    .btn-postpone { background: #ffc107; color: #333; }
+    .btn-download { background: #17a2b8; color: white; }
+    .btn-manage { background: #6c757d; color: white; }
+    .btn-action:hover { opacity: 0.8; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .loading { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; margin: 0 auto 10px; border: 3px solid rgba(17, 153, 142, 0.2); border-top-color: #11998e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .message { padding: 12px 16px; margin-top: 20px; border-radius: 10px; text-align: center; display: none; font-size: 14px; white-space: pre-line; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 30px; width: 90%; max-width: 600px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
+    .modal-header { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #11998e; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    input[type="text"], textarea { width: 100%; padding: 12px; border: 2px solid #e4e6eb; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 15px; }
+    textarea { height: 100px; resize: vertical; }
+    
+    .image-preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .image-preview-item { position: relative; width: 100px; height: 100px; border: 2px solid #e4e6eb; border-radius: 8px; overflow: hidden; }
+    .image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .image-remove-btn { position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; }
+    
+    .photo-gallery { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
+    .photo-item { position: relative; width: 120px; height: 120px; border: 2px solid #e4e6eb; border-radius: 8px; overflow: hidden; }
+    .photo-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .photo-delete-btn { position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 14px; display: none; }
+    .photo-item:hover .photo-delete-btn { display: block; }
+    
+    .btn-file { display: inline-block; padding: 10px 20px; background: #11998e; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(17, 153, 142, 0.3);">
+        <span style="font-size: 40px;">🔍</span>
+      </div>
+      
+      <h1>Inspector - ตรวจสอบงาน RFI</h1>
+      
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <span style="color: #666; font-size: 16px;">ระบบตรวจสอบงานสำหรับ Inspector</span>
+        <span id="userBadge" style="display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border-radius: 20px; font-size: 12px; font-weight: 500;">Inspector</span>
+      </div>
+      
+      <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; font-size: 13px; color: #999;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 8px; height: 8px; background: #17a2b8; border-radius: 50%; display: inline-block;"></span>
+          <span>Approved</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 8px; height: 8px; background: #ffc107; border-radius: 50%; display: inline-block;"></span>
+          <span>Rescheduled</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 8px; height: 8px; background: #007bff; border-radius: 50%; display: inline-block;"></span>
+          <span>Started</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ✅ Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('active')">📋 งานที่ต้องตรวจ</button>
+      <button class="tab" onclick="switchTab('closed')">✅ งานปิดแล้ว (Close RFI)</button>
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+      <button class="btn btn-primary" onclick="loadAllData()">🔄 Refresh</button>
+    </div>
+    
+    <!-- Tab: Active RFI -->
+    <div id="activeTab" class="tab-content active">
+      <div id="rfiTableContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab: Closed RFI -->
+    <div id="closedTab" class="tab-content">
+      <div id="closeTableContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    </div>
+    
+    <div id="message" class="message"></div>
+
+    <!-- Modal: Complete Inspection -->
+    <div id="completeModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">✅ บันทึกตรวจเสร็จ</div>
+        
+        <form id="completeForm">
+          <input type="hidden" id="completeRfiId">
+          
+          <div class="form-group">
+            <label class="form-label">RFI NO</label>
+            <input type="text" id="completeRfiNo" disabled style="background: #f5f6f7;">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">หมายเหตุ</label>
+            <textarea id="completeRemarks" placeholder="กรอกหมายเหตุเพิ่มเติม (ถ้ามี)..."></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">รูปภาพที่ตรวจสอบ</label>
+            <label for="imageInput" class="btn-file">📷 เลือกรูปภาพ</label>
+            <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageSelect(event)">
+            <div id="imagePreviewContainer" class="image-preview-container"></div>
+          </div>
+          
+          <div style="display: flex; gap: 15px; margin-top: 30px;">
+            <button type="button" onclick="closeCompleteModal()" style="flex: 1; padding: 14px; background: #e4e6eb; color: #333; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; cursor: pointer;">ยกเลิก</button>
+            <button type="submit" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; cursor: pointer;">บันทึก</button>
+          </div>
+        </form>
+        
+        <div id="completeLoading" class="loading" style="display:none;">
+          <div class="spinner"></div>
+          <p>กำลังบันทึกและอัปโหลดรูปภาพ...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Postpone Inspection -->
+    <div id="postponeModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">⏸️ เลื่อนตรวจ</div>
+        
+        <form id="postponeForm">
+          <input type="hidden" id="postponeRfiId">
+          
+          <div class="form-group">
+            <label class="form-label">RFI NO</label>
+            <input type="text" id="postponeRfiNo" disabled style="background: #f5f6f7;">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">เหตุผลที่เลื่อนตรวจ <span style="color: #e74c3c;">*</span></label>
+            <textarea id="postponeReason" placeholder="ระบุเหตุผลที่เลื่อนตรวจ..." required></textarea>
+          </div>
+          
+          <div style="display: flex; gap: 15px; margin-top: 30px;">
+            <button type="button" onclick="closePostponeModal()" style="flex: 1; padding: 14px; background: #e4e6eb; color: #333; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; cursor: pointer;">ยกเลิก</button>
+            <button type="submit" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; cursor: pointer;">ยืนยันเลื่อนตรวจ</button>
+          </div>
+        </form>
+        
+        <div id="postponeLoading" class="loading" style="display:none;">
+          <div class="spinner"></div>
+          <p>กำลังบันทึก...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View Photos -->
+    <div id="photosModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">📷 รูปภาพ RFI: <span id="photosRfiNo"></span></div>
+        
+        <div id="photosContent">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>กำลังโหลดรูปภาพ...</p>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+          <button onclick="closePhotosModal()" style="padding: 12px 30px; background: #e4e6eb; color: #333; border: none; border-radius: 8px; font-family: 'Kanit', sans-serif; cursor: pointer;">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+var selectedImages = [];
+var currentUserIsQC = false;
+
+window.onload = function() {
+  loadAllData();
+  checkInspectorRole();
+  setupFormListeners();
+};
+
+function checkInspectorRole() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) {
+        showMessage(result.message, 'error', 10000);
+        document.querySelector('.btn-primary').disabled = true;
+      } else {
+        var badge = document.getElementById('userBadge');
+        currentUserIsQC = result.isQC;
+        
+        if (result.isQC) {
+          showMessage('ยินดีต้อนรับ ' + result.name + ' (' + result.role + ') - เห็นได้ทุกรายการ', 'success', 3000);
+          badge.textContent = result.role;
+          badge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        } else {
+          showMessage('ยินดีต้อนรับ ' + result.name, 'success', 3000);
+        }
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('ไม่สามารถตรวจสอบสิทธิ์ได้', 'error');
+    })
+    .validateInspectorRole();
+}
+
+function switchTab(tab) {
+  var tabs = document.querySelectorAll('.tab');
+  var contents = document.querySelectorAll('.tab-content');
+  
+  tabs.forEach(function(t) { t.classList.remove('active'); });
+  contents.forEach(function(c) { c.classList.remove('active'); });
+  
+  if (tab === 'active') {
+    tabs[0].classList.add('active');
+    document.getElementById('activeTab').classList.add('active');
+  } else {
+    tabs[1].classList.add('active');
+    document.getElementById('closedTab').classList.add('active');
+  }
+}
+
+function loadAllData() {
+  loadRFIList();
+  loadCloseRFIList();
+}
+
+function setupFormListeners() {
+  // Complete Form
+  var completeForm = document.getElementById('completeForm');
+  if (completeForm) {
+    completeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // ✅ เพิ่ม Confirm Dialog
+      if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการบันทึกตรวจเสร็จ?')) {
+        return;
+      }
+      
+      var rfiId = document.getElementById('completeRfiId').value;
+      var remarks = document.getElementById('completeRemarks').value.trim();
+      var loading = document.getElementById('completeLoading');
+      
+      loading.style.display = 'block';
+      
+      // แปลงรูปภาพเป็น base64
+      var imageDataArray = [];
+      
+      if (selectedImages.length > 0) {
+        var promises = [];
+        
+        for (var i = 0; i < selectedImages.length; i++) {
+          (function(index) {
+            var promise = new Promise(function(resolve) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                imageDataArray.push({
+                  filename: selectedImages[index].name,
+                  mimeType: selectedImages[index].type,
+                  data: e.target.result
+                });
+                resolve();
+              };
+              reader.readAsDataURL(selectedImages[index]);
+            });
+            promises.push(promise);
+          })(i);
+        }
+        
+        Promise.all(promises).then(function() {
+          submitComplete(rfiId, remarks, imageDataArray, loading);
+        });
+      } else {
+        submitComplete(rfiId, remarks, [], loading);
+      }
+    });
+  }
+  
+  // Postpone Form
+  var postponeForm = document.getElementById('postponeForm');
+  if (postponeForm) {
+    postponeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      var rfiId = document.getElementById('postponeRfiId').value;
+      var reason = document.getElementById('postponeReason').value.trim();
+      var loading = document.getElementById('postponeLoading');
+      
+      if (!reason) {
+        showMessage('กรุณาระบุเหตุผลที่เลื่อนตรวจ', 'error');
+        return;
+      }
+      
+      loading.style.display = 'block';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          loading.style.display = 'none';
+          
+          if (result && result.success) {
+            showMessage(result.message, 'success', 5000);
+            closePostponeModal();
+            setTimeout(function() {
+              loadAllData();
+            }, 1000);
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          loading.style.display = 'none';
+          showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+        })
+        .postponeInspectionByInspector(rfiId, reason);
+    });
+  }
+}
+
+function submitComplete(rfiId, remarks, imageDataArray, loading) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loading.style.display = 'none';
+      
+      if (result && result.success) {
+        showMessage(result.message, 'success', 5000);
+        closeCompleteModal();
+        setTimeout(function() {
+          loadAllData();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      loading.style.display = 'none';
+      showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+    })
+    .completeInspection(rfiId, remarks, imageDataArray);
+}
+
+function handleImageSelect(event) {
+  var files = event.target.files;
+  
+  for (var i = 0; i < files.length; i++) {
+    selectedImages.push(files[i]);
+  }
+  
+  updateImagePreview();
+}
+
+function updateImagePreview() {
+  var container = document.getElementById('imagePreviewContainer');
+  container.innerHTML = '';
+  
+  for (var i = 0; i < selectedImages.length; i++) {
+    (function(index) {
+      var item = document.createElement('div');
+      item.className = 'image-preview-item';
+      
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(selectedImages[index]);
+      
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'image-remove-btn';
+      removeBtn.textContent = '×';
+      removeBtn.onclick = function() {
+        selectedImages.splice(index, 1);
+        updateImagePreview();
+      };
+      
+      item.appendChild(img);
+      item.appendChild(removeBtn);
+      container.appendChild(item);
+    })(i);
+  }
+}
+
+function loadRFIList() {
+  var container = document.getElementById('rfiTableContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(rfiList) {
+      if (!rfiList || rfiList.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>ไม่พบรายการ RFI</h3><p>ไม่มี RFI ที่ต้องตรวจสอบในขณะนี้</p></div>';
+        return;
+      }
+      
+      var html = '<table><thead><tr>';
+      html += '<th>RFI NO</th><th>รายละเอียด</th><th>สถานที่</th><th>วันที่</th>';
+      html += '<th>เวลา</th><th>ทีมงาน</th><th>สถานะ</th><th>จัดการ</th>';
+      html += '</tr></thead><tbody>';
+      
+      var today = new Date().toISOString().split('T')[0];
+      
+      for (var i = 0; i < rfiList.length; i++) {
+        var rfi = rfiList[i];
+        var statusClass = '';
+        
+        if (rfi.status === 'RFI Approved – Proceed to Site Inspection') {
+          statusClass = 'status-approved';
+        } else if (rfi.status === 'Rescheduled – Proceed to Site Inspection') {
+          statusClass = 'status-rescheduled';
+        } else if (rfi.status === 'Inspection Started') {
+          statusClass = 'status-started';
+        }
+        
+        var desc = rfi.description || '';
+        
+        html += '<tr>';
+        html += '<td><strong>' + (rfi.rfiNo || 'N/A') + '</strong></td>';
+        html += '<td>' + desc.substring(0, 30) + (desc.length > 30 ? '...' : '') + '</td>';
+        html += '<td>' + (rfi.location || '') + '</td>';
+        html += '<td>' + (rfi.requestDate || '') + '</td>';
+        html += '<td>' + (rfi.startTime || '') + '-' + (rfi.endTime || '') + '</td>';
+        html += '<td>' + (rfi.assignedInspector || '') + '</td>';
+        html += '<td><span class="status-badge ' + statusClass + '">' + rfi.status + '</span></td>';
+        html += '<td>';
+        
+        // ✅ ปุ่มเริ่มตรวจงาน
+        if (rfi.requestDate === today && rfi.status !== 'Inspection Started') {
+          html += '<button class="btn-action btn-start" onclick="startInspection(\'' + rfi.id + '\')">▶️ เริ่มตรวจงาน</button>';
+        }
+        
+        // ✅ ปุ่มตรวจเสร็จ
+        if (rfi.status === 'Inspection Started') {
+          html += '<button class="btn-action btn-complete" onclick="openCompleteModal(\'' + rfi.id + '\', \'' + rfi.rfiNo + '\')">✅ ตรวจเสร็จ</button>';
+        }
+        
+        // ✅ ปุ่มเลื่อนตรวจ
+        if (rfi.status !== 'Inspection Postponed') {
+          html += '<button class="btn-action btn-postpone" onclick="openPostponeModal(\'' + rfi.id + '\', \'' + rfi.rfiNo + '\')">⏸️ เลื่อนตรวจ</button>';
+        }
+        
+        html += '</td>';
+        html += '</tr>';
+      }
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div class="empty-state"><h3>เกิดข้อผิดพลาด</h3><p>' + (error.message || error) + '</p></div>';
+      showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
+    })
+    .getRFIListForInspector();
+}
+
+function loadCloseRFIList() {
+  var container = document.getElementById('closeTableContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(closeList) {
+      if (!closeList || closeList.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>ไม่พบรายการ</h3><p>ไม่มี RFI ที่ปิดแล้ว</p></div>';
+        return;
+      }
+      
+      var html = '<table><thead><tr>';
+      html += '<th>RFI NO</th><th>รายละเอียด</th><th>สถานที่</th><th>วันที่</th><th>สถานะ</th><th>จัดการ</th>';
+      html += '</tr></thead><tbody>';
+      
+      for (var i = 0; i < closeList.length; i++) {
+        var rfi = closeList[i];
+        var desc = rfi.description || '';
+        
+        html += '<tr>';
+        html += '<td><strong>' + (rfi.rfiNo || 'N/A') + '</strong></td>';
+        html += '<td>' + desc.substring(0, 40) + (desc.length > 40 ? '...' : '') + '</td>';
+        html += '<td>' + (rfi.location || '') + '</td>';
+        html += '<td>' + (rfi.requestDate || '') + '</td>';
+        html += '<td>' + (rfi.status || '') + '</td>';
+        html += '<td>';
+        html += '<button class="btn-action btn-download" onclick="viewPhotos(\'' + rfi.rfiNo + '\')">📷 ดูรูปภาพ</button>';
+        html += '</td>';
+        html += '</tr>';
+      }
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div class="empty-state"><h3>เกิดข้อผิดพลาด</h3><p>' + (error.message || error) + '</p></div>';
+    })
+    .getCloseRFIList();
+}
+
+function startInspection(rfiId) {
+  // ✅ เพิ่ม Confirm Dialog
+  if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการเริ่มตรวจงาน?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.success) {
+        showMessage(result.message, 'success', 5000);
+        setTimeout(function() {
+          loadAllData();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+    })
+    .startInspection(rfiId);
+}
+
+function openCompleteModal(rfiId, rfiNo) {
+  document.getElementById('completeRfiId').value = rfiId;
+  document.getElementById('completeRfiNo').value = rfiNo;
+  document.getElementById('completeRemarks').value = '';
+  selectedImages = [];
+  updateImagePreview();
+  document.getElementById('completeModal').style.display = 'block';
+}
+
+function closeCompleteModal() {
+  document.getElementById('completeModal').style.display = 'none';
+  selectedImages = [];
+}
+
+function openPostponeModal(rfiId, rfiNo) {
+  document.getElementById('postponeRfiId').value = rfiId;
+  document.getElementById('postponeRfiNo').value = rfiNo;
+  document.getElementById('postponeReason').value = '';
+  document.getElementById('postponeModal').style.display = 'block';
+}
+
+function closePostponeModal() {
+  document.getElementById('postponeModal').style.display = 'none';
+}
+
+function viewPhotos(rfiNo) {
+  document.getElementById('photosRfiNo').textContent = rfiNo;
+  document.getElementById('photosContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดรูปภาพ...</p></div>';
+  document.getElementById('photosModal').style.display = 'block';
+  
+  google.script.run
+    .withSuccessHandler(function(photos) {
+      var content = document.getElementById('photosContent');
+      
+      if (!photos || photos.length === 0) {
+        content.innerHTML = '<p style="text-align: center; color: #999;">ไม่มีรูปภาพ</p>';
+        return;
+      }
+      
+      var html = '<div style="margin-bottom: 15px;">';
+      html += '<strong>รูปภาพทั้งหมด:</strong> ' + photos.length + ' รูป';
+      html += '</div>';
+      
+      html += '<div class="photo-gallery">';
+      
+      for (var i = 0; i < photos.length; i++) {
+        var photo = photos[i];
+        html += '<div class="photo-item">';
+        html += '<img src="' + photo.link + '" onclick="window.open(\'' + photo.link + '\', \'_blank\')" title="คลิกเพื่อดูขนาดเต็ม">';
+        
+        // ✅ ปุ่มลบ (เฉพาะ QC)
+        if (currentUserIsQC) {
+          html += '<button class="photo-delete-btn" onclick="deletePhoto(\'' + photo.id + '\', \'' + rfiNo + '\')">×</button>';
+        }
+        
+        html += '</div>';
+      }
+      
+      html += '</div>';
+      
+      // ✅ ปุ่มเพิ่มรูป (เฉพาะ QC)
+      if (currentUserIsQC) {
+        html += '<div style="margin-top: 20px; text-align: center;">';
+        html += '<p style="color: #999; font-size: 13px; margin-bottom: 10px;">คุณสามารถเพิ่มหรือลบรูปภาพได้ (QC/QC Reviewer)</p>';
+        html += '</div>';
+      }
+      
+      content.innerHTML = html;
+    })
+    .withFailureHandler(function(error) {
+      document.getElementById('photosContent').innerHTML = '<p style="color: #dc3545;">เกิดข้อผิดพลาด</p>';
+    })
+    .getPhotosForRFI(rfiNo);
+}
+
+function deletePhoto(photoId, rfiNo) {
+  if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรูปภาพนี้?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.success) {
+        showMessage(result.message, 'success', 3000);
+        viewPhotos(rfiNo); // Refresh
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด', 'error');
+    })
+    .deletePhoto(photoId);
+}
+
+function closePhotosModal() {
+  document.getElementById('photosModal').style.display = 'none';
+}
+
+function showMessage(text, type, duration) {
+  if (typeof duration === 'undefined') duration = 5000;
+  var messageDiv = document.getElementById('message');
+  messageDiv.textContent = text;
+  messageDiv.className = 'message ' + type;
+  messageDiv.style.display = 'block';
+  setTimeout(function() {
+    messageDiv.style.display = 'none';
+  }, duration);
+}
+  </script>
+</body>
+</html>
