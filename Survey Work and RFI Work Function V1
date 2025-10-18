@@ -1,4 +1,4 @@
-//Version 12 18/10/2025 8:30
+//Version 12 18/10/2025 9:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -4247,12 +4247,13 @@ function getSurveyAvailableEndTimes(date, startTime) {
 }
 
 
+/**
+ * ⭐ PROJECT A: บันทึก Survey Work พร้อมเรียก Calendar Service
+ */
 function saveSurveyWorkRequirement(data) {
   try {
     console.log('========== saveSurveyWorkRequirement START ==========');
     console.log('Input data:', JSON.stringify(data));
-
-
     
     // Validation
     if (!data.requestDate || !data.startTime || !data.endTime || 
@@ -4264,8 +4265,7 @@ function saveSurveyWorkRequirement(data) {
       };
     }
     
-    // ตรวจสอบและดึงข้อมูลผู้ใช้จาก User sheet
-    
+    // Validate User
     const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
@@ -4281,28 +4281,19 @@ function saveSurveyWorkRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-// จัดทีม Survey อัตโนมัติ
-const teamAssignment = assignSurveyTeamAutomatically(
-  data.requestDate, 
-  data.startTime, 
-  data.endTime,
-  false    // useCache = false (บันทึกจริง)
-);
-
-// ⭐ เพิ่มการเช็ค
-if (!teamAssignment) {
-  console.error('teamAssignment is undefined!');
-  return {
-    success: false,
-    message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
-  };
-}
+    // จัดทีม Survey อัตโนมัติ
+    const teamAssignment = assignSurveyTeamAutomatically(
+      data.requestDate, 
+      data.startTime, 
+      data.endTime,
+      false
+    );
     
-    if (!teamAssignment.success) {
-      console.log('Team assignment failed:', teamAssignment.message);
+    if (!teamAssignment || !teamAssignment.success) {
+      console.log('Team assignment failed');
       return {
         success: false,
-        message: teamAssignment.message
+        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้'
       };
     }
     
@@ -4312,19 +4303,15 @@ if (!teamAssignment) {
     const rfiId = generateUniqueId();
     console.log('Generated ID:', rfiId);
     
-    // ⭐ คำนวณ Order_Survey และสร้าง Survey_NO
+    // คำนวณ Order_Survey และสร้าง Survey_NO
     const orderSurvey = getNextOrderSurvey();
-    console.log('Order Survey:', orderSurvey);
-    
-    const orderSurveyPadded = String(orderSurvey).padStart(4, '0');
-    const surveyNo = 'SW-' + orderSurveyPadded;
+    const surveyNo = 'SW-' + String(orderSurvey).padStart(4, '0');
     console.log('Survey NO:', surveyNo);
     
-    // ดึง Sheet
+    // บันทึกลง Sheet
     let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
-      console.log('RFI_List sheet not found, creating new one...');
       sheet = createRFIListSheet();
     }
     
@@ -4332,29 +4319,24 @@ if (!teamAssignment) {
     const nextRow = lastRow + 1;
     const currentTime = new Date();
     
-    console.log('Adding data to sheet at row:', nextRow);
-    
     const combinedDescription = data.workType + ' - ' + data.description;
-    console.log('Combined description:', combinedDescription);
     
-    // Format date
     const dateParts = data.requestDate.split('-');
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
-    // เตรียมข้อมูล
     const rowData = [];
     for (let i = 0; i < 40; i++) {
       rowData.push('');
     }
     
     rowData[0] = rfiId;
-    rowData[1] = surveyNo;                       // ⭐ B - Survey_NO
+    rowData[1] = surveyNo;
     rowData[2] = combinedDescription;
     rowData[3] = data.location;
     rowData[4] = formattedDate;
     rowData[5] = data.startTime;
     rowData[6] = data.endTime;
-    rowData[7] = orderSurvey;                    // ⭐ H - Order_Survey
+    rowData[7] = orderSurvey;
     rowData[9] = validatedEmail;
     rowData[10] = validatedName;
     rowData[11] = teamAssignment.teamName;
@@ -4362,39 +4344,52 @@ if (!teamAssignment) {
     rowData[15] = currentTime;
     rowData[39] = 'Survey Work';
     
-    console.log('Row data prepared');
-    
     sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // ⭐ สร้าง Calendar Event
+    // ⭐ เรียก Calendar Service (Project B)
     let calendarResult = null;
+    
     try {
-      console.log('Creating Calendar Event...');
+      console.log('Calling Calendar Service...');
       
-      const calendarData = {
-        requestDate: data.requestDate,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        description: combinedDescription,
-        location: data.location,
-        requesterName: validatedName,
-        requesterEmail: validatedEmail,
-        assignedTeam: teamAssignment.teamName
-      };
+      // รวบรวม Team Emails
+      const teamEmails = [];
       
-      calendarResult = createSurveyWorkCalendarEvent(calendarData, rfiId, surveyNo);  // ⭐ ส่ง surveyNo
+      const surveyTeamEmails = getSurveyEmailList();
+      surveyTeamEmails.forEach(function(member) {
+        teamEmails.push(member.email);
+      });
+      
+      const assignedTeamEmails = getTeamEmailsByTeamNames(teamAssignment.teamName);
+      assignedTeamEmails.forEach(function(member) {
+        if (teamEmails.indexOf(member.email) === -1) {
+          teamEmails.push(member.email);
+        }
+      });
+      
+      calendarResult = callCalendarServiceWithRetry({
+  requestDate: data.requestDate,
+  startTime: data.startTime,
+  endTime: data.endTime,
+  description: combinedDescription,
+  location: data.location,
+  requesterName: validatedName,
+  requesterEmail: validatedEmail,
+  assignedTeam: teamAssignment.teamName,
+  surveyNo: surveyNo,
+  teamEmails: teamEmails
+}, 3);
       
       if (calendarResult.success) {
-        console.log('✅ Calendar Event Created Successfully');
-        console.log('Event ID:', calendarResult.eventId);
-        console.log('Guests:', calendarResult.guestsCount);
+        console.log('✅ Calendar Event Created via Service');
+        console.log('Event ID:', calendarResult.data.eventId);
       } else {
-        console.log('⚠️ Calendar Event Creation Failed:', calendarResult.message);
+        console.log('⚠️ Calendar Service Failed:', calendarResult.message);
       }
       
     } catch (calendarError) {
-      console.error('⚠️ Calendar Error:', calendarError);
+      console.error('⚠️ Calendar Service Error:', calendarError);
       calendarResult = {
         success: false,
         error: calendarError.toString()
@@ -4415,23 +4410,21 @@ if (!teamAssignment) {
         assignedTeam: teamAssignment.teamName,
         teamCategory: 'Survey Work'
       };
-      emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId, surveyNo);  // ⭐ ส่ง surveyNo
-      console.log('Email sent:', emailSent);
+      emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId, surveyNo);
     } catch (emailError) {
       console.error('Failed to send email:', emailError);
     }
     
     let message = 'บันทึก Survey Work Request เรียบร้อยแล้ว';
-    message += '\n📋 Survey NO: ' + surveyNo;  // ⭐ แสดง Survey NO
+    message += '\n📋 Survey NO: ' + surveyNo;
     message += '\n👥 ทีมงาน: ' + teamAssignment.teamName;
     
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
     }
     
-    // ⭐ แจ้งผลการสร้าง Calendar
     if (calendarResult && calendarResult.success) {
-      message += '\n✅ สร้าง Calendar Event แล้ว (Guests: ' + calendarResult.guestsCount + ' คน)';
+      message += '\n✅ สร้าง Calendar Event แล้ว';
     } else if (calendarResult) {
       message += '\n⚠️ ไม่สามารถสร้าง Calendar Event ได้';
     }
@@ -4446,10 +4439,9 @@ if (!teamAssignment) {
       success: true,
       message: message,
       rfiId: rfiId,
-      surveyNo: surveyNo,  // ⭐ เพิ่ม
+      surveyNo: surveyNo,
       emailSent: emailSent,
       calendarCreated: calendarResult ? calendarResult.success : false,
-      calendarEventId: calendarResult && calendarResult.success ? calendarResult.eventId : null,
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamName
     };
@@ -4457,11 +4449,68 @@ if (!teamAssignment) {
   } catch (error) {
     console.error('========== saveSurveyWorkRequirement FAILED ==========');
     console.error('Error:', error);
-    console.error('Stack:', error.stack);
     
     return {
       success: false,
       message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ เรียก Calendar Service API (ใช้ Properties)
+ */
+function callCalendarService(eventData) {
+  try {
+    // ⭐ ดึงจาก Properties (ไม่ hardcode)
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const CALENDAR_SERVICE_URL = scriptProperties.getProperty('CALENDAR_SERVICE_URL');
+    const API_KEY = scriptProperties.getProperty('CALENDAR_SERVICE_API_KEY');
+    
+    if (!CALENDAR_SERVICE_URL || !API_KEY) {
+      throw new Error('Calendar Service not configured. Run setupCalendarServiceConfig() first.');
+    }
+    
+    const payload = {
+      apiKey: API_KEY,
+      action: 'createSurveyWorkEvent',
+      data: eventData
+    };
+    
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    
+    console.log('Sending request to Calendar Service...');
+    console.log('URL:', CALENDAR_SERVICE_URL);
+    
+    const response = UrlFetchApp.fetch(CALENDAR_SERVICE_URL, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    
+    console.log('Response Code:', responseCode);
+    console.log('Response:', responseText);
+    
+    if (responseCode !== 200) {
+      return {
+        success: false,
+        message: 'Calendar Service returned error code: ' + responseCode
+      };
+    }
+    
+    const result = JSON.parse(responseText);
+    
+    return result;
+    
+  } catch (error) {
+    console.error('Error calling Calendar Service:', error);
+    
+    return {
+      success: false,
+      message: 'Failed to call Calendar Service: ' + error.toString()
     };
   }
 }
@@ -7055,4 +7104,210 @@ function createCentralSurveyCalendar() {
     Logger.log('❌ Error: ' + error.toString());
     SpreadsheetApp.getUi().alert('Error: ' + error.toString());
   }
+}
+
+// ใน Project A
+function testCallCalendarService() {
+  const testData = {
+    requestDate: '2025-10-25',
+    startTime: '14:00',
+    endTime: '15:00',
+    description: 'Test from Project A',
+    location: 'Test Location',
+    requesterName: 'Test User',
+    requesterEmail: 'test@example.com',
+    assignedTeam: 'Survey Team A',
+    surveyNo: 'SW-TEST-002',
+    teamEmails: ['team@example.com']
+  };
+  
+  const result = callCalendarService(testData);
+  
+  Logger.log('Result:', JSON.stringify(result));
+  
+  if (result.success) {
+    Logger.log('✅ SUCCESS!');
+    Logger.log('Event ID:', result.data.eventId);
+  } else {
+    Logger.log('❌ FAILED:', result.message);
+  }
+}
+
+// ===== Code.gs =====
+
+/**
+ * ⭐ ตั้งค่า API Key และ Service URL ครั้งแรก (รันครั้งเดียว)
+ */
+function setupCalendarServiceConfig() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // 1. ใส่ Service URL
+  const urlResponse = ui.prompt(
+    'Setup Calendar Service',
+    'Enter Calendar Service URL:\n(from Project B deployment)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (urlResponse.getSelectedButton() !== ui.Button.OK) {
+    ui.alert('Setup cancelled');
+    return;
+  }
+  
+  const serviceUrl = urlResponse.getResponseText().trim();
+  
+  // 2. ใส่ API Key
+  const keyResponse = ui.prompt(
+    'Setup Calendar Service',
+    'Enter API Key:\n(from Project B setupApiKey)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (keyResponse.getSelectedButton() !== ui.Button.OK) {
+    ui.alert('Setup cancelled');
+    return;
+  }
+  
+  const apiKey = keyResponse.getResponseText().trim();
+  
+  // 3. บันทึก
+  const scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('CALENDAR_SERVICE_URL', serviceUrl);
+  scriptProperties.setProperty('CALENDAR_SERVICE_API_KEY', apiKey);
+  
+  Logger.log('✅ Configuration saved!');
+  
+  ui.alert(
+    'Setup Complete! ✅',
+    'Calendar Service URL: ' + serviceUrl + '\n\n' +
+    'API Key: ' + apiKey.substring(0, 20) + '...\n\n' +
+    'Configuration saved successfully!',
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * ⭐ ดูการตั้งค่าปัจจุบัน
+ */
+function viewCalendarServiceConfig() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const serviceUrl = scriptProperties.getProperty('CALENDAR_SERVICE_URL');
+  const apiKey = scriptProperties.getProperty('CALENDAR_SERVICE_API_KEY');
+  
+  Logger.log('Service URL:', serviceUrl);
+  Logger.log('API Key:', apiKey);
+  
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    'Calendar Service Configuration',
+    'URL: ' + (serviceUrl || '(not set)') + '\n\n' +
+    'API Key: ' + (apiKey ? apiKey.substring(0, 20) + '...' : '(not set)'),
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * ⭐ อัปเดต callCalendarService() ให้ใช้ Properties
+ */
+function callCalendarService(eventData) {
+  try {
+    // ⭐ ดึงจาก Properties
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const CALENDAR_SERVICE_URL = scriptProperties.getProperty('CALENDAR_SERVICE_URL');
+    const API_KEY = scriptProperties.getProperty('CALENDAR_SERVICE_API_KEY');
+    
+    if (!CALENDAR_SERVICE_URL || !API_KEY) {
+      throw new Error('Calendar Service not configured. Run setupCalendarServiceConfig() first.');
+    }
+    
+    const payload = {
+      apiKey: API_KEY,
+      action: 'createSurveyWorkEvent',
+      data: eventData
+    };
+    
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    
+    console.log('Sending request to Calendar Service...');
+    console.log('URL:', CALENDAR_SERVICE_URL);
+    
+    const response = UrlFetchApp.fetch(CALENDAR_SERVICE_URL, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    
+    console.log('Response Code:', responseCode);
+    console.log('Response:', responseText);
+    
+    if (responseCode !== 200) {
+      return {
+        success: false,
+        message: 'Calendar Service returned error code: ' + responseCode
+      };
+    }
+    
+    const result = JSON.parse(responseText);
+    
+    return result;
+    
+  } catch (error) {
+    console.error('Error calling Calendar Service:', error);
+    
+    return {
+      success: false,
+      message: 'Failed to call Calendar Service: ' + error.toString()
+    };
+  }
+}
+
+
+/**
+ * ⭐ เรียก Calendar Service พร้อม Retry Logic
+ */
+function callCalendarServiceWithRetry(eventData, maxRetries) {
+  if (typeof maxRetries === 'undefined') maxRetries = 3;
+  
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log('📡 Calendar Service - Attempt ' + attempt + ' of ' + maxRetries);
+      
+      const result = callCalendarService(eventData);
+      
+      if (result.success) {
+        console.log('✅ Success on attempt ' + attempt);
+        return result;
+      }
+      
+      lastError = result.message;
+      console.log('⚠️ Failed on attempt ' + attempt + ':', result.message);
+      
+      // ถ้ายังไม่ถึง attempt สุดท้าย ให้รอก่อน retry
+      if (attempt < maxRetries) {
+        const waitSeconds = attempt; // 1s, 2s, 3s
+        console.log('⏳ Waiting ' + waitSeconds + 's before retry...');
+        Utilities.sleep(waitSeconds * 1000);
+      }
+      
+    } catch (error) {
+      lastError = error.toString();
+      console.error('❌ Error on attempt ' + attempt + ':', error);
+      
+      if (attempt < maxRetries) {
+        const waitSeconds = attempt;
+        console.log('⏳ Waiting ' + waitSeconds + 's before retry...');
+        Utilities.sleep(waitSeconds * 1000);
+      }
+    }
+  }
+  
+  // ล้มเหลวทุก attempts
+  return {
+    success: false,
+    message: 'Failed after ' + maxRetries + ' attempts. Last error: ' + lastError
+  };
 }
