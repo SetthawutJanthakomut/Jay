@@ -1,4 +1,4 @@
-//Version 12 17/10/2025 13:30
+//Version 12 18/10/2025 8:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -4557,41 +4557,42 @@ function getSurveyEmailList() {
   }
 }
 
-/**
- * ⭐ สร้าง Calendar Event สำหรับ Survey Work (Sub Calendar แยกจาก RFI)
- * 
- * @param {Object} data - ข้อมูล Survey Work
- * @param {string} rfiId - ID ของ Survey Work
- * @return {Object} ผลลัพธ์การสร้าง event
- */
-function createSurveyWorkCalendarEvent(data, rfiId, surveyNo) {  // ⭐ เพิ่ม parameter
+function createSurveyWorkCalendarEvent(data, rfiId, surveyNo) {
   try {
     console.log('========== Creating Survey Work Calendar Event ==========');
     console.log('RFI ID:', rfiId);
     console.log('Data:', JSON.stringify(data));
     
-    // ⭐ Sub Calendar ID สำหรับ Survey Work (แยกจาก RFI)
-    // TODO: เปลี่ยนเป็น Calendar ID จริงของคุณ
-    const SURVEY_WORK_CALENDAR_ID = '9e21ac30dc20b0eb52fc1dcf7a5e50b5e431f087f91096c729efc20712f6470c@group.calendar.google.com'; // ⚠️ เปลี่ยนเป็น Calendar ID ของ Survey Work
+    // ⭐ ใส่ Calendar ID ที่สร้างได้
+    const CENTRAL_CALENDAR_ID = '6cbf6620e2630d70b763e8fe7f04d40b59d13da14a4c39cbb17687c69778b135@group.calendar.google.com';
+    
+    console.log('🔍 Using Central Calendar ID:', CENTRAL_CALENDAR_ID);
     
     let calendar;
+    
     try {
-      calendar = CalendarApp.getCalendarById(SURVEY_WORK_CALENDAR_ID);
+      calendar = CalendarApp.getCalendarById(CENTRAL_CALENDAR_ID);
       
       if (!calendar) {
-        console.log('⚠️ Survey Work Calendar not found, using primary calendar');
+        console.log('❌ Cannot access Central Calendar');
+        console.log('⚠️ Falling back to user calendar');
         calendar = CalendarApp.getDefaultCalendar();
+      } else {
+        console.log('✅ Using Central Calendar:', calendar.getName());
+        console.log('✅ Owner:', calendar.getOwnerEmail());
       }
+      
     } catch (calError) {
-      console.log('⚠️ Error accessing Survey Work Calendar:', calError.message);
-      console.log('Using primary calendar instead');
+      console.log('❌ Error accessing Central Calendar:', calError.message);
+      console.log('⚠️ User may not have access - check calendar sharing');
+      console.log('⚠️ Falling back to user calendar');
       calendar = CalendarApp.getDefaultCalendar();
     }
     
-    // สร้างวันเวลาสำหรับ event
+    // ⭐ ส่วนนี้เหมือนเดิม - สร้าง Event
     const dateParts = data.requestDate.split('-');
     const year = parseInt(dateParts[0]);
-    const month = parseInt(dateParts[1]) - 1; // JavaScript month เริ่มที่ 0
+    const month = parseInt(dateParts[1]) - 1;
     const day = parseInt(dateParts[2]);
     
     const startTimeParts = data.startTime.split(':');
@@ -4605,15 +4606,13 @@ function createSurveyWorkCalendarEvent(data, rfiId, surveyNo) {  // ⭐ เพ�
     const startDateTime = new Date(year, month, day, startHour, startMinute, 0);
     const endDateTime = new Date(year, month, day, endHour, endMinute, 0);
     
-    // สร้าง Event Title
-const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTeam;  // ⭐ ใช้ surveyNo
+    const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTeam;
     
-    // สร้าง Event Description
     const description = 
       '═══════════════════════════════════════\n' +
       '🗺️ SURVEY WORK REQUEST\n' +
       '═══════════════════════════════════════\n\n' +
-      'Survey NO: ' + surveyNo + '\n' +  // ⭐ ใช้ surveyNo
+      'Survey NO: ' + surveyNo + '\n' +
       'ทีมงาน: ' + data.assignedTeam + '\n' +
       'รายละเอียด: ' + data.description + '\n' +
       'สถานที่: ' + data.location + '\n\n' +
@@ -4630,27 +4629,33 @@ const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTea
       'เวลาที่สร้าง: ' + new Date().toLocaleString('th-TH') + '\n' +
       '═══════════════════════════════════════';
     
-    // ⭐ สร้าง Guest List
     const guestList = [];
     
-    // 1. เพิ่ม Requester Email
     if (data.requesterEmail && data.requesterEmail.includes('@')) {
       guestList.push(data.requesterEmail);
       console.log('Added Requester:', data.requesterEmail);
     }
     
-    // 2. เพิ่ม Survey Team Emails
     const surveyTeamEmails = getSurveyEmailList();
     surveyTeamEmails.forEach(function(member) {
-      if (!guestList.includes(member.email)) {
+      if (guestList.indexOf(member.email) === -1) {
         guestList.push(member.email);
         console.log('Added Survey Team Member:', member.email, '(' + member.role + ')');
       }
     });
     
+    if (data.assignedTeam) {
+      const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
+      teamEmails.forEach(function(teamMember) {
+        if (guestList.indexOf(teamMember.email) === -1) {
+          guestList.push(teamMember.email);
+          console.log('Added team member:', teamMember.name, '->', teamMember.email);
+        }
+      });
+    }
+    
     console.log('Total guests:', guestList.length);
     
-    // สร้าง Event
     const event = calendar.createEvent(
       eventTitle,
       startDateTime,
@@ -4659,11 +4664,10 @@ const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTea
         description: description,
         location: data.location,
         guests: guestList.join(','),
-        sendInvites: true // ส่ง email notification ไปหา guests
+        sendInvites: true
       }
     );
     
-    // เพิ่ม Color (เขียว)
     try {
       event.setColor(CalendarApp.EventColor.GREEN);
     } catch (colorError) {
@@ -4672,6 +4676,7 @@ const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTea
     
     console.log('✅ Calendar Event Created:', event.getId());
     console.log('Event Title:', eventTitle);
+    console.log('Calendar Owner:', calendar.getOwnerEmail());
     console.log('Start:', startDateTime);
     console.log('End:', endDateTime);
     console.log('Guests:', guestList.join(', '));
@@ -4682,7 +4687,8 @@ const eventTitle = '🗺️ Survey Work: ' + surveyNo + ' - ' + data.assignedTea
       eventId: event.getId(),
       eventTitle: eventTitle,
       guestsCount: guestList.length,
-      guests: guestList
+      guests: guestList,
+      calendarOwner: calendar.getOwnerEmail()
     };
     
   } catch (error) {
@@ -6833,4 +6839,220 @@ function testQuickFix() {
   console.log('Success:', result3 ? result3.success : 'N/A');
   
   console.log('\n====================================');
+}
+
+
+/**
+ * ทดสอบสร้าง Survey Work Event
+ */
+function testSurveyWorkCalendarEvent() {
+  console.log('========== Test Survey Work Calendar Event ==========');
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  const testData = {
+    requestDate: tomorrowStr,
+    startTime: '14:00',
+    endTime: '15:00',
+    description: 'Test Survey Work Event',
+    location: 'Test Location',
+    requesterName: 'Test User',
+    requesterEmail: 'test@example.com',
+    assignedTeam: 'Survey Team A'
+  };
+  
+  const result = createSurveyWorkCalendarEvent(testData, 'TEST-001', 'SW-9999');
+  
+  console.log('========== Result ==========');
+  console.log('Success:', result.success);
+  
+  if (result.success) {
+    console.log('✅ Event Created!');
+    console.log('Event ID:', result.eventId);
+    console.log('Guests:', result.guestsCount);
+    console.log('Title:', result.eventTitle);
+  } else {
+    console.log('❌ Failed:', result.message);
+  }
+  
+  console.log('==============================');
+}
+
+/**
+ * 🔍 ค้นหา Event (Fixed - ใช้ + แทน ,)
+ */
+function findCreatedEvent() {
+  Logger.log('========== Finding Event ==========');
+  
+  const eventId = 'g6ssbsse163n0rc16mm12deo5k';
+  
+  try {
+    const calendar = CalendarApp.getDefaultCalendar();
+    
+    if (!calendar) {
+      Logger.log('❌ Cannot access calendar');
+      return;
+    }
+    
+    const calName = calendar.getName();
+    const calId = calendar.getId();
+    
+    Logger.log('✅ Calendar Name: ' + calName);
+    Logger.log('✅ Calendar ID: ' + calId);
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 1);
+    
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30);
+    
+    Logger.log('Search from: ' + startDate.toLocaleDateString());
+    Logger.log('Search to: ' + endDate.toLocaleDateString());
+    
+    const events = calendar.getEvents(startDate, endDate);
+    const eventCount = events.length;
+    
+    Logger.log('Total events: ' + eventCount);
+    Logger.log('');
+    
+    if (eventCount === 0) {
+      Logger.log('❌ No events in calendar');
+      Logger.log('');
+      Logger.log('🔍 Trying to find events in wider range...');
+      
+      // ลองค้นหาในช่วงกว้างขึ้น
+      const wideStart = new Date();
+      wideStart.setMonth(wideStart.getMonth() - 1);
+      
+      const wideEnd = new Date();
+      wideEnd.setMonth(wideEnd.getMonth() + 3);
+      
+      const wideEvents = calendar.getEvents(wideStart, wideEnd);
+      Logger.log('Events in wider range: ' + wideEvents.length);
+      
+      if (wideEvents.length > 0) {
+        Logger.log('Found events:');
+        for (var i = 0; i < Math.min(5, wideEvents.length); i++) {
+          Logger.log((i + 1) + '. ' + wideEvents[i].getTitle());
+          Logger.log('   Date: ' + wideEvents[i].getStartTime().toLocaleDateString());
+        }
+      }
+      
+      return;
+    }
+    
+    // ค้นหา event
+    let foundCount = 0;
+    
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+      const id = event.getId();
+      const title = event.getTitle();
+      
+      if (title.indexOf('Survey Work') !== -1 || id.indexOf(eventId) !== -1) {
+        foundCount++;
+        Logger.log('');
+        Logger.log('✅ FOUND EVENT #' + foundCount + ':');
+        Logger.log('   Title: ' + title);
+        Logger.log('   ID: ' + id);
+        Logger.log('   Start: ' + event.getStartTime().toLocaleString('th-TH'));
+        Logger.log('   Location: ' + event.getLocation());
+        
+        const desc = event.getDescription();
+        const descPreview = desc ? desc.substring(0, 100) : '(no description)';
+        Logger.log('   Description: ' + descPreview + '...');
+        
+        const guests = event.getGuestList();
+        Logger.log('   Guests: ' + guests.length + ' people');
+        
+        if (guests.length > 0) {
+          for (var g = 0; g < Math.min(3, guests.length); g++) {
+            Logger.log('      - ' + guests[g].getEmail());
+          }
+        }
+        
+        Logger.log('');
+        
+        if (id.indexOf(eventId) !== -1) {
+          Logger.log('🎯 This is the target event!');
+        }
+      }
+    }
+    
+    if (foundCount === 0) {
+      Logger.log('');
+      Logger.log('⚠️ No Survey Work events found');
+      Logger.log('');
+      Logger.log('📋 All events in range:');
+      
+      for (let i = 0; i < Math.min(10, events.length); i++) {
+        Logger.log((i + 1) + '. ' + events[i].getTitle());
+        Logger.log('   ' + events[i].getStartTime().toLocaleDateString());
+      }
+    } else {
+      Logger.log('');
+      Logger.log('📊 Summary: Found ' + foundCount + ' Survey Work event(s)');
+    }
+    
+    Logger.log('===================================');
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+  }
+}
+
+
+/**
+ * 🗓️ สร้าง Survey Work Calendar (Central)
+ */
+function createCentralSurveyCalendar() {
+  Logger.log('========== Creating Central Survey Work Calendar ==========');
+  
+  try {
+    // เช็คว่ามีอยู่แล้วหรือไม่
+    const allCals = CalendarApp.getAllOwnedCalendars();
+    
+    for (let i = 0; i < allCals.length; i++) {
+      if (allCals[i].getName() === 'Survey Work (Central)') {
+        Logger.log('✅ Calendar already exists');
+        Logger.log('Name: ' + allCals[i].getName());
+        Logger.log('ID: ' + allCals[i].getId());
+        Logger.log('Owner: ' + Session.getActiveUser().getEmail());
+        
+        SpreadsheetApp.getUi().alert(
+          'Calendar ID',
+          allCals[i].getId(),
+          SpreadsheetApp.getUi().ButtonSet.OK
+        );
+        
+        return allCals[i];
+      }
+    }
+    
+    // สร้างใหม่
+    const calendar = CalendarApp.createCalendar('Survey Work (Central)', {
+      summary: 'Central calendar for all Survey Work requests',
+      color: CalendarApp.Color.GREEN
+    });
+    
+    Logger.log('✅ Created new calendar');
+    Logger.log('Name: ' + calendar.getName());
+    Logger.log('ID: ' + calendar.getId());
+    Logger.log('Owner: ' + Session.getActiveUser().getEmail());
+    
+    SpreadsheetApp.getUi().alert(
+      'Calendar Created! ✅',
+      'Calendar ID:\n' + calendar.getId() + '\n\nCopy this ID!',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+    return calendar;
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
 }
