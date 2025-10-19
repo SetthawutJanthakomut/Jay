@@ -1,0 +1,678 @@
+// version 1 18/10/2025 10:12
+/**
+ * ⭐ PROJECT B: Calendar Service
+ * Deploy as Web App:
+ * - Execute as: Me (developeritd75@gmail.com)
+ * - Who has access: Anyone
+ */
+
+// ⭐ API Key สำหรับ Authentication (สร้าง random key ยาวๆ)
+const API_KEY = 'sk_live_abc123def456ghi789jkl012mno345pqr678stu901vwx234yz';
+
+// ⭐ Calendar ID ของ developeritd75@gmail.com
+const CALENDAR_ID = 'primary'; // หรือใช้ ID เฉพาะ
+
+/**
+ * ⭐ doPost - รับ Request จาก Project A
+ */
+function doPost(e) {
+  try {
+    Logger.log('========== Calendar Service Received Request ==========');
+    
+    // 1. ตรวจสอบ Content-Type
+    const contentType = e.postData.type;
+    if (contentType !== 'application/json') {
+      return createResponse(false, 'Invalid content type');
+    }
+    
+    // 2. Parse JSON
+    const requestData = JSON.parse(e.postData.contents);
+    Logger.log('Request data:', JSON.stringify(requestData));
+    
+    // 3. ตรวจสอบ API Key
+    if (!requestData.apiKey || requestData.apiKey !== API_KEY) {
+      Logger.log('❌ Invalid API Key');
+      return createResponse(false, 'Unauthorized - Invalid API Key');
+    }
+    
+    // 4. ตรวจสอบ Action
+    if (requestData.action !== 'createSurveyWorkEvent') {
+      return createResponse(false, 'Invalid action');
+    }
+    
+    // 5. สร้าง Calendar Event
+    const result = createCalendarEvent(requestData.data);
+    
+    Logger.log('Result:', JSON.stringify(result));
+    return createResponse(result.success, result.message, result.data);
+    
+  } catch (error) {
+    Logger.log('❌ Error in doPost:', error.toString());
+    return createResponse(false, 'Server error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ สร้าง Calendar Event
+ */
+function createCalendarEvent(data) {
+  try {
+    Logger.log('Creating calendar event...');
+    Logger.log('Data:', JSON.stringify(data));
+    
+    // Validate required fields
+    const required = ['requestDate', 'startTime', 'endTime', 'description', 
+                     'location', 'requesterName', 'requesterEmail', 
+                     'assignedTeam', 'surveyNo'];
+    
+    for (let i = 0; i < required.length; i++) {
+      if (!data[required[i]]) {
+        return {
+          success: false,
+          message: 'Missing required field: ' + required[i]
+        };
+      }
+    }
+    
+    // Get Calendar
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    
+    if (!calendar) {
+      return {
+        success: false,
+        message: 'Calendar not found'
+      };
+    }
+    
+    Logger.log('✅ Calendar found:', calendar.getName());
+    
+    // Parse Date & Time
+    const dateParts = data.requestDate.split('-');
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1;
+    const day = parseInt(dateParts[2]);
+    
+    const startParts = data.startTime.split(':');
+    const startHour = parseInt(startParts[0]);
+    const startMin = parseInt(startParts[1]);
+    
+    const endParts = data.endTime.split(':');
+    const endHour = parseInt(endParts[0]);
+    const endMin = parseInt(endParts[1]);
+    
+    const startDateTime = new Date(year, month, day, startHour, startMin, 0);
+    const endDateTime = new Date(year, month, day, endHour, endMin, 0);
+    
+    // Create Event Title
+    const eventTitle = '🗺️ Survey Work: ' + data.surveyNo + ' - ' + data.assignedTeam;
+    
+    // Create Description
+    const description = 
+      '═══════════════════════════════════════\n' +
+      '🗺️ SURVEY WORK REQUEST\n' +
+      '═══════════════════════════════════════\n\n' +
+      'Survey NO: ' + data.surveyNo + '\n' +
+      'ทีมงาน: ' + data.assignedTeam + '\n' +
+      'รายละเอียด: ' + data.description + '\n' +
+      'สถานที่: ' + data.location + '\n\n' +
+      '───────────────────────────────────────\n' +
+      'ผู้ขอ: ' + data.requesterName + '\n' +
+      'อีเมลผู้ขอ: ' + data.requesterEmail + '\n' +
+      '───────────────────────────────────────\n' +
+      'วันที่: ' + formatDateThai(data.requestDate) + '\n' +
+      'เวลา: ' + data.startTime + ' - ' + data.endTime + ' น.\n\n' +
+      'ประเภท: Survey Work\n' +
+      'สถานะ: Survey Work Request Submitted\n\n' +
+      '═══════════════════════════════════════\n' +
+      'สร้างโดย Calendar Service\n' +
+      'เวลาที่สร้าง: ' + new Date().toLocaleString('th-TH') + '\n' +
+      '═══════════════════════════════════════';
+    
+    // Guest List
+    const guestList = [];
+    
+    if (data.requesterEmail) {
+      guestList.push(data.requesterEmail);
+    }
+    
+    if (data.teamEmails && Array.isArray(data.teamEmails)) {
+      data.teamEmails.forEach(function(email) {
+        if (email && guestList.indexOf(email) === -1) {
+          guestList.push(email);
+        }
+      });
+    }
+    
+    Logger.log('Guest list:', guestList.join(', '));
+    
+    // Create Event
+    const event = calendar.createEvent(
+      eventTitle,
+      startDateTime,
+      endDateTime,
+      {
+        description: description,
+        location: data.location,
+        guests: guestList.join(','),
+        sendInvites: true
+      }
+    );
+    
+    // Set Color
+    try {
+      event.setColor(CalendarApp.EventColor.GREEN);
+    } catch (e) {
+      Logger.log('Could not set color:', e.message);
+    }
+    
+    Logger.log('✅ Event created:', event.getId());
+    
+    return {
+      success: true,
+      message: 'Calendar event created successfully',
+      data: {
+        eventId: event.getId(),
+        eventTitle: eventTitle,
+        guestsCount: guestList.length,
+        calendarName: calendar.getName()
+      }
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error creating event:', error.toString());
+    
+    return {
+      success: false,
+      message: 'Failed to create calendar event: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ Helper: สร้าง JSON Response
+ */
+function createResponse(success, message, data) {
+  const response = {
+    success: success,
+    message: message || ''
+  };
+  
+  if (data) {
+    response.data = data;
+  }
+  
+  return ContentService
+    .createTextOutput(JSON.stringify(response))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * ⭐ Helper: Format Date Thai
+ */
+function formatDateThai(dateString) {
+  if (!dateString) return '';
+  
+  const months = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  
+  const date = new Date(dateString + 'T00:00:00');
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear() + 543;
+  
+  return day + ' ' + month + ' ' + year;
+}
+
+/**
+ * ⭐ Test Function
+ */
+function testCalendarService() {
+  const testData = {
+    apiKey: API_KEY,
+    action: 'createSurveyWorkEvent',
+    data: {
+      requestDate: '2025-10-25',
+      startTime: '14:00',
+      endTime: '15:00',
+      description: 'Test Survey Work',
+      location: 'Test Location',
+      requesterName: 'Test User',
+      requesterEmail: 'test@example.com',
+      assignedTeam: 'Survey Team A',
+      surveyNo: 'SW-TEST-001',
+      teamEmails: ['team1@example.com', 'team2@example.com']
+    }
+  };
+  
+  const mockRequest = {
+    postData: {
+      type: 'application/json',
+      contents: JSON.stringify(testData)
+    }
+  };
+  
+  const result = doPost(mockRequest);
+  Logger.log('Test Result:', result.getContent());
+}
+
+
+// ===== CalendarService.gs =====
+
+/**
+ * ⭐ ตั้งค่า API Key ครั้งแรก (รันครั้งเดียว) - SAFE VERSION
+ */
+function setupApiKey() {
+  const apiKey = 'sk_live_' + Utilities.getUuid();
+  
+  const scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('API_KEY', apiKey);
+  
+  Logger.log('');
+  Logger.log('═══════════════════════════════════════════════════════');
+  Logger.log('✅ API Key Created Successfully!');
+  Logger.log('═══════════════════════════════════════════════════════');
+  Logger.log('');
+  Logger.log('📋 API Key (copy this):');
+  Logger.log('');
+  Logger.log('    ' + apiKey);
+  Logger.log('');
+  Logger.log('═══════════════════════════════════════════════════════');
+  Logger.log('⚠️  IMPORTANT: Save this key! You cannot retrieve it again.');
+  Logger.log('═══════════════════════════════════════════════════════');
+  Logger.log('');
+  
+  return apiKey;
+}
+
+/**
+ * ⭐ ดึง API Key จาก Properties
+ */
+function getApiKey() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const apiKey = scriptProperties.getProperty('API_KEY');
+  
+  if (!apiKey) {
+    throw new Error('API Key not configured. Run setupApiKey() first.');
+  }
+  
+  return apiKey;
+}
+
+/**
+ * ⭐ อัปเดต doPost() ให้ใช้ getApiKey()
+ */
+function doPost(e) {
+  try {
+    Logger.log('========== Calendar Service Received Request ==========');
+    
+    // 1. ตรวจสอบ Content-Type
+    const contentType = e.postData.type;
+    if (contentType !== 'application/json') {
+      return createResponse(false, 'Invalid content type');
+    }
+    
+    // 2. Parse JSON
+    const requestData = JSON.parse(e.postData.contents);
+    Logger.log('Request data:', JSON.stringify(requestData));
+    
+    // 3. ⭐ ตรวจสอบ API Key (ใช้ getApiKey())
+    const validApiKey = getApiKey();
+    
+    if (!requestData.apiKey || requestData.apiKey !== validApiKey) {
+      Logger.log('❌ Invalid API Key');
+      return createResponse(false, 'Unauthorized - Invalid API Key');
+    }
+    
+    // 4. ตรวจสอบ Action
+    if (requestData.action !== 'createSurveyWorkEvent') {
+      return createResponse(false, 'Invalid action');
+    }
+    
+    // 5. สร้าง Calendar Event
+    const result = createCalendarEvent(requestData.data);
+    
+    Logger.log('Result:', JSON.stringify(result));
+    return createResponse(result.success, result.message, result.data);
+    
+  } catch (error) {
+    Logger.log('❌ Error in doPost:', error.toString());
+    return createResponse(false, 'Server error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ ดู API Key ปัจจุบัน (สำหรับ Admin เท่านั้น)
+ */
+function viewApiKey() {
+  try {
+    const apiKey = getApiKey();
+    
+    Logger.log('Current API Key:', apiKey);
+    
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'Current API Key',
+      apiKey,
+      ui.ButtonSet.OK
+    );
+    
+  } catch (error) {
+    Logger.log('Error:', error);
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ สร้าง API Key ใหม่ (ระวัง! จะทำให้ API Key เก่าใช้ไม่ได้)
+ */
+function regenerateApiKey() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'Regenerate API Key?',
+    'This will invalidate the old API Key!\n\n' +
+    'You need to update Project A with the new key.\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response === ui.Button.YES) {
+    return setupApiKey();
+  } else {
+    ui.alert('Cancelled');
+  }
+}
+
+function logRequest(requestData, result) {
+  try {
+    const logSheet = getOrCreateLogSheet();
+    
+    const logRow = [
+      new Date(),                                   // Timestamp
+      requestData.data.surveyNo || '',              // Survey NO
+      requestData.data.requesterEmail || '',        // Requester
+      requestData.data.requestDate || '',           // Date
+      requestData.data.startTime || '',             // Start Time
+      requestData.data.endTime || '',               // End Time
+      requestData.data.assignedTeam || '',          // Team
+      result.success ? 'SUCCESS' : 'FAILED',        // Status
+      result.message || '',                         // Message
+      result.data && result.data.eventId ? result.data.eventId : '',  // Event ID
+      requestData.data.teamEmails ? requestData.data.teamEmails.length : 0  // Guest Count
+    ];
+    
+    logSheet.appendRow(logRow);
+    
+    Logger.log('📝 Request logged');
+    
+  } catch (error) {
+    Logger.log('⚠️ Error logging request:', error);
+    // ไม่ throw error เพราะไม่อยากให้ logging ทำให้ระบบล้ม
+  }
+}
+
+/**
+ * ⭐ สร้าง/ดึง Log Sheet
+ */
+function getOrCreateLogSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Calendar_Service_Logs');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Calendar_Service_Logs');
+    
+    // Headers
+    const headers = [
+      'Timestamp', 'Survey NO', 'Requester', 'Date', 
+      'Start Time', 'End Time', 'Team', 'Status', 
+      'Message', 'Event ID', 'Guests'
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format Headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#16a34a');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setHorizontalAlignment('center');
+    
+    // Set Column Widths
+    sheet.setColumnWidth(1, 150);  // Timestamp
+    sheet.setColumnWidth(2, 120);  // Survey NO
+    sheet.setColumnWidth(3, 200);  // Requester
+    sheet.setColumnWidth(4, 100);  // Date
+    sheet.setColumnWidth(8, 100);  // Status
+    sheet.setColumnWidth(10, 250); // Event ID
+    
+    sheet.setFrozenRows(1);
+    
+    Logger.log('✅ Created Calendar_Service_Logs sheet');
+  }
+  
+  return sheet;
+}
+
+/**
+ * ⭐ อัปเดต doPost() ให้มี Logging
+ */
+function doPost(e) {
+  let requestData = null;
+  
+  try {
+    Logger.log('========== Calendar Service Received Request ==========');
+    
+    // 1. ตรวจสอบ Content-Type
+    const contentType = e.postData.type;
+    if (contentType !== 'application/json') {
+      return createResponse(false, 'Invalid content type');
+    }
+    
+    // 2. Parse JSON
+    requestData = JSON.parse(e.postData.contents);
+    Logger.log('Request data:', JSON.stringify(requestData));
+    
+    // 3. ตรวจสอบ API Key
+    const validApiKey = getApiKey();
+    
+    if (!requestData.apiKey || requestData.apiKey !== validApiKey) {
+      Logger.log('❌ Invalid API Key');
+      
+      // ⭐ Log unauthorized attempts
+      if (requestData.data) {
+        logRequest(requestData, {
+          success: false,
+          message: 'Unauthorized - Invalid API Key'
+        });
+      }
+      
+      return createResponse(false, 'Unauthorized - Invalid API Key');
+    }
+    
+    // 4. ตรวจสอบ Action
+    if (requestData.action !== 'createSurveyWorkEvent') {
+      return createResponse(false, 'Invalid action');
+    }
+    
+    // 5. สร้าง Calendar Event
+    const result = createCalendarEvent(requestData.data);
+    
+    // ⭐ 6. Log Request
+    logRequest(requestData, result);
+    
+    Logger.log('Result:', JSON.stringify(result));
+    return createResponse(result.success, result.message, result.data);
+    
+  } catch (error) {
+    Logger.log('❌ Error in doPost:', error.toString());
+    
+    // ⭐ Log errors
+    if (requestData && requestData.data) {
+      logRequest(requestData, {
+        success: false,
+        message: 'Server error: ' + error.toString()
+      });
+    }
+    
+    return createResponse(false, 'Server error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ ดู Log Stats
+ */
+function setupLogSpreadsheet() {
+  const spreadsheetId = '1kco0Kb7E_2TyFjuYg4Bb8JUW98GkSbOD-VnwvQBzjoM';
+  
+  try {
+    // ทดสอบเข้าถึง Spreadsheet
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    Logger.log('✅ Spreadsheet accessible:', ss.getName());
+    
+    // บันทึก ID
+    const scriptProperties = PropertiesService.getScriptProperties();
+    scriptProperties.setProperty('LOG_SPREADSHEET_ID', spreadsheetId);
+    
+    Logger.log('✅ Spreadsheet ID saved');
+    Logger.log('');
+    Logger.log('Setup complete!');
+    Logger.log('Spreadsheet:', ss.getName());
+    Logger.log('URL:', ss.getUrl());
+    
+    return true;
+    
+  } catch (error) {
+    Logger.log('❌ Error:', error);
+    Logger.log('');
+    Logger.log('Make sure:');
+    Logger.log('1. Spreadsheet ID is correct');
+    Logger.log('2. You have edit permission');
+    
+    return false;
+  }
+}
+
+/**
+ * ⭐ ดึง Spreadsheet จาก Properties
+ */
+function getLogSpreadsheet() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const spreadsheetId = scriptProperties.getProperty('LOG_SPREADSHEET_ID');
+  
+  if (!spreadsheetId) {
+    throw new Error('Log Spreadsheet not configured. Run setupLogSpreadsheet() first.');
+  }
+  
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
+/**
+ * ⭐ สร้าง/ดึง Log Sheet
+ */
+function getOrCreateLogSheet() {
+  const ss = getLogSpreadsheet();
+  let sheet = ss.getSheetByName('Calendar_Service_Logs');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Calendar_Service_Logs');
+    
+    // Headers
+    const headers = [
+      'Timestamp', 'Survey NO', 'Requester', 'Date', 
+      'Start Time', 'End Time', 'Team', 'Status', 
+      'Message', 'Event ID', 'Guests'
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format Headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#16a34a');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setHorizontalAlignment('center');
+    
+    // Set Column Widths
+    sheet.setColumnWidth(1, 150);  // Timestamp
+    sheet.setColumnWidth(2, 120);  // Survey NO
+    sheet.setColumnWidth(3, 200);  // Requester
+    sheet.setColumnWidth(4, 100);  // Date
+    sheet.setColumnWidth(5, 90);   // Start Time
+    sheet.setColumnWidth(6, 90);   // End Time
+    sheet.setColumnWidth(7, 150);  // Team
+    sheet.setColumnWidth(8, 100);  // Status
+    sheet.setColumnWidth(9, 250);  // Message
+    sheet.setColumnWidth(10, 250); // Event ID
+    sheet.setColumnWidth(11, 70);  // Guests
+    
+    sheet.setFrozenRows(1);
+    
+    Logger.log('✅ Created Calendar_Service_Logs sheet');
+  }
+  
+  return sheet;
+}
+
+/**
+ * ⭐ ดู Log Stats (อัปเดต)
+ */
+function viewLogStats() {
+  try {
+    const ss = getLogSpreadsheet();
+    const sheet = ss.getSheetByName('Calendar_Service_Logs');
+    
+    if (!sheet) {
+      Logger.log('ℹ️ No logs yet - creating sheet...');
+      getOrCreateLogSheet();
+      
+      Logger.log('✅ Log sheet created!');
+      Logger.log('No log entries yet.');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('ℹ️ No log entries yet.');
+      return;
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    data.forEach(function(row) {
+      if (row[7] === 'SUCCESS') {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    });
+    
+    const total = successCount + failCount;
+    const successRate = total > 0 ? ((successCount / total) * 100).toFixed(1) : '0.0';
+    
+    Logger.log('');
+    Logger.log('═══════════════════════════════════');
+    Logger.log('     Calendar Service Stats');
+    Logger.log('═══════════════════════════════════');
+    Logger.log('Total Requests:', total);
+    Logger.log('Success:', successCount);
+    Logger.log('Failed:', failCount);
+    Logger.log('Success Rate:', successRate + '%');
+    Logger.log('═══════════════════════════════════');
+    Logger.log('');
+    Logger.log('📊 View full logs:');
+    Logger.log(ss.getUrl());
+    
+  } catch (error) {
+    Logger.log('❌ Error:', error.toString());
+    
+    if (error.message.includes('not configured')) {
+      Logger.log('');
+      Logger.log('💡 Run setupLogSpreadsheet() first');
+    }
+  }
+}
