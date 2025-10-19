@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+// version 1 18/10/2025 10:12
 <html>
 <head>
   <base target="_top">
@@ -436,22 +436,23 @@
         <div class="time-info">เลือกผู้ขอ RFI</div>
       </div>
 
-      <div class="form-row">
+<div class="form-row">
         <div class="form-group" id="surveyReportGroup" style="display:none;">
-          <label for="requireSurveyReport">Survey Report</label>
-          <select id="requireSurveyReport" name="requireSurveyReport">
-            <option value="None">None (ไม่ต้องแนบ)</option>
-            <option value="Both">Both (Open + Close)</option>
-          </select>
+          <input type="hidden" id="requireSurveyReport" name="requireSurveyReport" value="None">
+          <div style="padding: 12px; background: #e7f3ff; border: 2px solid #1877f2; border-radius: 10px;">
+            <label style="margin-bottom: 5px;">Survey Report</label>
+            <div style="color: #1877f2; font-weight: 600; font-size: 15px;">✓ Both (Open + Close)</div>
+            <div class="time-info" style="color: #1877f2;">กำหนดอัตโนมัติเมื่อเลือก Survey Team</div>
+          </div>
         </div>
         
         <div class="form-group" id="labReportGroup" style="display:none;">
-          <label for="requireLabReport">Lab Report</label>
+          <label for="requireLabReport">Lab Report <span class="required">*</span></label>
           <select id="requireLabReport" name="requireLabReport">
-            <option value="None">None (ไม่ต้องแนบ)</option>
             <option value="Both">Both (Open + Close)</option>
             <option value="Closing">Closing (Close เท่านั้น)</option>
           </select>
+          <div class="time-info">แสดงเมื่อเลือก Lab Team</div>
         </div>
       </div>
       
@@ -644,7 +645,11 @@
       document.getElementById('assignedInspector').value = selectedTeams.join(',');
       
       document.getElementById('surveyReportGroup').style.display = hasSurvey ? 'block' : 'none';
-      if (!hasSurvey) document.getElementById('requireSurveyReport').value = 'None';
+if (hasSurvey) {
+  document.getElementById('requireSurveyReport').value = 'Both';
+} else {
+  document.getElementById('requireSurveyReport').value = 'None';
+}
       
       document.getElementById('labReportGroup').style.display = hasLab ? 'block' : 'none';
       if (!hasLab) document.getElementById('requireLabReport').value = 'None';
