@@ -1,4 +1,4 @@
-//Version 12 18/10/2025 9:30
+//Version 12 19/10/2025 12:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -396,9 +396,13 @@ function timeToMinutes(timeString) {
   return parseInt(parts[0]) * 60 + parseInt(parts[1]);
 }
 
-// ===== Work Type Functions =====
-function getWorkTypeList() {
+/**
+ * ✅ อัปเดต: โหลด Work Types แยกตาม Category
+ */
+function getWorkTypeList(category) {
   try {
+    console.log('Getting work types for category:', category);
+    
     const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
     
     if (!workSheet) {
@@ -412,17 +416,27 @@ function getWorkTypeList() {
       return [];
     }
     
-    const data = workSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    // ดึง Column B (Work_Type) และ Column C (Work_Category)
+    const data = workSheet.getRange(2, 2, lastRow - 1, 2).getValues();
     const workTypes = [];
     
     for (let i = 0; i < data.length; i++) {
       const workType = String(data[i][0] || '').trim();
+      const workCategory = String(data[i][1] || '').trim();
+      
       if (workType) {
-        workTypes.push(workType);
+        // ถ้าไม่ระบุ category → ดึงทั้งหมด
+        if (!category) {
+          workTypes.push(workType);
+        } 
+        // ถ้าระบุ category → กรองตาม category
+        else if (workCategory === category) {
+          workTypes.push(workType);
+        }
       }
     }
     
-    console.log('Found work types:', workTypes.length);
+    console.log('Found work types:', workTypes.length, 'for category:', category);
     return workTypes;
     
   } catch (error) {
@@ -431,10 +445,48 @@ function getWorkTypeList() {
   }
 }
 
-// ===== Team/Resource Management Functions =====
-function getTeamsByCategory(category) {
+/**
+ * ⭐ ใหม่: ตรวจสอบว่าทีมรองรับงานนี้หรือไม่
+ */
+function teamSupportsWorkType(teamWorkTypes, requestedWorkType) {
+  if (!teamWorkTypes || !requestedWorkType) {
+    return false;
+  }
+  
+  const workTypesStr = String(teamWorkTypes).trim();
+  
+  // Universal Team (ทำได้ทุกงาน)
+  if (workTypesStr === '*') {
+    console.log('  → Universal team (supports all work types)');
+    return true;
+  }
+  
+  // แยกงานที่ทีมทำได้
+  const supportedTypes = workTypesStr.split(',').map(function(t) {
+    return t.trim();
+  });
+  
+  // เช็คว่ามีงานที่ต้องการหรือไม่
+  const isSupported = supportedTypes.indexOf(requestedWorkType) !== -1;
+  
+  if (isSupported) {
+    console.log('  → Team supports:', requestedWorkType);
+  } else {
+    console.log('  → Team does NOT support:', requestedWorkType);
+    console.log('     Supported types:', supportedTypes.join(', '));
+  }
+  
+  return isSupported;
+}
+
+/**
+ * ✅ อัปเดต: ดึงทีมตามหมวดงาน + กรอง Work Types
+ */
+function getTeamsByCategory(category, workType) {
   try {
-    console.log('Getting teams for category:', category);
+    console.log('========== getTeamsByCategory ==========');
+    console.log('Category:', category);
+    console.log('Work Type:', workType);
     
     const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
     
@@ -444,21 +496,23 @@ function getTeamsByCategory(category) {
     }
     
     const lastRow = resourceSheet.getLastRow();
+    const lastColumn = resourceSheet.getLastColumn();
+    
     if (lastRow <= 1) {
       console.log('No resources found');
       return [];
     }
     
-    // แยก categories ถ้ามีหลายหมวด (comma separated)
-    // เช่น "Survey,Inspector" → ["Survey", "Inspector"]
+    // แยก categories ถ้ามีหลายหมวด
     const categories = category.split(',').map(function(c) {
       return c.trim().toLowerCase();
     });
     
-    console.log('Categories to search (lowercase):', categories);
+    console.log('Categories to search:', categories);
     
-    // ดึงข้อมูล: A (Resource_ID), B (Resource_Name), C (Sub_Type), D (Team No.), E (Status)
-    const data = resourceSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    // ดึงข้อมูล: A (Resource_ID), B (Resource_Name), C (Sub_Type), D (Team No.), E (Status), I (Work_Types)
+    // ⚠️ ต้องปรับ column index ถ้า Work_Types ไม่ได้อยู่ที่ column I
+    const data = resourceSheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
     const teams = [];
     
     for (let i = 0; i < data.length; i++) {
@@ -468,34 +522,45 @@ function getTeamsByCategory(category) {
       const subType = String(row[2] || '').trim();
       const teamNo = row[3];
       const status = String(row[4] || '').trim();
+      const teamWorkTypes = String(row[8] || '').trim(); // Column I (index 8)
       
-      // เช็คว่า Status = Activated และมีข้อมูลครบ
-      if (status === 'Activated' && resourceId && subType) {
-        // เช็คว่า subType ของทีมนี้อยู่ใน categories ที่เลือกหรือไม่
-        // เช่น ถ้าเลือก "Survey,Inspector" จะหาทีมที่มี Sub_Type = "Survey" หรือ "Inspector"
-        const subTypeLower = subType.toLowerCase();
-        
-        if (categories.indexOf(subTypeLower) !== -1) {
-          teams.push({
-            resourceId: resourceId,
-            resourceName: resourceName,
-            subType: subType,
-            teamNo: teamNo || 999
-          });
-          console.log('Found team:', resourceId, resourceName, subType, 'Team No:', teamNo);
-        }
+      // Filter 1: Status = Activated และมีข้อมูลครบ
+      if (status !== 'Activated' || !resourceId || !subType) {
+        continue;
       }
+      
+      // Filter 2: ตรงกับหมวดงานที่เลือก
+      const subTypeLower = subType.toLowerCase();
+      const matchesCategory = categories.indexOf(subTypeLower) !== -1;
+      
+      if (!matchesCategory) {
+        continue;
+      }
+      
+      // Filter 3: รองรับ Work Type (ถ้าระบุ)
+      if (workType && !teamSupportsWorkType(teamWorkTypes, workType)) {
+        console.log('❌ Team', resourceName, 'does NOT support', workType);
+        continue;
+      }
+      
+      console.log('✅ Team', resourceName, 'matches all filters');
+      
+      teams.push({
+        resourceId: resourceId,
+        resourceName: resourceName,
+        subType: subType,
+        teamNo: teamNo || 999,
+        workTypes: teamWorkTypes
+      });
     }
     
-    // เรียงตาม Team No. จากน้อยไปมาก
+    // เรียงตาม Team No.
     teams.sort(function(a, b) {
       return a.teamNo - b.teamNo;
     });
     
     console.log('Total teams found:', teams.length);
-    console.log('Teams sorted by Team No:', teams.map(function(t) { 
-      return t.resourceName + ' (No.' + t.teamNo + ')'; 
-    }).join(', '));
+    console.log('========================================');
     
     return teams;
     
@@ -716,93 +781,8 @@ function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
     return false;
   }
 }
-function testViewAllStatuses() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-    
-    if (!sheet) {
-      console.log('❌ ไม่พบ RFI_List sheet');
-      return;
-    }
-    
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) {
-      console.log('❌ ไม่มีข้อมูล');
-      return;
-    }
-    
-    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
-    const statusCount = {};
-    const statusExamples = {};
-    
-    for (let i = 0; i < data.length; i++) {
-      const rfiId = String(data[i][0] || '').trim();
-      const status = String(data[i][14] || '').trim();
-      
-      if (status) {
-        // นับจำนวน
-        statusCount[status] = (statusCount[status] || 0) + 1;
-        
-        // เก็บตัวอย่าง RFI ID
-        if (!statusExamples[status]) {
-          statusExamples[status] = [];
-        }
-        if (statusExamples[status].length < 3) {
-          statusExamples[status].push(rfiId);
-        }
-      }
-    }
-    
-    console.log('========== Status Summary ==========');
-    console.log('Total RFI Records:', lastRow - 1);
-    console.log('');
-    
-    // เรียงตามจำนวน
-    const sortedStatuses = Object.keys(statusCount).sort(function(a, b) {
-      return statusCount[b] - statusCount[a];
-    });
-    
-    sortedStatuses.forEach(function(status) {
-      const isInactive = isStatusInactive(status);
-      const icon = isInactive ? '✅ (IGNORED)' : '🔴 (BLOCKS TEAM)';
-      
-      console.log(icon + ' ' + status + ': ' + statusCount[status] + ' records');
-      console.log('   Examples: ' + statusExamples[status].join(', '));
-      console.log('');
-    });
-    
-    console.log('====================================');
-    
-  } catch (error) {
-    console.error('❌ Error:', error);
-  }
-}
 
 
-function testSpecificStatus() {
-  const testStatuses = [
-    'Draft',
-    'RFI Request Submitted',
-    'Survey Work Request Submitted',
-    'Cancelled',
-    'Cancel',
-    'ยกเลิก',
-    'Completed',
-    'เสร็จสิ้น',
-    'Closed',
-    'Rejected',
-    'In Progress',
-    'Approved'
-  ];
-  
-  console.log('========== Status Test ==========');
-  testStatuses.forEach(function(status) {
-    const isInactive = isStatusInactive(status);
-    const result = isInactive ? '✅ IGNORED (ไม่นับว่าทีมถูกจอง)' : '🔴 BLOCKS TEAM (นับว่าทีมถูกจอง)';
-    console.log(status + ': ' + result);
-  });
-  console.log('=================================');
-}
 
 /**
  * ✅ อัปเดต: นับจำนวนงานที่ทีมมี (รวม cache)
@@ -968,16 +948,18 @@ function sortTeamsByWorkload(teams, date, useCache) {
 }
 
 /**
- * ✅ FINAL: จัดทีมอัตโนมัติ (RFI Work) - Load Balanced
+ * ✅ FINAL: จัดทีมอัตโนมัติ (RFI Work) - Load Balanced + Work Type Filter
  */
-function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiId, useCache) {
+function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiId, useCache, workType) {
   try {
     // Set default values
     if (typeof excludeRfiId === 'undefined') excludeRfiId = null;
     if (typeof useCache === 'undefined') useCache = false;
+    if (typeof workType === 'undefined') workType = null;
     
-    console.log('========== Auto-assigning team (Load Balanced) ==========');
+    console.log('========== Auto-assigning team (Load Balanced + Work Type Filter) ==========');
     console.log('Category:', category);
+    console.log('Work Type:', workType); // ⭐ ใหม่
     console.log('Date:', date);
     console.log('Time:', startTime, '-', endTime);
     console.log('Use Cache:', useCache);
@@ -991,27 +973,38 @@ function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiI
     
     // ถ้าเลือกหมวดเดียว
     if (categories.length === 1) {
-      const teams = getTeamsByCategory(category);
+      // ⭐ ส่ง workType ไปด้วย
+      const teams = getTeamsByCategory(category, workType);
       
       if (teams.length === 0) {
         const categoryDisplay = category.replace(/,/g, ', ');
-        return {
-          success: false,
-          message: 'ไม่พบทีมงานในหมวด ' + categoryDisplay
-        };
+        
+        // ⭐ ปรับ error message
+        if (workType) {
+          return {
+            success: false,
+            message: 'ไม่พบทีม ' + categoryDisplay + ' ที่รองรับงาน "' + workType + '"\n' +
+                    '💡 ลองเลือกหมวดงานอื่น หรือตรวจสอบว่าทีมมีการตั้งค่า Work_Types ถูกต้อง'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'ไม่พบทีมงานในหมวด ' + categoryDisplay
+          };
+        }
       }
       
-      // ⭐ เรียงทีมตาม workload
+      // เรียงทีมตาม workload
       const sortedTeams = sortTeamsByWorkload(teams, date, useCache);
       
-      // หาทีมที่ว่าง (เลือกจากทีมที่มีงานน้อยที่สุดก่อน)
+      // หาทีมที่ว่าง
       for (let i = 0; i < sortedTeams.length; i++) {
         const team = sortedTeams[i];
         
         if (isTeamAvailable(team.resourceId, date, startTime, endTime, excludeRfiId)) {
           console.log('✅ Selected team:', team.resourceName, '(Workload:', team.workload + ')');
           
-          // ⭐ อัปเดต cache (ถ้าใช้)
+          // อัปเดต cache (ถ้าใช้)
           if (useCache) {
             incrementWorkloadCache(team.resourceId, date);
             LAST_SELECTED_TEAM[team.subType + '_' + date] = team.resourceId;
@@ -1023,19 +1016,29 @@ function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiI
             teamNames: team.resourceName,
             resourceIds: team.resourceId,
             teamNo: team.teamNo,
-            workload: team.workload
+            workload: team.workload,
+            workType: workType // ⭐ ส่ง work type กลับ
           };
         }
       }
       
-      return {
-        success: false,
-        message: 'ไม่มีทีมว่างในหมวด ' + category + ' สำหรับวันและเวลาที่เลือก'
-      };
+      // ⭐ ปรับ error message
+      if (workType) {
+        return {
+          success: false,
+          message: 'ไม่มีทีม ' + category + ' ที่รองรับงาน "' + workType + '" และว่างในเวลาที่เลือก\n' +
+                  '💡 ลองเลือกเวลาอื่น หรือวันอื่น'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'ไม่มีทีมว่างในหมวด ' + category + ' สำหรับวันและเวลาที่เลือก'
+        };
+      }
     }
     
-    // ถ้าเลือกหลายหมวด - ต้องหาทีมที่ว่างพร้อมกัน
-    return assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache);
+    // ถ้าเลือกหลายหมวด
+    return assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache, workType);
     
   } catch (error) {
     console.error('Error in assignTeamAutomatically:', error);
@@ -1048,38 +1051,49 @@ function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiI
 }
 
 /**
- * ✅ FINAL: จัดหลายทีม (Multi-Work) - Load Balanced
+ * ✅ FINAL: จัดหลายทีม (Multi-Work) - Load Balanced + Work Type Filter
  */
-function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache) {
+function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache, workType) {
   try {
     // Set default values
     if (typeof excludeRfiId === 'undefined') excludeRfiId = null;
     if (typeof useCache === 'undefined') useCache = false;
+    if (typeof workType === 'undefined') workType = null;
     
-    console.log('========== Assigning multiple teams (Load Balanced) ==========');
+    console.log('========== Assigning multiple teams (Load Balanced + Work Type Filter) ==========');
     console.log('Categories:', categories);
+    console.log('Work Type:', workType); // ⭐ ใหม่
     console.log('Use Cache:', useCache);
     
     const teamsByCategory = {};
     
-    // ดึงทีมแต่ละหมวด
+    // ดึงทีมแต่ละหมวด (⭐ ส่ง workType ไปด้วย)
     for (let i = 0; i < categories.length; i++) {
       const cat = categories[i];
-      const teams = getTeamsByCategory(cat);
+      const teams = getTeamsByCategory(cat, workType);
       
       if (teams.length === 0) {
-        return {
-          success: false,
-          message: 'ไม่พบทีมในหมวด ' + cat
-        };
+        // ⭐ ปรับ error message
+        if (workType) {
+          return {
+            success: false,
+            message: 'ไม่พบทีม ' + cat + ' ที่รองรับงาน "' + workType + '"\n' +
+                    '💡 ตรวจสอบว่าทีมมีการตั้งค่า Work_Types ถูกต้อง'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'ไม่พบทีมในหมวด ' + cat
+          };
+        }
       }
       
-      // ⭐ เรียงทีมตาม workload + Round Robin
+      // เรียงทีมตาม workload + Round Robin
       teamsByCategory[cat] = sortTeamsByWorkload(teams, date, useCache);
       console.log('Category ' + cat + ':', teamsByCategory[cat].length, 'teams');
     }
     
-    // ⚡ จำกัด combinations: เอาแค่ 3 ทีมแรกของแต่ละหมวด
+    // จำกัด combinations
     const MAX_TEAMS_PER_CATEGORY = 3;
     
     Object.keys(teamsByCategory).forEach(function(cat) {
@@ -1089,7 +1103,7 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
       }
     });
     
-    // ⚡ Cache team availability
+    // Cache team availability
     const teamAvailability = {};
     Object.keys(teamsByCategory).forEach(function(cat) {
       teamsByCategory[cat].forEach(function(team) {
@@ -1104,7 +1118,6 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
     // สร้างชุดค่าผสมทีมทั้งหมด
     function generateCombinations(index, currentCombo) {
       if (index === categories.length) {
-        // เช็คว่าทีมทั้งหมดว่างหรือไม่
         let allAvailable = true;
         let totalTeamNo = 0;
         let totalWorkload = 0;
@@ -1147,18 +1160,27 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
     console.log('Found ' + availableCombinations.length + ' available combinations');
     
     if (availableCombinations.length === 0) {
-      return {
-        success: false,
-        message: 'ไม่มีชุดทีมที่ว่างพร้อมกันสำหรับหมวด ' + categories.join(', ')
-      };
+      // ⭐ ปรับ error message
+      if (workType) {
+        return {
+          success: false,
+          message: 'ไม่มีชุดทีมที่รองรับงาน "' + workType + '" และว่างพร้อมกันสำหรับหมวด ' + categories.join(', ') + '\n' +
+                  '💡 ลองเลือกเวลาอื่น หรือเลือกหมวดเดียว'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'ไม่มีชุดทีมที่ว่างพร้อมกันสำหรับหมวด ' + categories.join(', ')
+        };
+      }
     }
     
-    // ⭐ เลือกชุดที่มี workload รวมน้อยที่สุด (ถ้าเท่ากัน เลือกตาม Team No.)
+    // เลือกชุดที่มี workload รวมน้อยที่สุด
     availableCombinations.sort(function(a, b) {
       if (a.totalWorkload !== b.totalWorkload) {
-        return a.totalWorkload - b.totalWorkload; // workload น้อยก่อน
+        return a.totalWorkload - b.totalWorkload;
       }
-      return a.totalTeamNo - b.totalTeamNo; // Team No. เล็กก่อน
+      return a.totalTeamNo - b.totalTeamNo;
     });
     
     const bestCombo = availableCombinations[0];
@@ -1173,7 +1195,7 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
     console.log('✅ Selected teams:', teamNames.join(', '));
     console.log('Total workload:', bestCombo.totalWorkload);
     
-    // ⭐ อัปเดต cache (ถ้าใช้)
+    // อัปเดต cache (ถ้าใช้)
     if (useCache) {
       bestCombo.teams.forEach(function(team) {
         incrementWorkloadCache(team.resourceId, date);
@@ -1187,7 +1209,8 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
       teamNames: teamNames.join(','),
       resourceIds: resourceIds.join(','),
       totalTeamNo: bestCombo.totalTeamNo,
-      totalWorkload: bestCombo.totalWorkload
+      totalWorkload: bestCombo.totalWorkload,
+      workType: workType // ⭐ ส่ง work type กลับ
     };
     
   } catch (error) {
@@ -1835,7 +1858,9 @@ function getRFIByDate(date) {
   }
 }
 
-// ===== Core Save Function =====
+/**
+ * ✅ อัปเดต: บันทึก RFI พร้อมกรอง Work Type
+ */
 function saveRFIRequirement(data) {
   try {
     console.log('========== saveRFIRequirement START ==========');
@@ -1851,7 +1876,7 @@ function saveRFIRequirement(data) {
       };
     }
     
-    // ตรวจสอบและดึงข้อมูลผู้ใช้จาก User sheet
+    // ตรวจสอบและดึงข้อมูลผู้ใช้
     const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
@@ -1867,25 +1892,24 @@ function saveRFIRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // จัดทีมอัตโนมัติ (ไม่ใช้ cache เพราะจะบันทึกลง Sheet)
-// จัดทีมอัตโนมัติ
-const teamAssignment = assignTeamAutomatically(
-  data.teamCategory, 
-  data.requestDate, 
-  data.startTime, 
-  data.endTime,
-  null,    // excludeRfiId
-  false    // useCache = false (บันทึกจริง)
-);
-
-// ⭐ เพิ่มการเช็ค
-if (!teamAssignment) {
-  console.error('teamAssignment is undefined!');
-  return {
-    success: false,
-    message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
-  };
-}
+    // ⭐ จัดทีมอัตโนมัติ (ส่ง workType ไปด้วย)
+    const teamAssignment = assignTeamAutomatically(
+      data.teamCategory, 
+      data.requestDate, 
+      data.startTime, 
+      data.endTime,
+      null,
+      false,
+      data.workType  // ⭐ ส่ง work type
+    );
+    
+    if (!teamAssignment) {
+      console.error('teamAssignment is undefined!');
+      return {
+        success: false,
+        message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
+      };
+    }
     
     if (!teamAssignment.success) {
       console.log('Team assignment failed:', teamAssignment.message);
@@ -1918,7 +1942,7 @@ if (!teamAssignment) {
     const combinedDescription = data.workType + ' - ' + data.description;
     console.log('Combined description:', combinedDescription);
     
-    // ⭐ เตรียมข้อมูล 40 columns (รองรับ Column AN)
+    // เตรียมข้อมูล 40 columns
     const rowData = [];
     for (let i = 0; i < 40; i++) {
       rowData.push('');
@@ -1927,22 +1951,22 @@ if (!teamAssignment) {
     const dateParts = data.requestDate.split('-');
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
-    rowData[0] = rfiId;                          // A - ID
-    rowData[2] = combinedDescription;            // C - description
-    rowData[3] = data.location;                  // D - Location
-    rowData[4] = formattedDate;                  // E - Request_Date
-    rowData[5] = data.startTime;                 // F - Start_Time
-    rowData[6] = data.endTime;                   // G - End_Time 
-    rowData[9] = validatedEmail;                 // J - Requester_Email
-    rowData[10] = validatedName;                 // K - Requester_Name
-    rowData[11] = teamAssignment.teamNames;      // L - Assigned_Inspector (ชื่อทีมที่จัดให้)
-    rowData[14] = 'RFI Request Submitted';       // O - Status
-    rowData[15] = currentTime;                   // P - Created_Timestamp
-    rowData[39] = 'RFI Work';                    // AN - Column AN (index 39) ⭐ เพิ่มบรรทัดนี้
+    rowData[0] = rfiId;
+    rowData[2] = combinedDescription;
+    rowData[3] = data.location;
+    rowData[4] = formattedDate;
+    rowData[5] = data.startTime;
+    rowData[6] = data.endTime;
+    rowData[9] = validatedEmail;
+    rowData[10] = validatedName;
+    rowData[11] = teamAssignment.teamNames;
+    rowData[14] = 'RFI Request Submitted';
+    rowData[15] = currentTime;
+    rowData[39] = 'RFI Work';
     
     console.log('Row data prepared with Column AN = "RFI Work"');
     
-    // ⭐ บันทึก 40 columns
+    // บันทึก 40 columns
     sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
@@ -1958,7 +1982,7 @@ if (!teamAssignment) {
         location: data.location,
         requesterName: validatedName,
         requesterEmail: validatedEmail,
-        assignedTeam: teamAssignment.teamNames, // ชื่อทีม เช่น "Survey Team A,Inspector Team B"
+        assignedTeam: teamAssignment.teamNames,
         teamCategory: categoryDisplay
       };
       emailSent = sendRFINotificationEmail(emailData, rfiId);
@@ -1969,9 +1993,10 @@ if (!teamAssignment) {
     
     const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
     let message = 'บันทึก RFI Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
+    message += '\nงาน: ' + data.workType;  // ⭐ แสดง work type
     message += '\nหมวดงาน: ' + categoryDisplay;
-    message += '\nจัดทีม: ' + teamAssignment.teamNames; // แสดงชื่อทีมทั้งหมด
-    message += '\nประเภท: RFI Work';  // ⭐ เพิ่มบรรทัดนี้
+    message += '\nจัดทีม: ' + teamAssignment.teamNames;
+    message += '\nประเภท: RFI Work';
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
     }
@@ -1987,7 +2012,8 @@ if (!teamAssignment) {
       rfiId: rfiId,
       emailSent: emailSent,
       userAdded: !userValidation.exists,
-      assignedTeam: teamAssignment.teamNames
+      assignedTeam: teamAssignment.teamNames,
+      workType: data.workType  // ⭐ ส่ง work type กลับ
     };
     
   } catch (error) {
@@ -3749,53 +3775,7 @@ function exampleUsageFromFrontend() {
 
 // ========== TEST FUNCTION ==========
 
-/**
- * ทดสอบ Integration
- */
-function testPostponeIntegration() {
-  console.log('========== TEST: Postpone Integration ==========');
-  
-  // 1. ตรวจสอบว่ามี function postponeRFIInspection หรือไม่
-  const hasIntegration = checkPostponeIntegration();
-  console.log('Has Integration:', hasIntegration);
-  
-  if (!hasIntegration) {
-    console.log('⚠️ Please add "RFI Calendar Cancel Postpone.gs" file first');
-    return;
-  }
-  
-  // 2. ทดสอบเรียก postponeRFIInspection()
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  try {
-    const result = postponeRFIInspection(
-      "TEST-RFI-001",              // RFI Number
-      "Test Description",          // Description
-      tomorrowStr,                 // New Date
-      "14:00",                     // New Start Time
-      "16:00",                     // New End Time
-      "Testing from RFI System",   // Postpone Reason
-      "test@example.com",          // Requester Email
-      "",                          // Guest Emails
-      "Test Location",             // New Location
-      "Survey Team A",             // Assigned Inspector
-      false,                       // Send Email = false (for testing)
-      30                           // Search Days
-    );
-    
-    console.log('========== TEST RESULT ==========');
-    console.log('Success:', result.success);
-    console.log('Message:', result.message);
-    console.log('Events Found:', result.rfiEventsFound);
-    console.log('Events Updated:', result.rfiEventsUpdated);
-    console.log('Emails Sent:', result.emailsSent);
-    
-  } catch (error) {
-    console.error('❌ Test Error:', error);
-  }
-}
+
 
 /**
  * ⭐ เปิดหน้า Survey Work Form
@@ -3949,38 +3929,50 @@ function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
 }
 
 /**
- * ✅ FINAL: จัดทีม Survey อัตโนมัติ - Load Balanced
+ * ✅ FINAL: จัดทีม Survey อัตโนมัติ - Load Balanced + Work Type Filter
  */
-function assignSurveyTeamAutomatically(date, startTime, endTime, useCache) {
+function assignSurveyTeamAutomatically(date, startTime, endTime, useCache, workType) {
   try {
     // Set default value
     if (typeof useCache === 'undefined') useCache = false;
+    if (typeof workType === 'undefined') workType = null;
     
-    console.log('========== Auto-assigning Survey team (Load Balanced) ==========');
+    console.log('========== Auto-assigning Survey team (Load Balanced + Work Type Filter) ==========');
+    console.log('Work Type:', workType); // ⭐ ใหม่
     console.log('Date:', date);
     console.log('Time:', startTime, '-', endTime);
     console.log('Use Cache:', useCache);
     
-    const teams = getSurveyTeams();
+    // ⭐ ส่ง workType ไปด้วย
+    const teams = getTeamsByCategory('Survey', workType);
     
     if (teams.length === 0) {
-      return {
-        success: false,
-        message: 'ไม่พบทีม Survey ในระบบ'
-      };
+      // ⭐ ปรับ error message
+      if (workType) {
+        return {
+          success: false,
+          message: 'ไม่พบทีม Survey ที่รองรับงาน "' + workType + '"\n' +
+                  '💡 ตรวจสอบว่ามีทีม Survey ที่ตั้งค่า Work_Types เป็น "*" หรือมี "' + workType + '"'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'ไม่พบทีม Survey ในระบบ'
+        };
+      }
     }
     
-    // ⭐ เรียงทีมตาม workload + Round Robin
+    // เรียงทีมตาม workload + Round Robin
     const sortedTeams = sortTeamsByWorkload(teams, date, useCache);
     
-    // หาทีมที่ว่าง (เลือกจากทีมที่มีงานน้อยที่สุดก่อน)
+    // หาทีมที่ว่าง
     for (let i = 0; i < sortedTeams.length; i++) {
       const team = sortedTeams[i];
       
       if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
         console.log('✅ Selected Survey team:', team.resourceName, '(Workload:', team.workload + ')');
         
-        // ⭐ อัปเดต cache (ถ้าใช้)
+        // อัปเดต cache (ถ้าใช้)
         if (useCache) {
           incrementWorkloadCache(team.resourceId, date);
           LAST_SELECTED_TEAM[team.subType + '_' + date] = team.resourceId;
@@ -3991,15 +3983,25 @@ function assignSurveyTeamAutomatically(date, startTime, endTime, useCache) {
           teamName: team.resourceName,
           resourceId: team.resourceId,
           teamNo: team.teamNo,
-          workload: team.workload
+          workload: team.workload,
+          workType: workType // ⭐ ส่ง work type กลับ
         };
       }
     }
     
-    return {
-      success: false,
-      message: 'ไม่มีทีม Survey ว่างสำหรับวันและเวลาที่เลือก'
-    };
+    // ⭐ ปรับ error message
+    if (workType) {
+      return {
+        success: false,
+        message: 'ไม่มีทีม Survey ที่รองรับงาน "' + workType + '" และว่างในเวลาที่เลือก\n' +
+                '💡 ลองเลือกเวลาอื่น หรือวันอื่น'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'ไม่มีทีม Survey ว่างสำหรับวันและเวลาที่เลือก'
+      };
+    }
     
   } catch (error) {
     console.error('Error in assignSurveyTeamAutomatically:', error);
@@ -4248,7 +4250,7 @@ function getSurveyAvailableEndTimes(date, startTime) {
 
 
 /**
- * ⭐ PROJECT A: บันทึก Survey Work พร้อมเรียก Calendar Service
+ * ✅ อัปเดต: บันทึก Survey Work พร้อมกรอง Work Type
  */
 function saveSurveyWorkRequirement(data) {
   try {
@@ -4281,12 +4283,13 @@ function saveSurveyWorkRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // จัดทีม Survey อัตโนมัติ
+    // ⭐ จัดทีม Survey อัตโนมัติ (ส่ง workType ไปด้วย)
     const teamAssignment = assignSurveyTeamAutomatically(
       data.requestDate, 
       data.startTime, 
       data.endTime,
-      false
+      false,
+      data.workType  // ⭐ ส่ง work type
     );
     
     if (!teamAssignment || !teamAssignment.success) {
@@ -4347,13 +4350,12 @@ function saveSurveyWorkRequirement(data) {
     sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // ⭐ เรียก Calendar Service (Project B)
+    // เรียก Calendar Service (ไม่เปลี่ยน)
     let calendarResult = null;
     
     try {
       console.log('Calling Calendar Service...');
       
-      // รวบรวม Team Emails
       const teamEmails = [];
       
       const surveyTeamEmails = getSurveyEmailList();
@@ -4369,17 +4371,17 @@ function saveSurveyWorkRequirement(data) {
       });
       
       calendarResult = callCalendarServiceWithRetry({
-  requestDate: data.requestDate,
-  startTime: data.startTime,
-  endTime: data.endTime,
-  description: combinedDescription,
-  location: data.location,
-  requesterName: validatedName,
-  requesterEmail: validatedEmail,
-  assignedTeam: teamAssignment.teamName,
-  surveyNo: surveyNo,
-  teamEmails: teamEmails
-}, 3);
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamName,
+        surveyNo: surveyNo,
+        teamEmails: teamEmails
+      }, 3);
       
       if (calendarResult.success) {
         console.log('✅ Calendar Event Created via Service');
@@ -4417,6 +4419,7 @@ function saveSurveyWorkRequirement(data) {
     
     let message = 'บันทึก Survey Work Request เรียบร้อยแล้ว';
     message += '\n📋 Survey NO: ' + surveyNo;
+    message += '\nงาน: ' + data.workType;  // ⭐ แสดง work type
     message += '\n👥 ทีมงาน: ' + teamAssignment.teamName;
     
     if (!userValidation.exists) {
@@ -4443,7 +4446,8 @@ function saveSurveyWorkRequirement(data) {
       emailSent: emailSent,
       calendarCreated: calendarResult ? calendarResult.success : false,
       userAdded: !userValidation.exists,
-      assignedTeam: teamAssignment.teamName
+      assignedTeam: teamAssignment.teamName,
+      workType: data.workType  // ⭐ ส่ง work type กลับ
     };
     
   } catch (error) {
@@ -4903,166 +4907,6 @@ ${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data
 }
 
 
-// ทดสอบดึงทีม Survey
-function testGetSurveyTeams() {
-  const teams = getSurveyTeams();
-  console.log('Survey Teams:', teams);
-}
-
-// ทดสอบ Available Slots
-function testSurveySlots() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = tomorrow.toISOString().split('T')[0];
-  
-  const slots = getSurveyAvailableTimeSlots(date);
-  console.log('Available slots:', slots);
-}
-
-// ===== ฟังก์ชันทดสอบสำหรับ "Cancel RFI Request Submitted" =====
-// วางโค้ดนี้ใน Code.gs และรันเพื่อทดสอบ
-
-/**
- * ทดสอบ Status ที่มีคำว่า "Cancel" ทั้งหมด
- */
-function testCancelStatuses() {
-  console.log('========== Test Cancel Statuses ==========');
-  
-  const cancelStatuses = [
-    'Cancel',
-    'Cancelled',
-    'Cancel RFI Request Submitted',        // ⭐ ต้องการให้ IGNORED
-    'RFI Request Cancelled',
-    'Cancelled by User',
-    'Auto-Cancelled',
-    'Pre-Cancelled',
-    'Cancellation Requested',
-    'Pending Cancellation'
-  ];
-  
-  cancelStatuses.forEach(function(status) {
-    const result = isStatusInactive(status);
-    const icon = result ? '✅' : '❌';
-    const text = result ? 'IGNORED (ถูกต้อง)' : 'BLOCKS (ผิดพลาด!)';
-    
-    console.log(icon + ' ' + status + ' → ' + text);
-  });
-  
-  console.log('==========================================');
-}
-
-/**
- * ทดสอบ Status ที่ไม่มีคำว่า "Cancel" ต้องไม่ถูก IGNORED
- */
-function testNonCancelStatuses() {
-  console.log('========== Test Non-Cancel Statuses ==========');
-  
-  const nonCancelStatuses = [
-    'Draft',
-    'RFI Request Submitted',
-    'Survey Work Request Submitted',
-    'In Progress',
-    'Approved',
-    'Rescheduled – Proceed to Site Inspection',
-    'Inspection Postponed'
-  ];
-  
-  nonCancelStatuses.forEach(function(status) {
-    const result = isStatusInactive(status);
-    const icon = result ? '❌' : '✅';
-    const text = result ? 'IGNORED (ผิดพลาด!)' : 'BLOCKS (ถูกต้อง)';
-    
-    console.log(icon + ' ' + status + ' → ' + text);
-  });
-  
-  console.log('==============================================');
-}
-
-/**
- * ทดสอบ Case-Insensitive (ไม่สนใจตัวพิมพ์เล็ก/ใหญ่)
- */
-function testCaseInsensitive() {
-  console.log('========== Test Case Insensitive ==========');
-  
-  const mixedCaseStatuses = [
-    'CANCEL RFI REQUEST SUBMITTED',        // ตัวพิมพ์ใหญ่ทั้งหมด
-    'Cancel RFI Request Submitted',        // Mixed Case
-    'cancel rfi request submitted',        // ตัวพิมพ์เล็กทั้งหมด
-    'CaNcEl RfI ReQuEsT SuBmItTeD'        // สลับ
-  ];
-  
-  mixedCaseStatuses.forEach(function(status) {
-    const result = isStatusInactive(status);
-    const icon = result ? '✅' : '❌';
-    const text = result ? 'IGNORED (ถูกต้อง)' : 'BLOCKS (ผิดพลาด!)';
-    
-    console.log(icon + ' "' + status + '" → ' + text);
-  });
-  
-  console.log('==========================================');
-}
-
-/**
- * ทดสอบความถูกต้องของการจองทีม
- * สร้างสถานการณ์จำลองเพื่อทดสอบ
- */
-function testTeamBookingScenario() {
-  console.log('========== Test Team Booking Scenario ==========');
-  console.log('');
-  console.log('สถานการณ์: ทีม Survey Team A มี RFI ดังนี้');
-  console.log('');
-  
-  const scenarios = [
-    {
-      rfiId: 'RFI001',
-      status: 'RFI Request Submitted',
-      date: '2025-01-15',
-      time: '10:00-12:00',
-      shouldBlock: true
-    },
-    {
-      rfiId: 'RFI002',
-      status: 'Cancel RFI Request Submitted',  // ⭐
-      date: '2025-01-15',
-      time: '13:00-15:00',
-      shouldBlock: false
-    },
-    {
-      rfiId: 'RFI003',
-      status: 'Completed',
-      date: '2025-01-15',
-      time: '15:00-17:00',
-      shouldBlock: false
-    }
-  ];
-  
-  console.log('ต้องการจอง: วันที่ 2025-01-15 เวลา 14:00-16:00');
-  console.log('');
-  
-  scenarios.forEach(function(scenario) {
-    const isInactive = isStatusInactive(scenario.status);
-    const willBlock = !isInactive;
-    const icon = willBlock === scenario.shouldBlock ? '✅' : '❌';
-    
-    console.log(icon + ' ' + scenario.rfiId + ' (' + scenario.status + ')');
-    console.log('   เวลา: ' + scenario.time);
-    console.log('   คาดว่าจะ Block: ' + (scenario.shouldBlock ? 'ใช่' : 'ไม่'));
-    console.log('   จริง: ' + (willBlock ? 'Block' : 'ไม่ Block'));
-    console.log('   ผลลัพธ์: ' + (willBlock === scenario.shouldBlock ? '✅ ถูกต้อง' : '❌ ผิดพลาด'));
-    console.log('');
-  });
-  
-  console.log('สรุป:');
-  console.log('• RFI001 (RFI Request Submitted) → จะ Block การจอง');
-  console.log('• RFI002 (Cancel RFI Request Submitted) → ไม่ Block การจอง ✅');
-  console.log('• RFI003 (Completed) → ไม่ Block การจอง');
-  console.log('');
-  console.log('ดังนั้น สามารถจอง 14:00-16:00 ได้ เพราะ:');
-  console.log('• RFI001 จบเวลา 12:00 (ก่อนหน้า 14:00)');
-  console.log('• RFI002 ถูกยกเลิกแล้ว (ไม่นับ)');
-  console.log('• RFI003 เสร็จสิ้นแล้ว (ไม่นับ)');
-  console.log('===============================================');
-}
 
 /**
  * รันทดสอบทั้งหมด
@@ -5091,33 +4935,7 @@ function runAllCancelTests() {
   console.log('╚════════════════════════════════════════════╝');
 }
 
-/**
- * ทดสอบแบบเฉพาะเจาะจง "Cancel RFI Request Submitted"
- */
-function testCancelRFIRequestSubmitted() {
-  console.log('========== Test "Cancel RFI Request Submitted" ==========');
-  
-  const status = 'Cancel RFI Request Submitted';
-  const result = isStatusInactive(status);
-  
-  console.log('Status: "' + status + '"');
-  console.log('ผลลัพธ์: ' + (result ? 'IGNORED ✅' : 'BLOCKS ❌'));
-  console.log('คำอธิบาย: ' + (result ? 
-    'ถูกต้อง - ทีมจะไม่ถูก Block เพราะ RFI นี้ยกเลิกแล้ว' : 
-    'ผิดพลาด - ควรจะ IGNORED แต่กลับ BLOCKS อยู่'));
-  
-  if (result) {
-    console.log('');
-    console.log('✅ ระบบทำงานถูกต้อง!');
-    console.log('   Status ที่มีคำว่า "Cancel" จะถูก IGNORED โดยอัตโนมัติ');
-  } else {
-    console.log('');
-    console.log('❌ เกิดข้อผิดพลาด!');
-    console.log('   กรุณาตรวจสอบฟังก์ชัน isStatusInactive()');
-  }
-  
-  console.log('========================================================');
-}
+
 
 /**
  * ⭐ สร้าง Sub Calendar สำหรับ Survey Work
@@ -5178,81 +4996,6 @@ function createSurveyWorkCalendar() {
   }
 }
 
-function testColumnAN() {
-  try {
-    console.log('========== Test Column AN ==========');
-    
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-    
-    if (!sheet) {
-      console.log('❌ RFI_List sheet not found');
-      return;
-    }
-    
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) {
-      console.log('❌ No data rows');
-      return;
-    }
-    
-    // ดึง Column A (ID), Column O (Status), Column AN (Type)
-    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();        // Column A
-    const statusData = sheet.getRange(2, 15, lastRow - 1, 1).getValues(); // Column O
-    const typeData = sheet.getRange(2, 40, lastRow - 1, 1).getValues();   // Column AN
-    
-    console.log('Total Records:', lastRow - 1);
-    console.log('');
-    
-    let rfiWorkCount = 0;
-    let surveyWorkCount = 0;
-    let emptyCount = 0;
-    
-    console.log('Recent 10 Records:');
-    console.log('─────────────────────────────────────────────────');
-    
-    const startIdx = Math.max(0, data.length - 10);
-    
-    for (let i = startIdx; i < data.length; i++) {
-      const id = String(data[i][0] || '').trim();
-      const status = String(statusData[i][0] || '').trim();
-      const type = String(typeData[i][0] || '').trim();
-      
-      let icon = '❓';
-      if (type === 'RFI Work') {
-        icon = '📋';
-        rfiWorkCount++;
-      } else if (type === 'Survey Work') {
-        icon = '🗺️';
-        surveyWorkCount++;
-      } else {
-        icon = '⚠️';
-        emptyCount++;
-      }
-      
-      console.log(icon + ' ' + id + ' | Status: ' + status + ' | Type: ' + (type || '(empty)'));
-    }
-    
-    console.log('─────────────────────────────────────────────────');
-    console.log('');
-    console.log('Summary:');
-    console.log('📋 RFI Work:', rfiWorkCount);
-    console.log('🗺️ Survey Work:', surveyWorkCount);
-    console.log('⚠️ Empty/Other:', emptyCount);
-    console.log('');
-    
-    if (emptyCount > 0) {
-      console.log('⚠️ Warning: มี ' + emptyCount + ' records ที่ Column AN ว่าง');
-      console.log('   ควรอัปเดตข้อมูลเก่าให้มี Column AN');
-    } else {
-      console.log('✅ All records have Column AN populated!');
-    }
-    
-    console.log('====================================');
-    
-  } catch (error) {
-    console.error('❌ Error:', error);
-  }
-}
 
 /**
  * อัปเดตข้อมูลเก่าให้มี Column AN = "RFI Work"
@@ -5321,34 +5064,7 @@ function updateOldRecordsColumnAN() {
 }
 
 
-/**
- * ทดสอบดึง Team Emails
- */
-function testGetTeamEmails() {
-  console.log('========== Test Get Team Emails ==========');
-  
-  const testTeams = [
-    'Survey Team A',
-    'Survey Team A,Lab Team B',
-    'Survey Team A, Lab Team A, Inspector Team A'
-  ];
-  
-  testTeams.forEach(function(teamNames) {
-    console.log('\n📝 Testing with teams:', teamNames);
-    const emails = getTeamEmailsByTeamNames(teamNames);
-    
-    if (emails.length > 0) {
-      console.log('✅ Found', emails.length, 'team emails:');
-      emails.forEach(function(team) {
-        console.log('  -', team.name, '→', team.email);
-      });
-    } else {
-      console.log('⚠️ No team emails found');
-    }
-  });
-  
-  console.log('\n==========================================');
-}
+
 
 // ===== Performance & Helper Functions =====
 
@@ -5708,97 +5424,7 @@ function getTeamAssignmentFailureReason(category, date, startTime, endTime) {
   }
 }
 
-/**
- * 🧪 ทดสอบฟังก์ชันที่ปรับปรุง
- */
-function testOptimizedFunctions() {
-  console.log('========== Test Optimized Functions ==========');
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = tomorrow.toISOString().split('T')[0];
-  
-  // 1. Test getRFIByDate
-  console.log('\n1. Testing getRFIByDate()...');
-  const rfis = getRFIByDate(date);
-  console.log('Found RFIs:', rfis.length);
-  
-  // 2. Test getAvailableTimeSlots
-  console.log('\n2. Testing getAvailableTimeSlots()...');
-  const startTime = new Date().getTime();
-  const slots = getAvailableTimeSlots(date, 'Survey');
-  const endTime = new Date().getTime();
-  console.log('Found slots:', slots.length);
-  console.log('⚡ Time taken:', (endTime - startTime) + 'ms');
-  
-  // 3. Test getNoSlotsReason
-  console.log('\n3. Testing getNoSlotsReason()...');
-  const reason = getNoSlotsReason(date, 'Survey');
-  console.log('Reason:', reason.message);
-  
-  // 4. Test getAvailableTeamsWithSlots
-  console.log('\n4. Testing getAvailableTeamsWithSlots()...');
-  const teams = getAvailableTeamsWithSlots(date, 'Survey');
-  teams.forEach(function(team) {
-    console.log('-', team.teamName + ':', team.totalBookings + ' bookings');
-  });
-  
-  // 5. Test validateRFIRequest
-  console.log('\n5. Testing validateRFIRequest()...');
-  const testData = {
-    requestDate: date,
-    startTime: '14:00',
-    endTime: '15:00',
-    description: 'Test',
-    location: 'Test Location',
-    requesterEmail: 'test@example.com'
-  };
-  const validation = validateRFIRequest(testData);
-  console.log('Valid:', validation.valid);
-  
-  console.log('\n========== Test Complete ==========');
-}
 
-
-/**
- * 🧪 ทดสอบ Survey_NO
- */
-function testSurveyNo() {
-  console.log('========== Test Survey_NO ==========');
-  
-  // Test 1: ดูว่ามี Survey Work อยู่แล้วกี่ตัว
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-  const lastRow = sheet.getLastRow();
-  
-  if (lastRow > 1) {
-    const typeData = sheet.getRange(2, 40, lastRow - 1, 1).getValues();
-    const surveyNoData = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
-    
-    let count = 0;
-    console.log('\n📋 Survey Work ที่มีอยู่:');
-    
-    for (let i = 0; i < typeData.length; i++) {
-      const type = String(typeData[i][0] || '').trim();
-      const surveyNo = String(surveyNoData[i][0] || '').trim();
-      
-      if (type === 'Survey Work') {
-        count++;
-        console.log(count + '. Survey NO:', surveyNo || '(ไม่มี)');
-      }
-    }
-    
-    console.log('\nTotal Survey Work:', count);
-  }
-  
-  // Test 2: ดูว่า Order ถัดไปคือเลขไหน
-  const nextOrder = getNextOrderSurvey();
-  console.log('\n📊 Next Order_Survey:', nextOrder);
-  
-  const nextSurveyNo = 'SW-' + String(nextOrder).padStart(4, '0');
-  console.log('📋 Next Survey_NO:', nextSurveyNo);
-  
-  console.log('\n====================================');
-}
 
 /**
  * 🔍 Debug: ดูว่ามี Status อะไรบ้างในระบบ
@@ -6105,28 +5731,6 @@ function updateResourcesSheetStructure() {
   }
 }
 
-function testGetTeamEmailsFixed() {
-  console.log('========== Test Get Team Emails ==========');
-  
-  const testTeams = 'Survey Team A';
-  console.log('Testing with teams:', testTeams);
-  
-  const emails = getTeamEmailsByTeamNames(testTeams);
-  
-  console.log('Result:', emails.length, 'emails found');
-  emails.forEach(function(team) {
-    console.log('✅', team.name, '→', team.email);
-  });
-  
-  if (emails.length === 0) {
-    console.log('⚠️ No emails found - please check:');
-    console.log('   1. Resources sheet has Contact_Email column (F)');
-    console.log('   2. Teams have email addresses');
-    console.log('   3. Status = "Activated"');
-  }
-  
-  console.log('==========================================');
-}
 
 /**
  * 🔍 Debug: แสดงชื่อ Sheets ทั้งหมด
@@ -6188,34 +5792,6 @@ function debugListAllSheets() {
   console.log('===============================================');
 }
 
-function testGetTeamEmailsDebug() {
-  console.log('\n\n');
-  console.log('╔════════════════════════════════════════════╗');
-  console.log('║   Test Get Team Emails (Debug Version)    ║');
-  console.log('╚════════════════════════════════════════════╝');
-  console.log('\n');
-  
-  const testTeams = 'Survey Team A';
-  const emails = getTeamEmailsByTeamNames(testTeams);
-  
-  console.log('\n');
-  console.log('╔════════════════════════════════════════════╗');
-  console.log('║              Final Result                  ║');
-  console.log('╚════════════════════════════════════════════╝');
-  
-  if (emails.length > 0) {
-    console.log('✅ SUCCESS! Found', emails.length, 'email(s):');
-    emails.forEach(function(team, index) {
-      console.log((index + 1) + '.', team.name);
-      console.log('   Email:', team.email);
-      console.log('   Role:', team.role);
-    });
-  } else {
-    console.log('❌ No emails found');
-  }
-  
-  console.log('\n');
-}
 
 
 function manualDebugResources() {
@@ -6244,123 +5820,7 @@ function manualDebugResources() {
   console.log('==================================');
 }
 
-/**
- * 🆕 Test Function ใหม่ - Force Refresh
- */
-function testGetTeamEmailsV2() {
-  console.log('\n╔════════════════════════════════════════════╗');
-  console.log('║       Test Get Team Emails V2 (NEW)       ║');
-  console.log('╚════════════════════════════════════════════╝\n');
-  
-  const testTeamName = 'Survey Team A';
-  console.log('🔍 Testing with team:', testTeamName);
-  console.log('');
-  
-  // เรียก function ตรง ๆ
-  try {
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    console.log('✅ Spreadsheet:', spreadsheet.getName());
-    
-    const resourceSheet = spreadsheet.getSheetByName('Resources');
-    
-    if (!resourceSheet) {
-      console.log('❌ Resources sheet not found!');
-      return;
-    }
-    
-    console.log('✅ Resources sheet found!');
-    console.log('   Last Row:', resourceSheet.getLastRow());
-    console.log('   Last Column:', resourceSheet.getLastColumn());
-    console.log('');
-    
-    const lastRow = resourceSheet.getLastRow();
-    if (lastRow <= 1) {
-      console.log('❌ No data in Resources sheet');
-      return;
-    }
-    
-    // อ่านข้อมูล: B (Name), E (Status), F (Email)
-    const data = resourceSheet.getRange(2, 2, lastRow - 1, 5).getValues();
-    
-    console.log('📊 Reading data from rows 2 to', lastRow);
-    console.log('Total rows to check:', data.length);
-    console.log('');
-    
-    const result = [];
-    let checkedCount = 0;
-    let activatedCount = 0;
-    
-    for (let i = 0; i < data.length; i++) {
-      checkedCount++;
-      
-      const resourceName = String(data[i][0] || '').trim();  // Column B
-      const subType = String(data[i][1] || '').trim();       // Column C
-      const teamNo = data[i][2];                              // Column D
-      const status = String(data[i][3] || '').trim();        // Column E
-      const contactEmail = String(data[i][4] || '').trim();  // Column F
-      
-      // Debug first 3 rows
-      if (i < 3) {
-        console.log('Row ' + (i + 2) + ':');
-        console.log('  Name:', resourceName);
-        console.log('  Status:', status);
-        console.log('  Email:', contactEmail);
-        console.log('');
-      }
-      
-      if (status === 'Activated') {
-        activatedCount++;
-      }
-      
-      // เช็คว่าตรงกับชื่อที่ต้องการหรือไม่
-      if (resourceName === testTeamName && 
-          status === 'Activated' && 
-          contactEmail && 
-          contactEmail.includes('@')) {
-        
-        result.push({
-          email: contactEmail,
-          name: resourceName,
-          role: 'Team Member'
-        });
-        
-        console.log('✅ FOUND MATCH!');
-        console.log('   Name:', resourceName);
-        console.log('   Email:', contactEmail);
-      }
-    }
-    
-    console.log('');
-    console.log('─────────────────────────────────────────────');
-    console.log('Summary:');
-    console.log('  Rows checked:', checkedCount);
-    console.log('  Activated teams:', activatedCount);
-    console.log('  Matches found:', result.length);
-    console.log('─────────────────────────────────────────────');
-    
-    if (result.length > 0) {
-      console.log('');
-      console.log('✅ SUCCESS! Found', result.length, 'email(s):');
-      result.forEach(function(team, index) {
-        console.log((index + 1) + '.', team.name, '→', team.email);
-      });
-    } else {
-      console.log('');
-      console.log('❌ No matching emails found');
-      console.log('');
-      console.log('💡 Please check:');
-      console.log('   1. Team name = "' + testTeamName + '" (exact match)');
-      console.log('   2. Status = "Activated"');
-      console.log('   3. Contact_Email has valid email');
-    }
-    
-  } catch (error) {
-    console.error('❌ Error:', error.toString());
-    console.error('Stack:', error.stack);
-  }
-  
-  console.log('\n');
-}
+
 
 function quickTestTeamEmails() {
   const emails = getTeamEmailsByTeamNames('Survey Team A');
@@ -6737,96 +6197,8 @@ function validateAndGetUser(email, name) {
   }
 }
 
-/**
- * ✅ อัปเดต: ทดสอบ Load Balancing พร้อม Cache
- */
-function testLoadBalancing() {
-  console.log('========== Test Load Balancing (with Cache) ==========');
-  
-  // ⭐ Reset cache ก่อนทดสอบ
-  resetWorkloadCache();
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = tomorrow.toISOString().split('T')[0];
-  
-  const timeSlots = [
-    ['09:00', '10:00'],
-    ['10:00', '11:00'],
-    ['11:00', '12:00'],
-    ['13:00', '14:00'],
-    ['14:00', '15:00']
-  ];
-  
-  console.log('\nจอง Survey Team 5 ครั้งในวันเดียวกัน:');
-  console.log('Date:', date);
-  console.log('─────────────────────────────────────');
-  
-  timeSlots.forEach(function(slot, index) {
-    const result = assignSurveyTeamAutomatically(date, slot[0], slot[1], true); // ⭐ useCache = true
-    
-    if (result.success) {
-      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→', 
-                  result.teamName, 
-                  '(Workload before:', result.workload + ')');
-    } else {
-      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→ ไม่มีทีมว่าง');
-    }
-  });
-  
-  console.log('\n======================================');
-  console.log('ผลลัพธ์ที่คาดหวัง:');
-  console.log('1. ควรเลือกทีมที่มี workload น้อยที่สุดก่อน');
-  console.log('2. ถ้า workload เท่ากัน ใช้ Round Robin สลับกัน');
-  console.log('3. ทีมที่ถูกเลือกจะมี workload เพิ่มใน cache');
-  console.log('======================================');
-}
 
-/**
- * ✅ อัปเดต: ทดสอบ Multi-Work พร้อม Cache
- */
-function testMultiWorkLoadBalancing() {
-  console.log('========== Test Multi-Work Load Balancing (with Cache) ==========');
-  
-  // ⭐ Reset cache ก่อนทดสอบ
-  resetWorkloadCache();
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = tomorrow.toISOString().split('T')[0];
-  
-  // จอง Survey + Lab 3 ครั้ง
-  const categories = ['Survey', 'Lab'];
-  
-  console.log('\nจอง Survey+Lab 3 ครั้งในวันเดียวกัน:');
-  console.log('Date:', date);
-  console.log('─────────────────────────────────────');
-  
-  const timeSlots = [
-    ['09:00', '10:00'],
-    ['11:00', '12:00'],
-    ['14:00', '15:00']
-  ];
-  
-  timeSlots.forEach(function(slot, index) {
-    const result = assignMultipleTeams(categories, date, slot[0], slot[1], null, true); // ⭐ useCache = true
-    
-    if (result.success) {
-      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→', 
-                  result.teamNames,
-                  '(Total Workload:', result.totalWorkload + ')');
-    } else {
-      console.log((index + 1) + '.', slot[0] + '-' + slot[1], '→ ไม่มีทีมว่าง');
-    }
-  });
-  
-  console.log('\n======================================');
-  console.log('ผลลัพธ์ที่คาดหวัง:');
-  console.log('1. ควรเลือกชุดทีมที่มี total workload น้อยที่สุด');
-  console.log('2. ไม่ควรเลือกทีมเดิมซ้ำ (ควรสลับกัน)');
-  console.log('3. workload ใน cache ควรเพิ่มขึ้นทุกครั้ง');
-  console.log('======================================');
-}
+
 
 /**
  * 🧪 ดู Workload ของแต่ละทีม
@@ -6862,72 +6234,10 @@ function viewTeamWorkload() {
 
 
 
-function testQuickFix() {
-  console.log('========== Test Quick Fix ==========');
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = tomorrow.toISOString().split('T')[0];
-  
-  // Test 1: Single Team
-  console.log('\n1. Testing Single Team:');
-  const result1 = assignTeamAutomatically('Survey', date, '09:00', '10:00');
-  console.log('Result:', result1 ? 'OK' : 'UNDEFINED');
-  console.log('Success:', result1 ? result1.success : 'N/A');
-  
-  // Test 2: Multi Team
-  console.log('\n2. Testing Multi Team:');
-  const result2 = assignTeamAutomatically('Survey,Lab', date, '11:00', '12:00');
-  console.log('Result:', result2 ? 'OK' : 'UNDEFINED');
-  console.log('Success:', result2 ? result2.success : 'N/A');
-  
-  // Test 3: Survey Team
-  console.log('\n3. Testing Survey Team:');
-  const result3 = assignSurveyTeamAutomatically(date, '14:00', '15:00');
-  console.log('Result:', result3 ? 'OK' : 'UNDEFINED');
-  console.log('Success:', result3 ? result3.success : 'N/A');
-  
-  console.log('\n====================================');
-}
 
 
-/**
- * ทดสอบสร้าง Survey Work Event
- */
-function testSurveyWorkCalendarEvent() {
-  console.log('========== Test Survey Work Calendar Event ==========');
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  const testData = {
-    requestDate: tomorrowStr,
-    startTime: '14:00',
-    endTime: '15:00',
-    description: 'Test Survey Work Event',
-    location: 'Test Location',
-    requesterName: 'Test User',
-    requesterEmail: 'test@example.com',
-    assignedTeam: 'Survey Team A'
-  };
-  
-  const result = createSurveyWorkCalendarEvent(testData, 'TEST-001', 'SW-9999');
-  
-  console.log('========== Result ==========');
-  console.log('Success:', result.success);
-  
-  if (result.success) {
-    console.log('✅ Event Created!');
-    console.log('Event ID:', result.eventId);
-    console.log('Guests:', result.guestsCount);
-    console.log('Title:', result.eventTitle);
-  } else {
-    console.log('❌ Failed:', result.message);
-  }
-  
-  console.log('==============================');
-}
+
+
 
 /**
  * 🔍 ค้นหา Event (Fixed - ใช้ + แทน ,)
@@ -7106,32 +6416,7 @@ function createCentralSurveyCalendar() {
   }
 }
 
-// ใน Project A
-function testCallCalendarService() {
-  const testData = {
-    requestDate: '2025-10-25',
-    startTime: '14:00',
-    endTime: '15:00',
-    description: 'Test from Project A',
-    location: 'Test Location',
-    requesterName: 'Test User',
-    requesterEmail: 'test@example.com',
-    assignedTeam: 'Survey Team A',
-    surveyNo: 'SW-TEST-002',
-    teamEmails: ['team@example.com']
-  };
-  
-  const result = callCalendarService(testData);
-  
-  Logger.log('Result:', JSON.stringify(result));
-  
-  if (result.success) {
-    Logger.log('✅ SUCCESS!');
-    Logger.log('Event ID:', result.data.eventId);
-  } else {
-    Logger.log('❌ FAILED:', result.message);
-  }
-}
+
 
 // ===== Code.gs =====
 
@@ -7310,4 +6595,255 @@ function callCalendarServiceWithRetry(eventData, maxRetries) {
     success: false,
     message: 'Failed after ' + maxRetries + ' attempts. Last error: ' + lastError
   };
+}
+
+
+/**
+ * ⭐ ใหม่: เพิ่ม Column "Work_Category" ใน Sheet "Work"
+ * วิธีใช้: รัน function นี้ครั้งเดียว
+ */
+function addWorkCategoryColumn() {
+  try {
+    console.log('========== Adding Work_Category Column ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
+    
+    if (!sheet) {
+      throw new Error('ไม่พบ Sheet "Work"');
+    }
+    
+    const lastColumn = sheet.getLastColumn();
+    console.log('Current columns:', lastColumn);
+    
+    // เช็คว่ามี Column "Work_Category" แล้วหรือยัง
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    const hasCategoryColumn = headers.indexOf('Work_Category') !== -1;
+    
+    if (hasCategoryColumn) {
+      console.log('✅ Work_Category column already exists');
+      SpreadsheetApp.getUi().alert(
+        'Column มีอยู่แล้ว',
+        'Sheet "Work" มี Column "Work_Category" อยู่แล้ว',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+      return;
+    }
+    
+    // เพิ่ม Column "Work_Category" (Column C)
+    const headerRow = 1;
+    const newColumnIndex = 3; // Column C
+    
+    // ตรวจสอบว่า Column C ว่างหรือไม่
+    const columnCHeader = sheet.getRange(headerRow, newColumnIndex).getValue();
+    
+    if (columnCHeader && columnCHeader !== '') {
+      console.log('⚠️ Column C is not empty:', columnCHeader);
+      
+      const ui = SpreadsheetApp.getUi();
+      const response = ui.alert(
+        'Column C ไม่ว่าง',
+        'Column C มีข้อมูลอยู่แล้ว: "' + columnCHeader + '"\n\n' +
+        'ต้องการเพิ่ม Column ใหม่ต่อท้ายแทนไหม?',
+        ui.ButtonSet.YES_NO
+      );
+      
+      if (response === ui.Button.YES) {
+        // เพิ่มท้ายสุด
+        const newCol = lastColumn + 1;
+        sheet.getRange(headerRow, newCol).setValue('Work_Category');
+        
+        // Format header
+        sheet.getRange(headerRow, newCol)
+          .setFontWeight('bold')
+          .setBackground('#1877f2')
+          .setFontColor('#ffffff')
+          .setHorizontalAlignment('center');
+        
+        console.log('✅ Added Work_Category at column', newCol);
+      } else {
+        console.log('❌ User cancelled');
+        return;
+      }
+    } else {
+      // Column C ว่าง - ใส่ได้เลย
+      sheet.getRange(headerRow, newColumnIndex).setValue('Work_Category');
+      
+      // Format header
+      sheet.getRange(headerRow, newColumnIndex)
+        .setFontWeight('bold')
+        .setBackground('#1877f2')
+        .setFontColor('#ffffff')
+        .setHorizontalAlignment('center');
+      
+      console.log('✅ Added Work_Category at column C');
+    }
+    
+    // เพิ่ม Data Validation
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const categoryColumn = sheet.getRange(2, 3, lastRow - 1, 1); // หรือ column ที่เพิ่ม
+      
+      const rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['RFI Work', 'Survey Work'], true)
+        .setAllowInvalid(false)
+        .setHelpText('เลือก: RFI Work หรือ Survey Work')
+        .build();
+      
+      categoryColumn.setDataValidation(rule);
+      console.log('✅ Added data validation');
+    }
+    
+    // ตั้งค่าความกว้าง column
+    sheet.setColumnWidth(3, 150);
+    
+    console.log('========== Work_Category Column Added ==========');
+    
+    SpreadsheetApp.getUi().alert(
+      'เพิ่ม Column สำเร็จ! ✅',
+      'เพิ่ม Column "Work_Category" ใน Sheet "Work" แล้ว\n\n' +
+      '📝 ถัดไป: กรุณากรอกข้อมูล Work_Category ให้ครบทุกแถว\n' +
+      '   • RFI Work - สำหรับเว็บ Index\n' +
+      '   • Survey Work - สำหรับเว็บ Survey',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    SpreadsheetApp.getUi().alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถเพิ่ม Column ได้\n\nError: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * ⭐ ใหม่: เพิ่ม Column "Work_Types" ใน Sheet "Resources"
+ * วิธีใช้: รัน function นี้ครั้งเดียว
+ */
+function addWorkTypesColumn() {
+  try {
+    console.log('========== Adding Work_Types Column ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!sheet) {
+      throw new Error('ไม่พบ Sheet "Resources"');
+    }
+    
+    const lastColumn = sheet.getLastColumn();
+    console.log('Current columns:', lastColumn);
+    
+    // เช็คว่ามี Column "Work_Types" แล้วหรือยัง
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    const hasWorkTypesColumn = headers.indexOf('Work_Types') !== -1;
+    
+    if (hasWorkTypesColumn) {
+      console.log('✅ Work_Types column already exists');
+      SpreadsheetApp.getUi().alert(
+        'Column มีอยู่แล้ว',
+        'Sheet "Resources" มี Column "Work_Types" อยู่แล้ว',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+      return;
+    }
+    
+    // เพิ่ม Column "Work_Types" ต่อท้าย
+    const newColumnIndex = lastColumn + 1;
+    
+    sheet.getRange(1, newColumnIndex).setValue('Work_Types');
+    
+    // Format header
+    sheet.getRange(1, newColumnIndex)
+      .setFontWeight('bold')
+      .setBackground('#1877f2')
+      .setFontColor('#ffffff')
+      .setHorizontalAlignment('center');
+    
+    // ตั้งค่าความกว้าง column
+    sheet.setColumnWidth(newColumnIndex, 300);
+    
+    // เพิ่มข้อมูลตัวอย่าง (default = "*" สำหรับทีมที่มีอยู่)
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const ui = SpreadsheetApp.getUi();
+      const response = ui.alert(
+        'ตั้งค่าเริ่มต้น',
+        'ต้องการตั้งค่า Work_Types เป็น "*" (ทำได้ทุกงาน) สำหรับทีมที่มีอยู่ทั้งหมดไหม?\n\n' +
+        'คุณสามารถแก้ไขเป็นงานเฉพาะได้ภายหลัง',
+        ui.ButtonSet.YES_NO
+      );
+      
+      if (response === ui.Button.YES) {
+        const dataRange = sheet.getRange(2, newColumnIndex, lastRow - 1, 1);
+        const defaultValues = [];
+        
+        for (let i = 0; i < lastRow - 1; i++) {
+          defaultValues.push(['*']);
+        }
+        
+        dataRange.setValues(defaultValues);
+        console.log('✅ Set default Work_Types to "*"');
+      }
+    }
+    
+    console.log('✅ Added Work_Types at column', newColumnIndex);
+    console.log('========== Work_Types Column Added ==========');
+    
+    SpreadsheetApp.getUi().alert(
+      'เพิ่ม Column สำเร็จ! ✅',
+      'เพิ่ม Column "Work_Types" ใน Sheet "Resources" แล้ว\n\n' +
+      '📝 คำแนะนำ:\n' +
+      '   • "*" = ทำได้ทุกงาน (Universal Team)\n' +
+      '   • "Soil Testing,Concrete Quality Check" = ทำได้เฉพาะงานที่ระบุ\n\n' +
+      '⚠️ ใส่หลายงาน: คั่นด้วย comma (,) ไม่ต้องมีช่องว่าง',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    SpreadsheetApp.getUi().alert(
+      'เกิดข้อผิดพลาด',
+      'ไม่สามารถเพิ่ม Column ได้\n\nError: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * ⭐ ใหม่: Setup ทั้งหมดในครั้งเดียว
+ */
+function setupWorkTypeSystem() {
+  const ui = SpreadsheetApp.getUi();
+  
+  const response = ui.alert(
+    'Setup Work Type System',
+    'จะเพิ่ม Columns:\n' +
+    '1. "Work_Category" ใน Sheet "Work"\n' +
+    '2. "Work_Types" ใน Sheet "Resources"\n\n' +
+    'ดำเนินการต่อไหม?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    ui.alert('ยกเลิก', 'ไม่มีการเปลี่ยนแปลง', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Step 1: Add Work_Category
+  addWorkCategoryColumn();
+  
+  // Step 2: Add Work_Types
+  Utilities.sleep(1000); // รอ 1 วินาที
+  addWorkTypesColumn();
+  
+  ui.alert(
+    'Setup เสร็จสิ้น! 🎉',
+    '✅ เพิ่ม Column ทั้งหมดแล้ว\n\n' +
+    '📝 ขั้นตอนถัดไป:\n' +
+    '1. กรอก Work_Category ใน Sheet "Work"\n' +
+    '2. กรอก Work_Types ใน Sheet "Resources"\n' +
+    '3. ทดสอบระบบ',
+    ui.ButtonSet.OK
+  );
 }
