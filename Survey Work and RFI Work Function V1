@@ -1,4 +1,4 @@
-//Version 12 19/10/2025 12:30
+//Version 12 19/10/2025 15:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -6846,4 +6846,119 @@ function setupWorkTypeSystem() {
     '3. ทดสอบระบบ',
     ui.ButtonSet.OK
   );
+}
+
+
+/**
+ * 💡 แนะนำหมวดงานตาม Work Type
+ * (UX Enhancement - Optional Recommendation)
+ */
+function getRecommendedCategory(workType) {
+  try {
+    console.log('========== getRecommendedCategory ==========');
+    console.log('Work Type:', workType);
+    
+    if (!workType) {
+      return {
+        success: false,
+        recommended: null
+      };
+    }
+    
+    const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!resourceSheet) {
+      console.log('Resources sheet not found');
+      return {
+        success: false,
+        recommended: null
+      };
+    }
+    
+    const lastRow = resourceSheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        success: false,
+        recommended: null
+      };
+    }
+    
+    // ดึงข้อมูล: B (Resource_Name), C (Sub_Type), E (Status), I (Work_Types)
+    const data = resourceSheet.getRange(2, 2, lastRow - 1, 8).getValues();
+    
+    // นับจำนวนทีมแต่ละประเภทที่รองรับงานนี้
+    const categoryCount = {};
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const resourceName = String(row[0] || '').trim();
+      const subType = String(row[1] || '').trim();
+      const status = String(row[3] || '').trim();
+      const teamWorkTypes = String(row[7] || '').trim(); // Column I
+      
+      // เฉพาะทีมที่ Active
+      if (status !== 'Activated' || !subType) {
+        continue;
+      }
+      
+      // เช็คว่ารองรับงานนี้หรือไม่
+      const supportsWork = teamSupportsWorkType(teamWorkTypes, workType);
+      
+      if (supportsWork) {
+        if (!categoryCount[subType]) {
+          categoryCount[subType] = {
+            count: 0,
+            teams: []
+          };
+        }
+        categoryCount[subType].count++;
+        categoryCount[subType].teams.push(resourceName);
+        
+        console.log('✅ Team supports:', resourceName, '(', subType, ')');
+      }
+    }
+    
+    // ถ้าไม่มีทีมรองรับเลย
+    if (Object.keys(categoryCount).length === 0) {
+      console.log('⚠️ No teams support this work type');
+      return {
+        success: false,
+        recommended: null,
+        message: 'ไม่พบทีมที่รองรับงานนี้'
+      };
+    }
+    
+    // หาหมวดที่มีทีมรองรับมากที่สุด
+    let maxCount = 0;
+    let recommendedCategory = null;
+    
+    Object.keys(categoryCount).forEach(function(category) {
+      const count = categoryCount[category].count;
+      
+      if (count > maxCount) {
+        maxCount = count;
+        recommendedCategory = category;
+      }
+    });
+    
+    console.log('📊 Category counts:', JSON.stringify(categoryCount));
+    console.log('💡 Recommended:', recommendedCategory, '(', maxCount, 'teams)');
+    console.log('==========================================');
+    
+    return {
+      success: true,
+      recommended: recommendedCategory,
+      teamCount: maxCount,
+      allCategories: categoryCount,
+      teams: categoryCount[recommendedCategory].teams
+    };
+    
+  } catch (error) {
+    console.error('Error in getRecommendedCategory:', error);
+    return {
+      success: false,
+      recommended: null,
+      error: error.toString()
+    };
+  }
 }
