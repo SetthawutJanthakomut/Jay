@@ -2,7 +2,7 @@
 // ===== POSTPONE RFI INSPECTION (Full Version with Team Change Support) =====
 // ใช้งาน: เลือนตรวจ RFI พร้อมอัปเดต Calendar และส่งอีเมลแจ้ง (รองรับการเปลี่ยนทีม)
 
-const SURVEY_SPREADSHEET_ID = '1rWMUNNDbbLbHljs2GsU6fzrJDjHsutS7nMvElGUNTQk';
+//const SURVEY_SPREADSHEET_ID = '1rWMUNNDbbLbHljs2GsU6fzrJDjHsutS7nMvElGUNTQk';
 const CALENDAR_ID = 'primary';
 
 /**
@@ -1231,7 +1231,7 @@ function getTeamColors(assignedInspector) {
   try {
     if (!assignedInspector) return {};
     const requestedTeams = assignedInspector.split(',').map(t => t.trim());
-    const sheet = SpreadsheetApp.openById(SURVEY_SPREADSHEET_ID).getSheetByName('Resources');
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
     if (!sheet) return {};
     const lastRow = sheet.getLastRow();
     if (lastRow <= 1) return {};
