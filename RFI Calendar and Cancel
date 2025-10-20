@@ -1,5 +1,7 @@
 // Version 2 - Simplified (No Postpone, No Storage)
+// เพิ่มที่บรรทัดบนสุด (ถัดจาก CALENDAR_ID)
 const CALENDAR_ID = 'primary';
+const SPREADSHEET_ID = '1Qp7vANQ4Pt7MiHqNqLHbDcqxOLri0qj6hTp0Ki-Rjnc'; // ✅ เพิ่มบรรทัดนี้
 
 // ====== CREATE SURVEY FROM RFI ======
 function createSurveyFromRFI(uniqueId, rfiId, date, startTime, endTime, description, location, requesterName, requesterEmail, note, guest, SurveyEmail, Assigned_Inspector) {
@@ -189,11 +191,11 @@ function getDisplayNameFromEmail(email) {
     
     const cleanEmail = email.trim().toLowerCase();
     
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('User');
     
     if (!sheet) {
       console.log('⚠️ User sheet not found');
-      return email; // ถ้าไม่มี sheet ให้ return email เดิม
+      return email;
     }
     
     const lastRow = sheet.getLastRow();
@@ -202,11 +204,10 @@ function getDisplayNameFromEmail(email) {
       return email;
     }
     
-    // อ่าน Column A (Email) และ Column C (DisplayName)
-    const emailData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    // ✅ แก้ไข: Column B = UserEmail (2), Column C = DisplayName (3)
+    const emailData = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
     const displayNameData = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
     
-    // ค้นหา email ที่ตรงกัน
     for (let i = 0; i < emailData.length; i++) {
       const sheetEmail = String(emailData[i][0] || '').trim().toLowerCase();
       const displayName = String(displayNameData[i][0] || '').trim();
@@ -218,7 +219,7 @@ function getDisplayNameFromEmail(email) {
     }
     
     console.log(`⚠️ No DisplayName found for ${email}`);
-    return email; // ถ้าหาไม่เจอให้ return email เดิม
+    return email;
     
   } catch (error) {
     console.error('Error getting DisplayName:', error);
@@ -270,7 +271,8 @@ function getTeamColors(assignedInspector) {
     
     console.log(`🔍 Looking for colors for teams: ${requestedTeams.join(', ')}`);
     
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    // ✅ แก้: ใช้ openById แทน getActiveSpreadsheet
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Resources');
     
     if (!sheet) {
       console.log('⚠️ Resources sheet not found, using default colors');
@@ -1068,11 +1070,11 @@ function testCancel() {
 
 function testDisplayName() {
   // ทดสอบการดึง DisplayName
-  const email = 'test@example.com';
+  const email = 'surveymarine048@gmail.com';
   const displayName = getDisplayNameFromEmail(email);
   console.log(`Email: ${email} → DisplayName: ${displayName}`);
   
-  const emailList = 'test1@example.com, test2@example.com';
+  const emailList = 'surveymarine048@gmail.com, surveymarine049@gmail.com';
   const displayNames = getDisplayNamesFromEmails(emailList);
   console.log(`Email List: ${emailList}`);
   console.log(`DisplayNames: ${displayNames}`);
