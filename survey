@@ -1,4 +1,4 @@
-// version 1 18/10/2025 10:12
+<!--version 1 18/10/2025 15:50-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -417,37 +417,37 @@
     }
     
     function loadWorkTypes() {
-      const workTypeSelect = document.getElementById('workType');
-      workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
-      workTypeSelect.disabled = true;
+  const workTypeSelect = document.getElementById('workType');
+  workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
+  workTypeSelect.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(workTypes) {
+      workTypeSelect.innerHTML = '';
       
-      google.script.run
-        .withSuccessHandler(function(workTypes) {
-          workTypeSelect.innerHTML = '';
-          
-          if (!workTypes || workTypes.length === 0) {
-            workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน --</option>';
-            showMessage('ไม่พบข้อมูลประเภทงาน กรุณาเพิ่มข้อมูลใน Sheet "Work"', 'warning');
-          } else {
-            workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
-            
-            workTypes.forEach(function(workType) {
-              const option = document.createElement('option');
-              option.value = workType;
-              option.textContent = workType;
-              workTypeSelect.appendChild(option);
-            });
-            
-            workTypeSelect.disabled = false;
-          }
-        })
-        .withFailureHandler(function(error) {
-          console.error('Error loading work types:', error);
-          workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-          showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
-        })
-        .getWorkTypeList();
-    }
+      if (!workTypes || workTypes.length === 0) {
+        workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน Survey --</option>';
+        showMessage('ไม่พบข้อมูลประเภทงาน Survey กรุณาเพิ่มข้อมูลใน Sheet "Work"', 'warning');
+      } else {
+        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+        
+        workTypes.forEach(function(workType) {
+          const option = document.createElement('option');
+          option.value = workType;
+          option.textContent = workType;
+          workTypeSelect.appendChild(option);
+        });
+        
+        workTypeSelect.disabled = false;
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading work types:', error);
+      workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+      showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
+    })
+    .getWorkTypeList('Survey Work');  // ⭐ เพิ่ม parameter
+}
     
     // ✅ ใหม่: โหลดทั้งอีเมลและชื่อ (เหมือน index.html)
 function loadUserEmailAndName() {
