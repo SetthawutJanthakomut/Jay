@@ -1,4 +1,4 @@
-// version 1 17/10/2025 10:12
+<version 2 122/10/2025 8:12>
 <!DOCTYPE html>
 <html>
 <head>
@@ -141,9 +141,36 @@
       color: #666 !important;
     }
     
-    /* Team Category Button Styles */
     .team-category-section {
       margin-bottom: 20px;
+    }
+    
+    .recommendation-box {
+      display: none;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-left: 4px solid #10b981;
+      padding: 12px 15px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #065f46;
+      animation: slideDown 0.3s ease-out;
+    }
+    
+    .recommendation-box.show {
+      display: block;
+    }
+    
+    .recommendation-box strong {
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .recommendation-box .team-info {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #047857;
+      font-style: italic;
     }
     
     .team-buttons {
@@ -182,11 +209,50 @@
       box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
     }
     
+    .team-btn.recommended {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      position: relative;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .team-btn.recommended::before {
+      content: '\1F4A1';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      font-size: 20px;
+      animation: bounce 1s ease-in-out infinite;
+    }
+    
+    .team-btn.recommended:hover {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+      }
+    }
+    
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+    
     .team-btn .icon {
       font-size: 18px;
     }
     
-    /* Multi-Select Checkbox Styles */
     .multi-select-container {
       display: none;
       margin-top: 15px;
@@ -424,20 +490,18 @@
 <body>
   <div class="container">
     <div class="header-section" style="text-align: center; margin-bottom: 30px;">
-  <!-- Icon Container -->
-  <div style="display: inline-flex; align-items: center; justify-content: center; width: 65px; height: 65px; background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%); border-radius: 16px; margin-bottom: 12px; box-shadow: 0 6px 20px rgba(24, 119, 242, 0.3);">
-    <span style="font-size: 36px;">📋</span>
-  </div>
-  
-  <!-- Title with Icon Decoration -->
-  <h1>
-    <span style="display: inline-flex; align-items: center; gap: 10px;">
-      RFI Requirement System
-      <span style="font-size: 20px; color: #10b981;">✓</span>
-    </span>
-  </h1>
-  <p class="subtitle">ระบบบันทึก Request for Information</p>
-</div>
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 65px; height: 65px; background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%); border-radius: 16px; margin-bottom: 12px; box-shadow: 0 6px 20px rgba(24, 119, 242, 0.3);">
+        <span style="font-size: 36px;">📋</span>
+      </div>
+      
+      <h1>
+        <span style="display: inline-flex; align-items: center; gap: 10px;">
+          RFI Requirement System
+          <span style="font-size: 20px; color: #10b981;">✓</span>
+        </span>
+      </h1>
+      <p class="subtitle">ระบบบันทึก Request for Information</p>
+    </div>
     
     <div class="info-box">
       <strong>📌 ข้อกำหนด:</strong> สามารถจองได้ในวันถัดไปเท่านั้น<br>
@@ -447,9 +511,21 @@
     </div>
     
     <form id="rfiForm">
-      <!-- Team Category Selection -->
+      <div class="form-group">
+        <label for="workType">ประเภทงาน <span>*</span></label>
+        <select id="workType" name="workType" required>
+          <option value="">-- กำลังโหลด... --</option>
+        </select>
+        <div class="time-info">เลือกประเภทงานที่ต้องการก่อน ระบบจะแนะนำทีมงานให้</div>
+      </div>
+      
       <div class="form-group team-category-section">
-        <label>หมวดงาน <span>*</span></label>
+        <label>ทีมงาน <span>*</span></label>
+        
+        <div class="recommendation-box" id="recommendationBox">
+          <div id="recommendationText"></div>
+        </div>
+        
         <div class="team-buttons">
           <button type="button" class="team-btn" data-category="Survey">
             <span class="icon">🔍</span>
@@ -469,9 +545,8 @@
           </button>
         </div>
         
-        <!-- Multi-Select Checkboxes -->
         <div class="multi-select-container" id="multiSelectContainer">
-          <div class="multi-select-title">✓ เลือกหมวดงานที่ต้องการ (เลือกได้หลายหมวด)</div>
+          <div class="multi-select-title">✓ เลือกทีมงานที่ต้องการ (เลือกได้หลายทีม)</div>
           <div class="checkbox-group">
             <div class="checkbox-item">
               <input type="checkbox" id="cbSurvey" value="Survey">
@@ -492,20 +567,12 @@
         </div>
         
         <input type="hidden" id="teamCategory" name="teamCategory" required>
-        <div class="time-info">เลือกหมวดงานที่ต้องการ ระบบจะจัดทีมที่ว่างให้</div>
+        <div class="time-info">เลือกทีมงานตามคำแนะนำ หรือเลือกเองก็ได้</div>
       </div>
       
       <div class="form-group">
         <label for="requestDate">วันที่ต้องการ <span>*</span></label>
         <input type="date" id="requestDate" name="requestDate" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="workType">ประเภทงาน <span>*</span></label>
-        <select id="workType" name="workType" required>
-          <option value="">-- กำลังโหลด... --</option>
-        </select>
-        <div class="time-info">เลือกประเภทงานที่ต้องการ</div>
       </div>
       
       <div class="form-group">
@@ -525,36 +592,34 @@
       </div>
       
       <div class="form-group">
-  <label for="description">รายละเอียด RFI <span>*</span></label>
-  <textarea id="description" name="description" required 
-    placeholder="ระบุรายละเอียดให้ครบถ้วน: ประเภทงาน, ขอบเขต, วัตถุประสงค์, ข้อกำหนดพิเศษ"></textarea>
-  <div class="time-info">💡 ข้อมูลที่ชัดเจนช่วยลดเวลาติดต่อกลับเพื่อแก้ไข</div>
-</div>
+        <label for="description">รายละเอียด RFI <span>*</span></label>
+        <textarea id="description" name="description" required 
+          placeholder="ระบุรายละเอียดให้ครบถ้วน: ประเภทงาน, ขอบเขต, วัตถุประสงค์, ข้อกำหนดพิเศษ"></textarea>
+        <div class="time-info">💡 ข้อมูลที่ชัดเจนช่วยลดเวลาติดต่อกลับเพื่อแก้ไข</div>
+      </div>
 
-<div class="form-group">
-  <label for="location">สถานที่ <span>*</span></label>
-  <input type="text" id="location" name="location" required 
-    placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
-  <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
-</div>
+      <div class="form-group">
+        <label for="location">สถานที่ <span>*</span></label>
+        <input type="text" id="location" name="location" required 
+          placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
+        <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
+      </div>
       
-      <!-- ✅ อัปเดต: ชื่อผู้ขอ (ดึงจากระบบ + แก้ไขได้) -->
-<div class="form-group">
-  <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
-  <input type="text" id="requesterName" name="requesterName" required 
-         placeholder="กำลังโหลด..." readonly
-         style="background: #f0f7ff; cursor: wait;">
-  <div class="time-info" id="nameInfo">🔍 กำลังตรวจสอบข้อมูลผู้ใช้...</div>
-</div>
+      <div class="form-group">
+        <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
+        <input type="text" id="requesterName" name="requesterName" required 
+               placeholder="กำลังโหลด..." readonly
+               style="background: #f0f7ff; cursor: wait;">
+        <div class="time-info" id="nameInfo">🔍 กำลังตรวจสอบข้อมูลผู้ใช้...</div>
+      </div>
       
-<!-- ✅ ใหม่ -->
-<div class="form-group">
-  <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
-  <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
-         style="background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%); color: #1877f2; font-weight: 500; cursor: not-allowed; border-color: #1877f2;"
-         placeholder="กำลังโหลดอีเมลของคุณ...">
-  <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
-</div>
+      <div class="form-group">
+        <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
+        <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
+               style="background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%); color: #1877f2; font-weight: 500; cursor: not-allowed; border-color: #1877f2;"
+               placeholder="กำลังโหลดอีเมลของคุณ...">
+        <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
+      </div>
       
       <button type="submit" id="submitBtn">ส่ง RFI Request</button>
     </form>
@@ -573,38 +638,34 @@
   </div>
   
   <script>
-    let selectedTeamCategory = null;
-    let isMultiWork = false;
+    var selectedTeamCategory = null;
+    var isMultiWork = false;
+    var recommendedCategory = null;
     
-    // ✅ ใหม่
-window.onload = function() {
-  setMinDate();
-  loadWorkTypes();
-  initTeamCategoryButtons();
-  initCheckboxes();
-  loadUserEmailAndName();  // ⭐ เพิ่มบรรทัดนี้
-  showMessage('กรุณาเลือกหมวดงานและวันถัดไปจากวันที่ทำการจอง', 'info');
-};
+    window.onload = function() {
+      setMinDate();
+      loadWorkTypes();
+      initTeamCategoryButtons();
+      initCheckboxes();
+      loadUserEmailAndName();
+      showMessage('กรุณาเลือกประเภทงานก่อน ระบบจะแนะนำทีมงานที่เหมาะสมให้', 'info');
+    };
     
-    // Team Category Button Handler
     function initTeamCategoryButtons() {
-      const teamButtons = document.querySelectorAll('.team-btn');
-      const multiSelectContainer = document.getElementById('multiSelectContainer');
-      const multiWorkBtn = document.getElementById('multiWorkBtn');
+      var teamButtons = document.querySelectorAll('.team-btn');
+      var multiSelectContainer = document.getElementById('multiSelectContainer');
       
       teamButtons.forEach(function(btn) {
         btn.addEventListener('click', function() {
-          // Remove active from all buttons
           teamButtons.forEach(function(b) {
             b.classList.remove('active');
+            b.classList.remove('recommended');
           });
           
-          // Add active to clicked button
           this.classList.add('active');
           
-          const category = this.getAttribute('data-category');
+          var category = this.getAttribute('data-category');
           
-          // Check if it's multi-work button
           if (category === 'งานรวม') {
             isMultiWork = true;
             multiSelectContainer.classList.add('show');
@@ -617,15 +678,19 @@ window.onload = function() {
             clearAllCheckboxes();
             selectedTeamCategory = category;
             document.getElementById('teamCategory').value = category;
-            showMessage('เลือกหมวดงาน: ' + category, 'info', 2000);
+            
+            if (recommendedCategory && category === recommendedCategory) {
+              showMessage('✓ เลือกหมวดงาน: ' + category + ' (ตามคำแนะนำ)', 'success', 2000);
+            } else {
+              showMessage('เลือกหมวดงาน: ' + category, 'info', 2000);
+            }
           }
         });
       });
     }
     
-    // Checkbox Handler
     function initCheckboxes() {
-      const checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]');
+      var checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]');
       
       checkboxes.forEach(function(checkbox) {
         checkbox.addEventListener('change', updateMultiWorkSelection);
@@ -635,8 +700,8 @@ window.onload = function() {
     function updateMultiWorkSelection() {
       if (!isMultiWork) return;
       
-      const checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]:checked');
-      const selectedCategories = [];
+      var checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]:checked');
+      var selectedCategories = [];
       
       checkboxes.forEach(function(cb) {
         selectedCategories.push(cb.value);
@@ -653,117 +718,104 @@ window.onload = function() {
     }
     
     function clearAllCheckboxes() {
-      const checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]');
+      var checkboxes = document.querySelectorAll('#multiSelectContainer input[type="checkbox"]');
       checkboxes.forEach(function(cb) {
         cb.checked = false;
       });
     }
 
-    // ⭐ เพิ่ม function นี้
-function loadUserEmailAndName() {
-  const emailInput = document.getElementById('requesterEmail');
-  const nameInput = document.getElementById('requesterName');
-  const nameInfo = document.getElementById('nameInfo');
-  
-  emailInput.value = 'กำลังโหลด...';
-  emailInput.disabled = true;
-  
-  nameInput.value = '';
-  nameInput.placeholder = 'กำลังโหลด...';
-  nameInput.readOnly = true;
-  nameInput.style.background = '#f0f7ff';
-  nameInput.style.cursor = 'wait';
-  
-  // 1. โหลดอีเมล
-  google.script.run
-    .withSuccessHandler(function(email) {
-      if (email) {
-        emailInput.value = email;
-        emailInput.disabled = true;
-        console.log('✅ User email loaded:', email);
-        
-        // 2. โหลดชื่อจากอีเมล
-        google.script.run
-          .withSuccessHandler(function(result) {
-            if (result.success && result.name) {
-              // ✅ เจอชื่อในระบบ
-              nameInput.value = result.name;
-              nameInput.readOnly = false;
-              nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
-              nameInput.style.cursor = 'text';
-              nameInfo.innerHTML = '✅ พบข้อมูลในระบบ - สามารถแก้ไขได้';
-              nameInfo.style.color = '#16a34a';
-              console.log('✅ User name loaded:', result.name);
-            } else if (!result.success && result.message) {
-              // ❌ อีเมลมีปัญหา (Role/Status ไม่ถูกต้อง)
-              nameInput.value = '';
-              nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
-              nameInput.readOnly = true;
-              nameInput.style.background = '#fee2e2';
-              nameInfo.innerHTML = '❌ ' + result.message;
-              nameInfo.style.color = '#dc2626';
-              showMessage(result.message, 'error');
-            } else {
-              // ⚠️ ไม่เจอชื่อ → ให้กรอกเอง
-              nameInput.value = '';
-              nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
-              nameInput.readOnly = false;
-              nameInput.style.background = '#ffffff';
-              nameInput.style.cursor = 'text';
-              nameInfo.innerHTML = '📝 กรอกชื่อผู้ขอ - ระบบจะบันทึกในฐานข้อมูล';
-              nameInfo.style.color = '#1877f2';
-              console.log('⚠️ User not found - manual entry required');
-            }
-          })
-          .withFailureHandler(function(error) {
-            console.error('❌ Error loading name:', error);
-            nameInput.value = '';
-            nameInput.placeholder = 'เกิดข้อผิดพลาด';
-            nameInput.readOnly = false;
-            nameInput.style.background = '#ffffff';
-            nameInput.style.cursor = 'text';
-            nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาด - กรุณากรอกชื่อ';
-            nameInfo.style.color = '#f59e0b';
-          })
-          .getUserNameFromEmail(email);
-        
-      } else {
-        emailInput.value = '';
-        emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
-        emailInput.disabled = false;
-        
-        nameInput.value = '';
-        nameInput.placeholder = 'กรุณา Login ก่อน';
-        nameInput.readOnly = true;
-        nameInput.style.background = '#fee2e2';
-        nameInfo.innerHTML = '⚠️ กรุณา Login ด้วย Google Account';
-        nameInfo.style.color = '#dc2626';
-        
-        showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error loading email:', error);
-      emailInput.value = '';
-      emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
-      emailInput.disabled = false;
+    function loadUserEmailAndName() {
+      var emailInput = document.getElementById('requesterEmail');
+      var nameInput = document.getElementById('requesterName');
+      var nameInfo = document.getElementById('nameInfo');
+      
+      emailInput.value = 'กำลังโหลด...';
+      emailInput.disabled = true;
       
       nameInput.value = '';
-      nameInput.placeholder = 'กรุณา Login ก่อน';
+      nameInput.placeholder = 'กำลังโหลด...';
       nameInput.readOnly = true;
-      nameInput.style.background = '#fee2e2';
-      nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาดในการดึงข้อมูล';
-      nameInfo.style.color = '#dc2626';
+      nameInput.style.background = '#f0f7ff';
+      nameInput.style.cursor = 'wait';
       
-      showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
-    })
-    .getCurrentUserEmail();
-}
-
-// function loadWorkTypes() อยู่ต่อด้านล่าง...
+      google.script.run
+        .withSuccessHandler(function(email) {
+          if (email) {
+            emailInput.value = email;
+            emailInput.disabled = true;
+            
+            google.script.run
+              .withSuccessHandler(function(result) {
+                if (result.success && result.name) {
+                  nameInput.value = result.name;
+                  nameInput.readOnly = false;
+                  nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+                  nameInput.style.cursor = 'text';
+                  nameInfo.innerHTML = '✅ พบข้อมูลในระบบ - สามารถแก้ไขได้';
+                  nameInfo.style.color = '#16a34a';
+                } else if (!result.success && result.message) {
+                  nameInput.value = '';
+                  nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
+                  nameInput.readOnly = true;
+                  nameInput.style.background = '#fee2e2';
+                  nameInfo.innerHTML = '❌ ' + result.message;
+                  nameInfo.style.color = '#dc2626';
+                  showMessage(result.message, 'error');
+                } else {
+                  nameInput.value = '';
+                  nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
+                  nameInput.readOnly = false;
+                  nameInput.style.background = '#ffffff';
+                  nameInput.style.cursor = 'text';
+                  nameInfo.innerHTML = '📝 กรอกชื่อผู้ขอ - ระบบจะบันทึกในฐานข้อมูล';
+                  nameInfo.style.color = '#1877f2';
+                }
+              })
+              .withFailureHandler(function(error) {
+                nameInput.value = '';
+                nameInput.placeholder = 'เกิดข้อผิดพลาด';
+                nameInput.readOnly = false;
+                nameInput.style.background = '#ffffff';
+                nameInput.style.cursor = 'text';
+                nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาด - กรุณากรอกชื่อ';
+                nameInfo.style.color = '#f59e0b';
+              })
+              .getUserNameFromEmail(email);
+            
+          } else {
+            emailInput.value = '';
+            emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
+            emailInput.disabled = false;
+            
+            nameInput.value = '';
+            nameInput.placeholder = 'กรุณา Login ก่อน';
+            nameInput.readOnly = true;
+            nameInput.style.background = '#fee2e2';
+            nameInfo.innerHTML = '⚠️ กรุณา Login ด้วย Google Account';
+            nameInfo.style.color = '#dc2626';
+            
+            showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
+          }
+        })
+        .withFailureHandler(function(error) {
+          emailInput.value = '';
+          emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
+          emailInput.disabled = false;
+          
+          nameInput.value = '';
+          nameInput.placeholder = 'กรุณา Login ก่อน';
+          nameInput.readOnly = true;
+          nameInput.style.background = '#fee2e2';
+          nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาดในการดึงข้อมูล';
+          nameInfo.style.color = '#dc2626';
+          
+          showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
+        })
+        .getCurrentUserEmail();
+    }
     
     function loadWorkTypes() {
-      const workTypeSelect = document.getElementById('workType');
+      var workTypeSelect = document.getElementById('workType');
       workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
       workTypeSelect.disabled = true;
       
@@ -778,38 +830,152 @@ function loadUserEmailAndName() {
             workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
             
             workTypes.forEach(function(workType) {
-              const option = document.createElement('option');
+              var option = document.createElement('option');
               option.value = workType;
               option.textContent = workType;
               workTypeSelect.appendChild(option);
             });
             
             workTypeSelect.disabled = false;
+            workTypeSelect.addEventListener('change', handleWorkTypeChange);
           }
         })
         .withFailureHandler(function(error) {
-          console.error('Error loading work types:', error);
           workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
           showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
         })
         .getWorkTypeList();
     }
     
+    function handleWorkTypeChange() {
+      var workType = document.getElementById('workType').value;
+      
+      if (!workType) {
+        hideRecommendation();
+        return;
+      }
+      
+      showRecommendationLoading();
+      
+      google.script.run
+        .withSuccessHandler(handleRecommendationResponse)
+        .withFailureHandler(function(error) {
+          hideRecommendation();
+        })
+        .getRecommendedCategory(workType);
+    }
+    
+    function showRecommendationLoading() {
+      var box = document.getElementById('recommendationBox');
+      var text = document.getElementById('recommendationText');
+      
+      text.innerHTML = '🔍 กำลังวิเคราะห์ทีมงานที่เหมาะสม...';
+      box.classList.add('show');
+      
+      document.querySelectorAll('.team-btn').forEach(function(btn) {
+        btn.classList.remove('recommended');
+      });
+    }
+    
+    function handleRecommendationResponse(result) {
+      if (!result || !result.success || !result.recommended || result.recommended.length === 0) {
+        hideRecommendation();
+        return;
+      }
+      
+      recommendedCategory = result.recommended;
+      showRecommendation(result);
+      highlightRecommendedButtons(result.recommended);
+    }
+    
+    function showRecommendation(result) {
+      var box = document.getElementById('recommendationBox');
+      var text = document.getElementById('recommendationText');
+      
+      var recommendedList = result.recommended;
+      
+      if (recommendedList.length === 1) {
+        var item = recommendedList[0];
+        var icon = getCategoryIcon(item.category);
+        
+        var html = '<strong>' + icon + ' แนะนำทีมงาน: ' + item.category + '</strong>';
+        html += '<div class="team-info">✓ มีทีมรองรับ ' + item.count + ' ทีม';
+        
+        if (item.teams.length > 0 && item.teams.length <= 3) {
+          html += ' (' + item.teams.join(', ') + ')';
+        }
+        
+        html += '</div>';
+        text.innerHTML = html;
+      } else {
+        var html = '<strong>💡 แนะนำทีมงานที่รองรับ:</strong><div class="team-info">';
+        
+        recommendedList.forEach(function(item, index) {
+          var icon = getCategoryIcon(item.category);
+          html += icon + ' <strong>' + item.category + '</strong>: ' + item.count + ' ทีม';
+          
+          if (item.teams.length > 0 && item.teams.length <= 2) {
+            html += ' (' + item.teams.join(', ') + ')';
+          }
+          
+          if (index < recommendedList.length - 1) {
+            html += '<br>';
+          }
+        });
+        
+        html += '</div>';
+        text.innerHTML = html;
+      }
+      
+      box.classList.add('show');
+    }
+    
+    function getCategoryIcon(category) {
+      if (category === 'Survey') return '🔍';
+      if (category === 'Lab') return '🧪';
+      if (category === 'Inspector') return '📋';
+      return '💡';
+    }
+    
+    function highlightRecommendedButtons(recommendedList) {
+      document.querySelectorAll('.team-btn').forEach(function(btn) {
+        btn.classList.remove('recommended');
+      });
+      
+      recommendedList.forEach(function(item) {
+        document.querySelectorAll('.team-btn').forEach(function(btn) {
+          if (btn.getAttribute('data-category') === item.category) {
+            btn.classList.add('recommended');
+          }
+        });
+      });
+    }
+    
+    function hideRecommendation() {
+      var box = document.getElementById('recommendationBox');
+      box.classList.remove('show');
+      recommendedCategory = null;
+      
+      document.querySelectorAll('.team-btn').forEach(function(btn) {
+        btn.classList.remove('recommended');
+      });
+    }
+    
     function setMinDate() {
-      const today = new Date();
-      const tomorrow = new Date(today);
+      var today = new Date();
+      var tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      const dateString = tomorrow.getFullYear() + '-' + 
-                        String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(tomorrow.getDate()).padStart(2, '0');
+      var dateString = tomorrow.getFullYear() + '-' + 
+                      String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(tomorrow.getDate()).padStart(2, '0');
       document.getElementById('requestDate').setAttribute('min', dateString);
     }
     
     function showMessage(text, type, duration) {
       if (typeof duration === 'undefined') duration = 5000;
       
-      const messageDiv = document.getElementById('message');
+      var messageDiv = document.getElementById('message');
       messageDiv.textContent = text;
       messageDiv.className = 'message ' + type;
       messageDiv.style.display = 'block';
@@ -824,18 +990,18 @@ function loadUserEmailAndName() {
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
     function updateAvailableSlots() {
-      const date = document.getElementById('requestDate').value;
-      const startTimeSelect = document.getElementById('startTime');
-      const endTimeSelect = document.getElementById('endTime');
+      var date = document.getElementById('requestDate').value;
+      var startTimeSelect = document.getElementById('startTime');
+      var endTimeSelect = document.getElementById('endTime');
       
       setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
       resetEndTimeSelect();
       
       if (date) {
-        const selectedDate = new Date(date + 'T00:00:00');
-        const today = new Date();
-        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        var selectedDate = new Date(date + 'T00:00:00');
+        var today = new Date();
+        var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         
         if (selectedDateOnly <= todayDateOnly) {
           startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
@@ -846,7 +1012,7 @@ function loadUserEmailAndName() {
         }
         
         google.script.run
-          .withSuccessHandler(function(availableSlots) {            
+          .withSuccessHandler(function(availableSlots) {
             startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
             startTimeSelect.innerHTML = '';
             
@@ -858,7 +1024,7 @@ function loadUserEmailAndName() {
               startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
               
               availableSlots.forEach(function(slot) {
-                const option = document.createElement('option');
+                var option = document.createElement('option');
                 option.value = slot;
                 option.textContent = slot + ' น.';
                 startTimeSelect.appendChild(option);
@@ -868,12 +1034,9 @@ function loadUserEmailAndName() {
             }
           })
           .withFailureHandler(function(error) {
-            console.error('Error getting available slots:', error);
-            
             startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
             startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
             startTimeSelect.disabled = true;
-            
             showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
           })
           .getAvailableTimeSlots(date);
@@ -884,9 +1047,9 @@ function loadUserEmailAndName() {
     }
     
     function updateEndTimeSlots() {
-      const date = document.getElementById('requestDate').value;
-      const startTime = document.getElementById('startTime').value;
-      const endTimeSelect = document.getElementById('endTime');
+      var date = document.getElementById('requestDate').value;
+      var startTime = document.getElementById('startTime').value;
+      var endTimeSelect = document.getElementById('endTime');
       
       if (!startTime) {
         resetEndTimeSelect();
@@ -908,13 +1071,13 @@ function loadUserEmailAndName() {
             } else {
               endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
               
-              const startHour = parseInt(startTime.split(':')[0]);
-              const startMinute = parseInt(startTime.split(':')[1]);
-              const defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
-                                   startMinute.toString().padStart(2, '0');
+              var startHour = parseInt(startTime.split(':')[0]);
+              var startMinute = parseInt(startTime.split(':')[1]);
+              var defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
+                                 startMinute.toString().padStart(2, '0');
               
               availableEndTimes.forEach(function(time) {
-                const option = document.createElement('option');
+                var option = document.createElement('option');
                 option.value = time;
                 option.textContent = time + ' น.';
                 if (time === defaultEndTime) {
@@ -931,12 +1094,9 @@ function loadUserEmailAndName() {
             }
           })
           .withFailureHandler(function(error) {
-            console.error('Error getting end times:', error);
-            
             endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
             endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
             endTimeSelect.disabled = true;
-            
             showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
           })
           .getAvailableEndTimes(date, startTime);
@@ -950,44 +1110,44 @@ function loadUserEmailAndName() {
     }
     
     function resetEndTimeSelect() {
-      const endTimeSelect = document.getElementById('endTime');
+      var endTimeSelect = document.getElementById('endTime');
       endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
       endTimeSelect.disabled = true;
     }
     
     function handleSubmit(event) {
-  event.preventDefault();
-  
-  // Check team category is selected
-  if (!selectedTeamCategory) {
-    showMessage('กรุณาเลือกหมวดงานก่อน', 'error');
-    return;
-  }
-  
-  // ⭐ เพิ่มการเช็คอีเมล
-  const email = document.getElementById('requesterEmail').value;
-  if (!email || email === 'กำลังโหลด...') {
-    showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
-    return;
-  }
-  
-  const submitBtn = document.getElementById('submitBtn');
-  const loading = document.querySelector('.loading');
-  
-  const formData = {
-    teamCategory: selectedTeamCategory,
-    requestDate: document.getElementById('requestDate').value,
-    workType: document.getElementById('workType').value,
-    startTime: document.getElementById('startTime').value,
-    endTime: document.getElementById('endTime').value,
-    description: document.getElementById('description').value.trim(),
-    location: document.getElementById('location').value.trim(),
-    requesterName: document.getElementById('requesterName').value.trim(),
-    requesterEmail: email  // ✅ ใช้อีเมลที่ดึงมา
-  };
+      event.preventDefault();
       
-      const requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
+      if (!selectedTeamCategory) {
+        showMessage('กรุณาเลือกทีมงานก่อน', 'error');
+        return;
+      }
+      
+      var email = document.getElementById('requesterEmail').value;
+      if (!email || email === 'กำลังโหลด...') {
+        showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+        return;
+      }
+      
+      var submitBtn = document.getElementById('submitBtn');
+      var loading = document.querySelector('.loading');
+      
+      var formData = {
+        teamCategory: selectedTeamCategory,
+        requestDate: document.getElementById('requestDate').value,
+        workType: document.getElementById('workType').value,
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value,
+        description: document.getElementById('description').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        requesterName: document.getElementById('requesterName').value.trim(),
+        requesterEmail: email
+      };
+      
+      var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+      var missingFields = requiredFields.filter(function(field) {
+        return !formData[field];
+      });
       
       if (missingFields.length > 0) {
         showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
@@ -1006,7 +1166,7 @@ function loadUserEmailAndName() {
             showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
             resetForm();
           } else {
-            const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+            var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
             showMessage(errorMessage, 'error');
           }
         })
@@ -1014,7 +1174,7 @@ function loadUserEmailAndName() {
           loading.style.display = 'none';
           submitBtn.disabled = false;
           
-          const errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
+          var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
           showMessage(errorMessage, 'error');
         })
         .saveRFIRequirement(formData);
@@ -1023,20 +1183,17 @@ function loadUserEmailAndName() {
     function resetForm() {
       document.getElementById('rfiForm').reset();
       
-      // Reset team category buttons
-      const teamButtons = document.querySelectorAll('.team-btn');
+      var teamButtons = document.querySelectorAll('.team-btn');
       teamButtons.forEach(function(btn) {
         btn.classList.remove('active');
       });
       
-      // Hide multi-select container
       document.getElementById('multiSelectContainer').classList.remove('show');
-      
-      // Clear checkboxes
       clearAllCheckboxes();
       
       selectedTeamCategory = null;
       isMultiWork = false;
+      hideRecommendation();
       
       document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
       document.getElementById('startTime').disabled = true;
