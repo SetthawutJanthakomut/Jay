@@ -1,4 +1,4 @@
-<version 2 122/10/2025 8:12>
+<version 2 122/10/2025 10:12>
 <!DOCTYPE html>
 <html>
 <head>
@@ -989,7 +989,7 @@
     document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
-    function updateAvailableSlots() {
+function updateAvailableSlots() {
   var date = document.getElementById('requestDate').value;
   var startTimeSelect = document.getElementById('startTime');
   var endTimeSelect = document.getElementById('endTime');
@@ -1069,6 +1069,63 @@
     startTimeSelect.disabled = true;
   }
 }
+    
+    function updateEndTimeSlots() {
+      var date = document.getElementById('requestDate').value;
+      var startTime = document.getElementById('startTime').value;
+      var endTimeSelect = document.getElementById('endTime');
+      
+      if (!startTime) {
+        resetEndTimeSelect();
+        return;
+      }
+      
+      setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
+      
+      if (date && startTime) {
+        google.script.run
+          .withSuccessHandler(function(availableEndTimes) {
+            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+            endTimeSelect.innerHTML = '';
+            
+            if (!availableEndTimes || availableEndTimes.length === 0) {
+              endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
+              endTimeSelect.disabled = true;
+              showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
+            } else {
+              endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
+              
+              var startHour = parseInt(startTime.split(':')[0]);
+              var startMinute = parseInt(startTime.split(':')[1]);
+              var defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
+                                 startMinute.toString().padStart(2, '0');
+              
+              availableEndTimes.forEach(function(time) {
+                var option = document.createElement('option');
+                option.value = time;
+                option.textContent = time + ' น.';
+                if (time === defaultEndTime) {
+                  option.selected = true;
+                }
+                endTimeSelect.appendChild(option);
+              });
+              
+              endTimeSelect.disabled = false;
+              
+              if (availableEndTimes.includes(defaultEndTime)) {
+                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
+              }
+            }
+          })
+          .withFailureHandler(function(error) {
+            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+            endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+            endTimeSelect.disabled = true;
+            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
+          })
+          .getAvailableEndTimes(date, startTime);
+      }
+    }
     
     function setSelectLoading(selectElement, loadingText) {
       selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
