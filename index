@@ -504,7 +504,7 @@
     </div>
     
     <div class="info-box">
-      <strong>📌 ข้อกำหนด:</strong> สามารถจองได้ในวันถัดไปเท่านั้น<br>
+      <strong>📌 ข้อกำหนด:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
       <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
       <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
@@ -990,118 +990,85 @@
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
     function updateAvailableSlots() {
-      var date = document.getElementById('requestDate').value;
-      var startTimeSelect = document.getElementById('startTime');
-      var endTimeSelect = document.getElementById('endTime');
-      
-      setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
-      resetEndTimeSelect();
-      
-      if (date) {
-        var selectedDate = new Date(date + 'T00:00:00');
-        var today = new Date();
-        var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        
-        if (selectedDateOnly <= todayDateOnly) {
-          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-          startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
-          startTimeSelect.disabled = true;
-          showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
-          return;
-        }
-        
-        google.script.run
-          .withSuccessHandler(function(availableSlots) {
-            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-            startTimeSelect.innerHTML = '';
-            
-            if (!availableSlots || availableSlots.length === 0) {
-              startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
-              startTimeSelect.disabled = true;
-              showMessage('ไม่มีเวลาว่างสำหรับวันที่ที่เลือก', 'warning');
-            } else {
-              startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
-              
-              availableSlots.forEach(function(slot) {
-                var option = document.createElement('option');
-                option.value = slot;
-                option.textContent = slot + ' น.';
-                startTimeSelect.appendChild(option);
-              });
-              
-              startTimeSelect.disabled = false;
-            }
-          })
-          .withFailureHandler(function(error) {
-            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-            startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-            startTimeSelect.disabled = true;
-            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
-          })
-          .getAvailableTimeSlots(date);
-      } else {
-        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-        startTimeSelect.disabled = true;
-      }
+  var date = document.getElementById('requestDate').value;
+  var startTimeSelect = document.getElementById('startTime');
+  var endTimeSelect = document.getElementById('endTime');
+  
+  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
+  resetEndTimeSelect();
+  
+  if (date) {
+    var selectedDate = new Date(date + 'T00:00:00');
+    var today = new Date();
+    var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    // ตรวจสอบว่าเลือกวันในอดีตหรือไม่
+    if (selectedDateOnly <= todayDateOnly) {
+      startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+      startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
+      startTimeSelect.disabled = true;
+      showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
+      return;
     }
     
-    function updateEndTimeSlots() {
-      var date = document.getElementById('requestDate').value;
-      var startTime = document.getElementById('startTime').value;
-      var endTimeSelect = document.getElementById('endTime');
+    // ตรวจสอบว่าถ้าจองวันพรุ่งนี้ ต้องจองก่อน 13:00 น.
+    var tomorrow = new Date(todayDateOnly);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
+    
+    if (isTomorrow) {
+      var currentHour = today.getHours();
       
-      if (!startTime) {
-        resetEndTimeSelect();
+      if (currentHour >= 13) {
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
+        startTimeSelect.disabled = true;
+        showMessage('❌ ไม่สามารถจองวันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)\nกรุณาเลือกวันถัดไปเพื่อให้ทีมมีเวลาเตรียมเอกสารขอ Consult อนุมัติ', 'error');
         return;
       }
       
-      setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
-      
-      if (date && startTime) {
-        google.script.run
-          .withSuccessHandler(function(availableEndTimes) {
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '';
-            
-            if (!availableEndTimes || availableEndTimes.length === 0) {
-              endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
-              endTimeSelect.disabled = true;
-              showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
-            } else {
-              endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
-              
-              var startHour = parseInt(startTime.split(':')[0]);
-              var startMinute = parseInt(startTime.split(':')[1]);
-              var defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
-                                 startMinute.toString().padStart(2, '0');
-              
-              availableEndTimes.forEach(function(time) {
-                var option = document.createElement('option');
-                option.value = time;
-                option.textContent = time + ' น.';
-                if (time === defaultEndTime) {
-                  option.selected = true;
-                }
-                endTimeSelect.appendChild(option);
-              });
-              
-              endTimeSelect.disabled = false;
-              
-              if (availableEndTimes.includes(defaultEndTime)) {
-                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
-              }
-            }
-          })
-          .withFailureHandler(function(error) {
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-            endTimeSelect.disabled = true;
-            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
-          })
-          .getAvailableEndTimes(date, startTime);
+      // เตือนล่วงหน้าถ้าเหลือเวลาไม่มาก
+      if (currentHour >= 11 && currentHour < 13) {
+        var timeLeft = 13 - currentHour;
+        showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
       }
     }
+    
+    google.script.run
+      .withSuccessHandler(function(availableSlots) {
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '';
+        
+        if (!availableSlots || availableSlots.length === 0) {
+          startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
+          startTimeSelect.disabled = true;
+          showMessage('ไม่มีเวลาว่างสำหรับวันที่ที่เลือก', 'warning');
+        } else {
+          startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+          
+          availableSlots.forEach(function(slot) {
+            var option = document.createElement('option');
+            option.value = slot;
+            option.textContent = slot + ' น.';
+            startTimeSelect.appendChild(option);
+          });
+          
+          startTimeSelect.disabled = false;
+        }
+      })
+      .withFailureHandler(function(error) {
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        startTimeSelect.disabled = true;
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
+      })
+      .getAvailableTimeSlots(date);
+  } else {
+    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+    startTimeSelect.disabled = true;
+  }
+}
     
     function setSelectLoading(selectElement, loadingText) {
       selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
