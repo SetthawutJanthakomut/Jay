@@ -1,4 +1,4 @@
-//Version 13 20/10/2025 10:30
+//Version 14 20/10/2025 10:30
 // ===== Survey Work Functions =====
 // เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
 /**
@@ -465,35 +465,39 @@ function getWorkTypeList(category) {
 }
 
 
-/**
- * ⭐ ใหม่: ตรวจสอบว่าทีมรองรับงานนี้หรือไม่
- */
+
 function teamSupportsWorkType(teamWorkTypes, requestedWorkType) {
   if (!teamWorkTypes || !requestedWorkType) {
+    console.log('  ❌ Missing input');
     return false;
   }
   
   const workTypesStr = String(teamWorkTypes).trim();
   
-  // Universal Team (ทำได้ทุกงาน)
+  // ⭐ Universal Team (ทำได้ทุกงาน)
   if (workTypesStr === '*') {
-    console.log('  → Universal team (supports all work types)');
+    console.log('  → ✅ Universal team (supports all work types)');
     return true;
   }
   
-  // แยกงานที่ทีมทำได้
+  // ⭐ แยกงานที่ทีมทำได้ + lowercase
   const supportedTypes = workTypesStr.split(',').map(function(t) {
-    return t.trim();
+    return t.trim().toLowerCase();  // ✅ Case-insensitive
   });
   
-  // เช็คว่ามีงานที่ต้องการหรือไม่
-  const isSupported = supportedTypes.indexOf(requestedWorkType) !== -1;
+  // ⭐ แปลงงานที่ต้องการเป็น lowercase
+  const requested = String(requestedWorkType).trim().toLowerCase();
   
+  // ⭐ ใช้ includes() (ทันสมัยกว่า indexOf)
+  const isSupported = supportedTypes.includes(requested);
+  
+  // ⭐ Logging สำหรับ debug
   if (isSupported) {
-    console.log('  → Team supports:', requestedWorkType);
+    console.log('  → ✅ Team supports:', requestedWorkType);
   } else {
-    console.log('  → Team does NOT support:', requestedWorkType);
-    console.log('     Supported types:', supportedTypes.join(', '));
+    console.log('  → ❌ Team does NOT support:', requestedWorkType);
+    console.log('     Team has:', supportedTypes.join(', '));
+    console.log('     Looking for:', requested);
   }
   
   return isSupported;
@@ -717,11 +721,12 @@ function isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId) {
 }
 
 /**
- * ✨ เช็คว่าทีม Survey ว่างหรือไม่ (Survey Work - ไม่มี buffer)
- * (ปรับปรุงจากเดิม)
+ * ✅ UPDATED: เช็คว่าทีม Survey ว่างหรือไม่ (Survey Work - ไม่มี buffer)
  */
 function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
   try {
+    console.log('🔍 Checking Survey Team availability:', resourceId, date, startTime, endTime);
+    
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     if (!sheet) return true;
     
@@ -742,62 +747,63 @@ function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
       const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
       const status = String(row[14] || '').trim();            // Column O - Status
       
-      // ✅ ข้าม Status ที่ไม่ใช้ทีมแล้ว
+      // ✅ ใช้ isStatusInactive() แทนการเช็คแบบเดิม
       if (isStatusInactive(status)) {
-        console.log('Skipping inactive status:', status, '(RFI:', rfiId + ')');
+        console.log('  ⏭️ Skipping inactive status:', status, '(RFI:', rfiId + ')');
         continue;
       }
       
-      if (rfiDate === date) {
-        const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
-        if (!resourceSheet) continue;
-        
-        const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
-        
-        const nameToId = {};
-        for (let j = 0; j < resourceData.length; j++) {
-          const rid = String(resourceData[j][0] || '').trim();
-          const rname = String(resourceData[j][1] || '').trim();
-          if (rid && rname) {
-            nameToId[rname] = rid;
-          }
+      if (rfiDate !== date) continue;
+      
+      const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+      if (!resourceSheet) continue;
+      
+      const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
+      
+      const nameToId = {};
+      for (let j = 0; j < resourceData.length; j++) {
+        const rid = String(resourceData[j][0] || '').trim();
+        const rname = String(resourceData[j][1] || '').trim();
+        if (rid && rname) {
+          nameToId[rname] = rid;
         }
-        
-        const teamNamesList = assignedTeams.split(',').map(function(name) {
-          return name.trim();
-        });
-        
-        let isThisTeamAssigned = false;
-        for (let k = 0; k < teamNamesList.length; k++) {
-          const teamName = teamNamesList[k];
-          if (nameToId[teamName] === resourceId) {
-            isThisTeamAssigned = true;
-            break;
-          }
+      }
+      
+      const teamNamesList = assignedTeams.split(',').map(function(name) {
+        return name.trim();
+      });
+      
+      let isThisTeamAssigned = false;
+      for (let k = 0; k < teamNamesList.length; k++) {
+        const teamName = teamNamesList[k];
+        if (nameToId[teamName] === resourceId) {
+          isThisTeamAssigned = true;
+          break;
         }
-        
-        if (!isThisTeamAssigned) {
-          continue;
-        }
-        
-        const existingStartMinutes = timeToMinutes(rfiStartTime);
-        const existingEndMinutes = timeToMinutes(rfiEndTime);
-        
-        // ⭐ ไม่มี buffer - เช็คแค่เวลาทับซ้อน
-        const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
-                           (requestStartMinutes >= existingEndMinutes);
-        
-        if (!isAvailable) {
-          console.log('Survey Team ' + resourceId + ' is NOT available (RFI: ' + rfiId + ', Status: ' + status + ')');
-          return false;
-        }
+      }
+      
+      if (!isThisTeamAssigned) continue;
+      
+      const existingStartMinutes = timeToMinutes(rfiStartTime);
+      const existingEndMinutes = timeToMinutes(rfiEndTime);
+      
+      // ⭐ ไม่มี buffer - เช็คแค่เวลาทับซ้อน
+      const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
+                         (requestStartMinutes >= existingEndMinutes);
+      
+      if (!isAvailable) {
+        console.log('  ❌ Survey Team', resourceId, 'is busy (RFI:', rfiId, ', Status:', status + ')');
+        console.log('     Existing:', rfiStartTime, '-', rfiEndTime);
+        console.log('     Request:', startTime, '-', endTime);
+        return false;
       }
     }
     
+    console.log('  ✅ Survey Team', resourceId, 'is available');
     return true;
     
   } catch (error) {
-    console.error('Error checking Survey team availability:', error);
+    console.error('❌ Error checking Survey team availability:', error);
     return false;
   }
 }
@@ -3921,87 +3927,7 @@ function getSurveyTeams() {
   }
 }
 
-/**
- * ⭐ เช็คว่าทีม Survey ว่างหรือไม่ (สำหรับ Survey Work - ไม่มี buffer ±30 นาที)
- */
-function isSurveyTeamAvailable(resourceId, date, startTime, endTime) {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-    if (!sheet) return true;
-    
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return true;
-    
-    const data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
-    
-    const requestStartMinutes = timeToMinutes(startTime);
-    const requestEndMinutes = timeToMinutes(endTime);
-    
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const rfiDate = formatDate(new Date(row[4]));           // Column E - Request_Date
-      const rfiStartTime = formatTime(row[5]);                // Column F - Start_Time
-      const rfiEndTime = formatTime(row[6]);                  // Column G - End_Time
-      const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
-      const status = String(row[14] || '').trim();            // Column O - Status
-      
-      if (status.includes('Cancel') || status.includes('ยกเลิก')) {
-        continue;
-      }
-      
-      if (rfiDate === date) {
-        const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
-        if (!resourceSheet) continue;
-        
-        const resourceData = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 2).getValues();
-        
-        const nameToId = {};
-        for (let j = 0; j < resourceData.length; j++) {
-          const rid = String(resourceData[j][0] || '').trim();
-          const rname = String(resourceData[j][1] || '').trim();
-          if (rid && rname) {
-            nameToId[rname] = rid;
-          }
-        }
-        
-        const teamNamesList = assignedTeams.split(',').map(function(name) {
-          return name.trim();
-        });
-        
-        let isThisTeamAssigned = false;
-        for (let k = 0; k < teamNamesList.length; k++) {
-          const teamName = teamNamesList[k];
-          if (nameToId[teamName] === resourceId) {
-            isThisTeamAssigned = true;
-            break;
-          }
-        }
-        
-        if (!isThisTeamAssigned) {
-          continue;
-        }
-        
-        const existingStartMinutes = timeToMinutes(rfiStartTime);
-        const existingEndMinutes = timeToMinutes(rfiEndTime);
-        
-        // ⭐ ไม่มี buffer - เช็คแค่เวลาทับซ้อน
-        const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
-                           (requestStartMinutes >= existingEndMinutes);
-        
-        if (!isAvailable) {
-          console.log('Survey Team ' + resourceId + ' is NOT available');
-          return false;
-        }
-      }
-    }
-    
-    return true;
-    
-  } catch (error) {
-    console.error('Error checking Survey team availability:', error);
-    return false;
-  }
-}
+
 
 /**
  * ✅ FINAL: จัดทีม Survey อัตโนมัติ - Load Balanced + Work Type Filter
@@ -7035,16 +6961,674 @@ function getRecommendedCategory(workType) {
   }
 }
 
-function teamSupportsWorkType(teamWorkTypes, requestedWorkType) {
-  if (!teamWorkTypes || !requestedWorkType) {
-    return false;
+
+/**
+ * 🔍 Debug: ตรวจสอบการตั้งค่า Work Types
+ */
+function debugWorkTypesConfig() {
+  try {
+    console.log('========== Work Types Configuration ==========');
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+    
+    if (!sheet) {
+      console.log('❌ Resources sheet not found');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    
+    console.log('Total teams:', lastRow - 1);
+    console.log('Total columns:', lastCol);
+    
+    // ดึงข้อมูล: A (ID), B (Name), C (SubType), E (Status), I (Work_Types)
+    const data = sheet.getRange(2, 1, lastRow - 1, Math.max(9, lastCol)).getValues();
+    
+    let summary = {
+      hasWorkTypesColumn: lastCol >= 9,
+      universalTeams: 0,
+      specificTeams: 0,
+      emptyWorkTypes: 0,
+      deactivatedTeams: 0
+    };
+    
+    const teamDetails = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const resourceId = String(row[0] || '').trim();
+      const resourceName = String(row[1] || '').trim();
+      const subType = String(row[2] || '').trim();
+      const status = String(row[4] || '').trim();
+      const workTypes = lastCol >= 9 ? String(row[8] || '').trim() : '';
+      
+      const detail = {
+        id: resourceId,
+        name: resourceName,
+        subType: subType,
+        status: status,
+        workTypes: workTypes,
+        issue: ''
+      };
+      
+      if (status !== 'Activated') {
+        summary.deactivatedTeams++;
+        detail.issue = '⚠️ Not Activated';
+      } else {
+        if (!workTypes) {
+          summary.emptyWorkTypes++;
+          detail.issue = '❌ No Work_Types';
+        } else if (workTypes === '*') {
+          summary.universalTeams++;
+          detail.issue = '✅ Universal';
+        } else {
+          summary.specificTeams++;
+          detail.issue = '✅ Specific: ' + workTypes;
+        }
+      }
+      
+      teamDetails.push(detail);
+    }
+    
+    console.log('\n📊 Summary:');
+    console.log('─────────────────────────────────────');
+    console.log('Has Work_Types Column:', summary.hasWorkTypesColumn ? '✅' : '❌');
+    console.log('Universal Teams (*):', summary.universalTeams);
+    console.log('Specific Work Types:', summary.specificTeams);
+    console.log('⚠️ Empty Work_Types:', summary.emptyWorkTypes);
+    console.log('Deactivated Teams:', summary.deactivatedTeams);
+    
+    console.log('\n📋 Team Details:');
+    console.log('─────────────────────────────────────');
+    teamDetails.forEach(function(team, index) {
+      console.log((index + 1) + '. ' + team.name + ' (' + team.subType + ')');
+      console.log('   Status: ' + team.status);
+      console.log('   Work_Types: "' + team.workTypes + '"');
+      console.log('   ' + team.issue);
+      console.log('');
+    });
+    
+    // สร้าง Alert
+    let alertMsg = '📊 Work Types Configuration\n\n';
+    alertMsg += 'Total Teams: ' + (lastRow - 1) + '\n';
+    alertMsg += '✅ Universal (*): ' + summary.universalTeams + '\n';
+    alertMsg += '✅ Specific Types: ' + summary.specificTeams + '\n';
+    alertMsg += '❌ Empty: ' + summary.emptyWorkTypes + '\n';
+    alertMsg += '⚠️ Deactivated: ' + summary.deactivatedTeams + '\n';
+    
+    if (summary.emptyWorkTypes > 0) {
+      alertMsg += '\n⚠️ Warning: ' + summary.emptyWorkTypes + ' teams have no Work_Types!\n';
+      alertMsg += 'Please set Work_Types to "*" or specific types.';
+    }
+    
+    SpreadsheetApp.getUi().alert('Work Types Config', alertMsg, SpreadsheetApp.getUi().ButtonSet.OK);
+    
+    console.log('==========================================');
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    SpreadsheetApp.getUi().alert('Error', error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * 🧪 ทดสอบ: ทีมไหนรองรับงานนี้
+ */
+function testWorkTypeSupport() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // ถามว่าต้องการทดสอบงานอะไร
+  const response = ui.prompt(
+    'Test Work Type Support',
+    'Enter Work Type to test:\n(e.g. "Soil Testing")',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
   }
   
-  const workTypeArray = teamWorkTypes.split(',').map(function(wt) {
-    return wt.trim().toLowerCase();
+  const testWorkType = response.getResponseText().trim();
+  
+  if (!testWorkType) {
+    ui.alert('Error', 'Please enter a work type', ui.ButtonSet.OK);
+    return;
+  }
+  
+  console.log('========== Testing Work Type: ' + testWorkType + ' ==========');
+  
+  const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+  
+  if (!resourceSheet) {
+    ui.alert('Error', 'Resources sheet not found', ui.ButtonSet.OK);
+    return;
+  }
+  
+  const lastRow = resourceSheet.getLastRow();
+  const lastCol = resourceSheet.getLastColumn();
+  
+  if (lastRow <= 1) {
+    ui.alert('Error', 'No teams in Resources sheet', ui.ButtonSet.OK);
+    return;
+  }
+  
+  const data = resourceSheet.getRange(2, 1, lastRow - 1, Math.max(9, lastCol)).getValues();
+  
+  const supportingTeams = [];
+  const notSupportingTeams = [];
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const resourceId = String(row[0] || '').trim();
+    const resourceName = String(row[1] || '').trim();
+    const subType = String(row[2] || '').trim();
+    const status = String(row[4] || '').trim();
+    const teamWorkTypes = lastCol >= 9 ? String(row[8] || '').trim() : '';
+    
+    if (status !== 'Activated') continue;
+    
+    const supports = teamSupportsWorkType(teamWorkTypes, testWorkType);
+    
+    const teamInfo = {
+      name: resourceName,
+      subType: subType,
+      workTypes: teamWorkTypes
+    };
+    
+    if (supports) {
+      supportingTeams.push(teamInfo);
+      console.log('✅', resourceName, '→ SUPPORTS');
+    } else {
+      notSupportingTeams.push(teamInfo);
+      console.log('❌', resourceName, '→ NOT SUPPORT');
+    }
+  }
+  
+  console.log('\n📊 Summary:');
+  console.log('✅ Supporting:', supportingTeams.length);
+  console.log('❌ Not Supporting:', notSupportingTeams.length);
+  
+  // สร้าง Alert
+  let msg = '🧪 Test: "' + testWorkType + '"\n\n';
+  msg += '✅ Supporting Teams: ' + supportingTeams.length + '\n';
+  
+  if (supportingTeams.length > 0) {
+    msg += '\n';
+    supportingTeams.forEach(function(team) {
+      msg += '• ' + team.name + ' (' + team.subType + ')\n';
+      msg += '  Types: ' + (team.workTypes || '(empty)') + '\n';
+    });
+  }
+  
+  msg += '\n❌ Not Supporting: ' + notSupportingTeams.length;
+  
+  if (notSupportingTeams.length > 0 && notSupportingTeams.length <= 5) {
+    msg += '\n';
+    notSupportingTeams.forEach(function(team) {
+      msg += '• ' + team.name + ' - ' + (team.workTypes || '(empty)') + '\n';
+    });
+  }
+  
+  ui.alert('Test Result', msg, ui.ButtonSet.OK);
+  
+  console.log('==========================================');
+}
+
+/**
+ * 🕐 ดูทีมที่ว่างในวันและเวลาที่กำหนด
+ */
+function checkTeamAvailabilityForDateTime() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // ถามวันที่
+  const dateResponse = ui.prompt(
+    'Check Availability',
+    'Enter Date (YYYY-MM-DD):\n(e.g. 2025-01-25)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResponse.getSelectedButton() !== ui.Button.OK) return;
+  const date = dateResponse.getResponseText().trim();
+  
+  // ถามเวลาเริ่ม
+  const startResponse = ui.prompt(
+    'Check Availability',
+    'Enter Start Time (HH:MM):\n(e.g. 09:00)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (startResponse.getSelectedButton() !== ui.Button.OK) return;
+  const startTime = startResponse.getResponseText().trim();
+  
+  // ถามเวลาสิ้นสุด
+  const endResponse = ui.prompt(
+    'Check Availability',
+    'Enter End Time (HH:MM):\n(e.g. 11:00)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (endResponse.getSelectedButton() !== ui.Button.OK) return;
+  const endTime = endResponse.getResponseText().trim();
+  
+  console.log('========== Checking Availability ==========');
+  console.log('Date:', date);
+  console.log('Time:', startTime, '-', endTime);
+  
+  const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
+  
+  if (!resourceSheet) {
+    ui.alert('Error', 'Resources sheet not found', ui.ButtonSet.OK);
+    return;
+  }
+  
+  const data = resourceSheet.getRange(2, 1, resourceSheet.getLastRow() - 1, 5).getValues();
+  
+  const availableTeams = [];
+  const busyTeams = [];
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const resourceId = String(row[0] || '').trim();
+    const resourceName = String(row[1] || '').trim();
+    const subType = String(row[2] || '').trim();
+    const status = String(row[4] || '').trim();
+    
+    if (status !== 'Activated') continue;
+    
+    const isAvailable = isTeamAvailable(resourceId, date, startTime, endTime, null);
+    
+    const teamInfo = {
+      name: resourceName,
+      subType: subType,
+      id: resourceId
+    };
+    
+    if (isAvailable) {
+      availableTeams.push(teamInfo);
+      console.log('✅', resourceName, '→ AVAILABLE');
+    } else {
+      busyTeams.push(teamInfo);
+      console.log('❌', resourceName, '→ BUSY');
+    }
+  }
+  
+  console.log('\n📊 Summary:');
+  console.log('✅ Available:', availableTeams.length);
+  console.log('❌ Busy:', busyTeams.length);
+  
+  let msg = '📅 ' + date + ' | ' + startTime + '-' + endTime + '\n\n';
+  msg += '✅ Available Teams: ' + availableTeams.length + '\n';
+  
+  if (availableTeams.length > 0) {
+    availableTeams.forEach(function(team) {
+      msg += '• ' + team.name + ' (' + team.subType + ')\n';
+    });
+  }
+  
+  msg += '\n❌ Busy Teams: ' + busyTeams.length;
+  
+  if (busyTeams.length > 0 && busyTeams.length <= 5) {
+    msg += '\n';
+    busyTeams.forEach(function(team) {
+      msg += '• ' + team.name + ' (' + team.subType + ')\n';
+    });
+  }
+  
+  ui.alert('Availability Check', msg, ui.ButtonSet.OK);
+  
+  console.log('==========================================');
+}
+
+function testTeamSupportsAfterFix() {
+  console.log('========== Test teamSupportsWorkType ==========');
+  
+  // Test 1: Universal Team
+  console.log('\n1️⃣ Test Universal Team:');
+  console.log('Result:', teamSupportsWorkType('*', 'Anything'));  // ต้องเป็น true
+  
+  // Test 2: Exact Match
+  console.log('\n2️⃣ Test Exact Match:');
+  console.log('Result:', teamSupportsWorkType('Revetment,Crown Wall', 'Revetment'));  // true
+  
+  // Test 3: Case-Insensitive
+  console.log('\n3️⃣ Test Case-Insensitive:');
+  console.log('Result:', teamSupportsWorkType('Revetment,Crown Wall', 'revetment'));  // true
+  console.log('Result:', teamSupportsWorkType('Revetment,Crown Wall', 'REVETMENT'));  // true
+  
+  // Test 4: With Spaces
+  console.log('\n4️⃣ Test With Spaces:');
+  console.log('Result:', teamSupportsWorkType('Revetment , Crown Wall', 'Crown Wall'));  // true
+  
+  // Test 5: Not Support
+  console.log('\n5️⃣ Test Not Support:');
+  console.log('Result:', teamSupportsWorkType('Revetment,Crown Wall', 'Soil Testing'));  // false
+  
+  // Test 6: Thai Language
+  console.log('\n6️⃣ Test Thai:');
+  console.log('Result:', teamSupportsWorkType('ซ่อมเครื่องมือสำรวจ', 'ซ่อมเครื่องมือสำรวจ'));  // true
+  
+  console.log('\n==========================================');
+}
+
+
+/**
+ * 🔍 เช็ค Status ของ RFI นี้
+ */
+function checkRFIStatus() {
+  const rfiId = '05G65DZT';  // ⭐ RFI ที่มีปัญหา
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 40).getValues();
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const id = String(row[0] || '').trim();
+    
+    if (id === rfiId) {
+      const status = String(row[14] || '');  // Column O
+      const surveyNo = String(row[1] || '').trim();
+      const date = row[4];
+      const startTime = row[5];
+      const endTime = row[6];
+      const team = String(row[11] || '').trim();
+      
+      console.log('========== RFI Details ==========');
+      console.log('ID:', id);
+      console.log('Survey NO:', surveyNo);
+      console.log('Status: "' + status + '"');
+      console.log('Status Length:', status.length);
+      console.log('Status Char Codes:', Array.from(status).map(c => c.charCodeAt(0)).join(','));
+      console.log('Date:', date);
+      console.log('Time:', startTime, '-', endTime);
+      console.log('Team:', team);
+      console.log('');
+      console.log('isStatusInactive():', isStatusInactive(status));
+      console.log('=================================');
+      
+      // แสดง Alert
+      const ui = SpreadsheetApp.getUi();
+      let msg = 'RFI: ' + id + '\n';
+      msg += 'Survey NO: ' + surveyNo + '\n';
+      msg += 'Status: "' + status + '"\n';
+      msg += 'Length: ' + status.length + ' chars\n\n';
+      msg += 'isStatusInactive(): ' + isStatusInactive(status) + '\n\n';
+      msg += 'Date: ' + formatDate(new Date(date)) + '\n';
+      msg += 'Time: ' + startTime + ' - ' + endTime + '\n';
+      msg += 'Team: ' + team;
+      
+      ui.alert('RFI Status Check', msg, ui.ButtonSet.OK);
+      
+      return;
+    }
+  }
+  
+  console.log('❌ RFI not found');
+  SpreadsheetApp.getUi().alert('RFI ' + rfiId + ' not found');
+}
+
+
+/**
+ * 🕐 ทดสอบ Available Slots สำหรับวันที่นั้น
+ */
+function testAvailableSlotsForDate() {
+  const date = '2025-10-22';  // ⭐ วันที่มีปัญหา
+  
+  console.log('========== Testing Available Slots ==========');
+  console.log('Date:', date);
+  
+  // Test Survey
+  const surveySlots = getSurveyAvailableTimeSlots(date);
+  console.log('\n📊 Survey Available Slots:', surveySlots.length);
+  console.log('Slots:', surveySlots.join(', '));
+  
+  // ⭐ เช็คว่า 14:00 อยู่ในรายการหรือไม่
+  const has1400 = surveySlots.indexOf('14:00') !== -1;
+  console.log('\n🔍 Has 14:00?', has1400 ? '✅ YES' : '❌ NO');
+  
+  if (!has1400) {
+    console.log('\n⚠️ 14:00 ไม่อยู่ใน available slots!');
+    console.log('ทำไม? ลองเช็ค...');
+    
+    // เช็คว่าทีมว่างหรือไม่
+    const teams = getSurveyTeams();
+    console.log('\nTeams:', teams.length);
+    
+    teams.forEach(function(team) {
+      const isAvailable = isSurveyTeamAvailable(team.resourceId, date, '14:00', '15:00');
+      console.log('-', team.resourceName, ':', isAvailable ? '✅ Available' : '❌ Busy');
+    });
+  }
+  
+  console.log('==========================================');
+  
+  // Alert
+  let msg = 'Date: ' + date + '\n\n';
+  msg += 'Available Slots: ' + surveySlots.length + '\n';
+  msg += 'Slots: ' + surveySlots.slice(0, 5).join(', ') + '...\n\n';
+  msg += '14:00 Available? ' + (has1400 ? '✅' : '❌');
+  
+  SpreadsheetApp.getUi().alert('Available Slots Test', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * 🚫 ดู Blocked Slots สำหรับวันนั้น
+ */
+function checkBlockedSlotsForDate() {
+  const date = '2025-10-22';
+  
+  console.log('========== Blocked Slots for ' + date + ' ==========');
+  
+  const teams = getSurveyTeams();
+  const blockedSlots = getBlockedTimeSlotsForTeams(date, teams);
+  
+  Object.keys(blockedSlots).forEach(function(teamId) {
+    const blocks = blockedSlots[teamId];
+    
+    // หาชื่อทีม
+    const team = teams.find(function(t) { return t.resourceId === teamId; });
+    const teamName = team ? team.resourceName : teamId;
+    
+    console.log('\n' + teamName + ' (' + teamId + '):');
+    console.log('  Blocked Slots:', blocks.length);
+    
+    if (blocks.length === 0) {
+      console.log('  → ว่างทั้งวัน ✅');
+    } else {
+      blocks.forEach(function(block) {
+        console.log('  →', minutesToTime(block.start), '-', minutesToTime(block.end));
+      });
+    }
   });
   
-  const requested = requestedWorkType.trim().toLowerCase();
+  console.log('==========================================');
   
-  return workTypeArray.includes(requested);
+  // Check specifically 14:00-15:00
+  console.log('\n🔍 Checking 14:00-15:00 specifically:');
+  
+  teams.forEach(function(team) {
+    const blocks = blockedSlots[team.resourceId] || [];
+    let isBlocked = false;
+    
+    blocks.forEach(function(block) {
+      // 14:00 = 840 minutes, 15:00 = 900 minutes
+      if (!(900 <= block.start || 840 >= block.end)) {
+        isBlocked = true;
+      }
+    });
+    
+    console.log('-', team.resourceName, ':', isBlocked ? '🚫 Blocked' : '✅ Available');
+  });
+  
+  console.log('==========================================');
+}
+
+/**
+ * 🧪 Test: จอง Survey Work ด้วย Backend
+ */
+function testBookSurveyWorkBackend() {
+  const testData = {
+    requestDate: '2025-10-22',
+    startTime: '14:00',
+    endTime: '15:00',
+    workType: 'ซ่อมเครื่องมือสำรวจ',  // ⭐ ทีม Survey Team B รองรับ
+    description: 'Test booking - should work',
+    location: 'Test Location',
+    requesterName: 'Test User',
+    requesterEmail: 'test@example.com'
+  };
+  
+  console.log('========== Test Survey Work Booking ==========');
+  console.log('Input:', JSON.stringify(testData, null, 2));
+  
+  const result = saveSurveyWorkRequirement(testData);
+  
+  console.log('\n📊 Result:');
+  console.log('Success:', result.success);
+  console.log('Message:', result.message);
+  
+  if (result.success) {
+    console.log('Survey NO:', result.surveyNo);
+    console.log('Assigned Team:', result.assignedTeam);
+  }
+  
+  console.log('==========================================');
+  
+  SpreadsheetApp.getUi().alert(
+    'Test Result',
+    result.success ? '✅ Success!\n\n' + result.message : '❌ Failed!\n\n' + result.message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+
+/**
+ * 🧪 Test: จองด้วยงานที่ไม่รองรับ (ควร fail)
+ */
+function testBookUnsupportedWork() {
+  const testData = {
+    requestDate: '2025-10-22',
+    startTime: '14:00',
+    endTime: '15:00',
+    workType: 'Soil Testing',  // ⭐ ไม่มีทีมรองรับ
+    description: 'Test - should fail',
+    location: 'Test',
+    requesterName: 'Test',
+    requesterEmail: 'test@example.com'
+  };
+  
+  console.log('========== Test Unsupported Work ==========');
+  
+  const result = saveSurveyWorkRequirement(testData);
+  
+  console.log('Success:', result.success);
+  console.log('Message:', result.message);
+  console.log('Expected: Should fail with "ไม่พบทีมที่รองรับงานนี้"');
+  
+  const isCorrect = !result.success && result.message.includes('ไม่พบทีม');
+  
+  console.log('\n📊 Test Result:', isCorrect ? '✅ PASS' : '❌ FAIL');
+  console.log('==========================================');
+  
+  SpreadsheetApp.getUi().alert(
+    'Test Result',
+    isCorrect ? 
+      '✅ PASS\n\nระบบ reject งานที่ไม่รองรับถูกต้อง' : 
+      '❌ FAIL\n\n' + result.message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+/**
+ * 🧪 Test: จองด้วยงานที่ไม่รองรับ (ควร fail)
+ */
+function testBookUnsupportedWork() {
+  const testData = {
+    requestDate: '2025-10-22',
+    startTime: '14:00',
+    endTime: '15:00',
+    workType: 'Soil Testing',  // ⭐ ไม่มีทีมรองรับ
+    description: 'Test - should fail',
+    location: 'Test',
+    requesterName: 'Test',
+    requesterEmail: 'test@example.com'
+  };
+  
+  console.log('========== Test Unsupported Work ==========');
+  
+  const result = saveSurveyWorkRequirement(testData);
+  
+  console.log('Success:', result.success);
+  console.log('Message:', result.message);
+  console.log('Expected: Should fail with "ไม่พบทีมที่รองรับงานนี้"');
+  
+  const isCorrect = !result.success && result.message.includes('ไม่พบทีม');
+  
+  console.log('\n📊 Test Result:', isCorrect ? '✅ PASS' : '❌ FAIL');
+  console.log('==========================================');
+  
+  SpreadsheetApp.getUi().alert(
+    'Test Result',
+    isCorrect ? 
+      '✅ PASS\n\nระบบ reject งานที่ไม่รองรับถูกต้อง' : 
+      '❌ FAIL\n\n' + result.message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+
+/**
+ * ทดสอบ isSurveyTeamAvailable() หลังแก้
+ */
+function testSurveyTeamAvailabilityFixed() {
+  console.log('========== Test isSurveyTeamAvailable ==========');
+  
+  const testCases = [
+    {
+      team: 'T001',
+      date: '2025-10-22',
+      start: '14:00',
+      end: '15:00',
+      expected: true,
+      reason: 'Survey Team A - no booking'
+    },
+    {
+      team: 'T002',
+      date: '2025-10-22',
+      start: '14:00',
+      end: '15:00',
+      expected: true,  // ⭐ ควรเป็น true เพราะ Completed ถูก ignore
+      reason: 'Survey Team B - has Completed booking (should ignore)'
+    }
+  ];
+  
+  let passCount = 0;
+  
+  testCases.forEach(function(test, index) {
+    console.log('\n' + (index + 1) + '. Test:', test.reason);
+    console.log('   Team:', test.team);
+    console.log('   Date:', test.date);
+    console.log('   Time:', test.start, '-', test.end);
+    
+    const result = isSurveyTeamAvailable(test.team, test.date, test.start, test.end);
+    
+    console.log('   Expected:', test.expected);
+    console.log('   Got:', result);
+    
+    const pass = result === test.expected;
+    console.log('   Result:', pass ? '✅ PASS' : '❌ FAIL');
+    
+    if (pass) passCount++;
+  });
+  
+  console.log('\n========================================');
+  console.log('📊 Summary:', passCount, '/', testCases.length, 'passed');
+  console.log('========================================');
+  
+  SpreadsheetApp.getUi().alert(
+    'Test Result',
+    'Passed: ' + passCount + ' / ' + testCases.length + '\n\n' +
+    (passCount === testCases.length ? '✅ All tests passed!' : '⚠️ Some tests failed'),
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
