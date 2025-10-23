@@ -294,6 +294,39 @@
       .subtitle {
         font-size: 14px;
       }
+.calendar-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: white;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.25);
+}
+
+.calendar-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35);
+  background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
+}
+
+.calendar-link-btn .icon {
+  font-size: 20px;
+}
+
+.calendar-link-btn .external-icon {
+  font-size: 18px;
+  opacity: 0.8;
+}
+    
     }
   </style>
 </head>
@@ -320,6 +353,14 @@
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>
       <strong>👥 ทีมงาน:</strong> Survey Teams เท่านั้น
     </div>
+
+<a href="https://calendar.google.com/calendar/u/0/embed?src=developeritd75@gmail.com&ctz=Asia/Bangkok" 
+   target="_blank" 
+   class="calendar-link-btn">
+  <span class="icon">📅</span>
+  <span>ดูปฏิทินการจอง</span>
+  <span class="external-icon">↗</span>
+</a>
     
     <form id="surveyWorkForm">
       <div class="form-group">
