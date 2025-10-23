@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ศูนย์รวมระบบงาน</title>
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -808,10 +809,22 @@
     
     /* ========== Loading & Messages ========== */
     .loading {
-      text-align: center;
-      padding: 60px;
-      color: white;
-    }
+  text-align: center;
+  padding: 60px;
+  color: white;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loading p {
+  font-size: 18px;
+  margin-top: 10px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
     
     .spinner {
       width: 50px;
@@ -1155,6 +1168,10 @@ select:focus {
       <span>📋</span>
       <span>ดูรายงาน</span>
     </button>
+      <button class="btn-manage" onclick="openNewLinkModal()">
+    <span>🔗</span>
+    <span>New Link</span>
+  </button>
         <!-- เพิ่มใน header-right -->
 
   </div>
@@ -1165,12 +1182,12 @@ select:focus {
   </button>
 </div>
       
-      <div id="appsContainer">
-        <div class="loading">
-          <div class="spinner"></div>
-          <p>กำลังโหลดระบบงาน...</p>
-        </div>
-      </div>
+<div id="appsContainer">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p id="loadingText">กำลังเชื่อมต่อ Google Apps Script...</p>
+  </div>
+</div>
     </div>
   </div>
   
@@ -1339,47 +1356,103 @@ select:focus {
     </form>
   </div>
 </div>
+
+<!-- New Link Modal -->
+<div class="modal" id="newLinkModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน</h2>
+      <p>อัปเดตลิงค์ใหม่และส่งอีเมลแจ้งทุกคน</p>
+    </div>
+    
+    <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+      <div style="font-size: 13px; color: #666; margin-bottom: 5px;">📍 ลิงค์ปัจจุบัน:</div>
+      <div id="currentLinkDisplay" style="font-size: 14px; color: #667eea; word-break: break-all; font-weight: 500;">กำลังโหลด...</div>
+    </div>
+    
+    <form id="newLinkForm">
+      <div class="form-group">
+        <label>ลิงค์ใหม่ *</label>
+        <input type="url" id="newLinkUrl" required placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+        <div style="font-size: 13px; color: #856404;">
+          <strong>⚠️ หมายเหตุ:</strong> ระบบจะอัปเดตลิงค์ใน Sheet "Link" และส่งอีเมลแจ้งเตือนให้ผู้ใช้ทุกคนในระบบ
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeNewLinkModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">อัปเดตและส่งอีเมล</button>
+      </div>
+    </form>
+  </div>
+</div>
   
-  <script>
+<script>
+    // ปิด Console Warnings ที่ไม่จำเป็น
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+      const message = args.join(' ');
+      if (
+        message.includes('Unrecognized feature') ||
+        message.includes('sandbox attribute') ||
+        message.includes('Net state changed')
+      ) {
+        return; // ไม่แสดง warning พวกนี้
+      }
+      originalWarn.apply(console, args);
+    };
+    
     let isAdmin = false;
     let allApps = [];
+    // ... โค้ดส่วนอื่นๆ ต่อไป ...
     let currentUserEmail = null;
     let isLoggedIn = false;
     
-    window.onload = function() {
-  // ตรวจสอบ version ก่อน
-  google.script.run
-    .withSuccessHandler(function(ver) {
-      console.log('App Version:', ver);
-      if (ver && ver.version === "2.0") {
-        console.log('✅ Using latest version');
-      } else {
-        console.warn('⚠️ Old version detected!');
-        alert('กรุณา Refresh หน้าเว็บด้วย Ctrl+Shift+R');
-      }
-      checkLoginStatus();
-    })
-    .getVersion();
+window.onload = function() {
+  checkLoginStatus(); // เรียกเลย ไม่ต้องเช็ค version
 };
     
-    function checkLoginStatus() {
-      google.script.run
-        .withSuccessHandler(function(email) {
-          if (email && email !== 'ไม่ทราบผู้ใช้') {
-            currentUserEmail = email;
-            isLoggedIn = true;
-            showMainApp();
-            loadApps();
-          } else {
-            showLoginScreen();
-          }
-        })
-        .withFailureHandler(function(error) {
-          console.log('Auto-login failed:', error);
-          showLoginScreen();
-        })
-        .getCurrentUser();
-    }
+function checkLoginStatus() {
+  // ลองดึงจาก cache ก่อน
+  const cachedEmail = localStorage.getItem('userEmail');
+  const cacheTime = localStorage.getItem('cacheTime');
+  const now = new Date().getTime();
+  
+  // ถ้ามี cache และยังไม่หมดอายุ (5 นาที)
+  if (cachedEmail && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+    console.log('✅ Using cached session');
+    currentUserEmail = cachedEmail;
+    isLoggedIn = true;
+    showMainApp();
+    loadApps();
+    return;
+  }
+  
+  // ถ้าไม่มี cache หรือหมดอายุ -> เรียก API
+  console.log('🔄 Fetching fresh session...');
+  google.script.run
+    .withSuccessHandler(function(email) {
+      if (email && email !== 'ไม่ทราบผู้ใช้') {
+        currentUserEmail = email;
+        isLoggedIn = true;
+        
+        // บันทึก cache
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('cacheTime', new Date().getTime().toString());
+        
+        showMainApp();
+        loadApps();
+      } else {
+        showLoginScreen();
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.log('Auto-login failed:', error);
+      showLoginScreen();
+    })
+    .getCurrentUser();
+}
     
     function handleGoogleLogin() {
       google.script.run
@@ -1400,14 +1473,19 @@ select:focus {
         .getCurrentUser();
     }
     
-    function handleLogout() {
-      if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-        currentUserEmail = null;
-        isLoggedIn = false;
-        showLoginScreen();
-        showMessage('ออกจากระบบเรียบร้อย', 'success');
-      }
-    }
+function handleLogout() {
+  if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+    currentUserEmail = null;
+    isLoggedIn = false;
+    
+    // ลบ cache
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('cacheTime');
+    
+    showLoginScreen();
+    showMessage('ออกจากระบบเรียบร้อย', 'success');
+  }
+}
     
     function showLoginScreen() {
       document.getElementById('loginScreen').style.display = 'flex';
@@ -1421,8 +1499,12 @@ select:focus {
     
     // แสดงปุ่มดูรายงานสำหรับ Admin
 function loadApps() {
+  document.getElementById('loadingText').textContent = 'กำลังตรวจสอบสิทธิ์...';
+  
   google.script.run
     .withSuccessHandler(function(result) {
+      document.getElementById('loadingText').textContent = 'กำลังโหลดระบบงาน...';
+      
       isAdmin = result.isAdmin;
       currentUserEmail = result.userEmail;
       
@@ -2076,6 +2158,58 @@ function getReports() {
   const data = sheet.getDataRange().getValues();
   return data.length > 1 ? data : null;
 }
+
+// ========== New Link Modal ==========
+function openNewLinkModal() {
+  // ดึง URL เดิมมาแสดงก่อน
+  google.script.run
+    .withSuccessHandler(function(currentUrl) {
+      document.getElementById('currentLinkDisplay').textContent = currentUrl || 'ยังไม่มีลิงค์ในระบบ';
+      document.getElementById('newLinkModal').classList.add('show');
+    })
+    .getWebAppUrl();
+}
+
+function closeNewLinkModal() {
+  document.getElementById('newLinkModal').classList.remove('show');
+  document.getElementById('newLinkForm').reset();
+}
+
+document.getElementById('newLinkForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const newUrl = document.getElementById('newLinkUrl').value.trim();
+  
+  if (!newUrl) {
+    showMessage('กรุณากรอกลิงค์', 'error');
+    return;
+  }
+  
+  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+    showMessage('ลิงค์ไม่ถูกต้อง กรุณาใส่ลิงค์ที่ขึ้นต้นด้วย http:// หรือ https://', 'error');
+    return;
+  }
+  
+  if (!confirm('ต้องการอัปเดตลิงค์และส่งอีเมลแจ้งทุกคนใช่หรือไม่?')) {
+    return;
+  }
+  
+  showMessage('กำลังอัปเดตและส่งอีเมล... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage(`✅ อัปเดตสำเร็จ! ส่งอีเมล: ${result.successCount}/${result.totalCount} คน`, 'success');
+        closeNewLinkModal();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .updateLinkAndNotifyUsers(newUrl);
+});
 
   </script>
 
