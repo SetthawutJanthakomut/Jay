@@ -508,21 +508,118 @@ function notifyAppUpdate(appName, url, users) {
     return;
   }
   
+  // ดึง URL ของศูนย์รวมระบบงาน
+  const webAppUrl = getWebAppUrl();
+  
   const subject = '🔔 แจ้งเตือน: ระบบงาน "' + appName + '" มีการอัปเดต';
   const body = `เรียน ผู้ใช้งานระบบ\n\n` +
                `ระบบงาน "${appName}" ที่คุณมีสิทธิ์เข้าถึงมีการอัปเดตข้อมูล\n\n` +
                `URL: ${url}\n\n` +
                `กรุณาตรวจสอบการเปลี่ยนแปลงและใช้งานได้ตามปกติ\n\n` +
+               `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Admin'}\n\n` +
                `ขอบคุณครับ/ค่ะ\n` +
                `ทีมงานระบบ`;
   
+  // สร้าง HTML Email
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนระบบ</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">ระบบงานมีการอัปเดต</h2>
+        
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #856404;">
+            <strong>📱 ระบบงาน:</strong> ${appName}
+          </p>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          ระบบงาน <strong>"${appName}"</strong> ที่คุณมีสิทธิ์เข้าถึงมีการอัปเดตข้อมูล
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 20px 0;">
+          <p style="color: #666; margin: 0; font-size: 14px;">
+            <strong>🔗 URL ระบบงาน:</strong><br>
+            <a href="${url}" style="color: #667eea; word-break: break-all;">${url}</a>
+          </p>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          กรุณาตรวจสอบการเปลี่ยนแปลงและใช้งานได้ตามปกติ
+        </p>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าศูนย์รวมระบบงาน
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
   try {
     users.forEach(function(email) {
-      MailApp.sendEmail(email, subject, body);
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        body: body,
+        htmlBody: htmlBody
+      });
     });
-    Logger.log('ส่งอีเมลแจ้งเตือนให้ผู้ใช้ ' + users.length + ' คน');
+    Logger.log('✅ ส่งอีเมลแจ้งเตือนให้ผู้ใช้ ' + users.length + ' คน');
   } catch (e) {
-    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+}
+
+// ฟังก์ชันดึง URL จาก Sheet "Link"
+function getWebAppUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let linkSheet = ss.getSheetByName('Link');
+    
+    // สร้าง Sheet ถ้ายังไม่มี
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', 'https://script.google.com/macros/s/YOUR_URL/exec']);
+      Logger.log('✅ สร้าง Sheet "Link" แล้ว - กรุณาใส่ URL ที่ถูกต้อง');
+      return null;
+    }
+    
+    const data = linkSheet.getDataRange().getValues();
+    
+    // หา URL ที่ column A = "ศูนย์รวมระบบงาน"
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === 'ศูนย์รวมระบบงาน' && data[i][1]) {
+        Logger.log('✅ พบ URL: ' + data[i][1]);
+        return data[i][1];
+      }
+    }
+    
+    Logger.log('⚠️ ไม่พบ URL ในระบบ');
+    return null;
+    
+  } catch (e) {
+    Logger.log('❌ Error: ' + e);
+    return null;
   }
 }
 
@@ -539,18 +636,74 @@ function notifyPermissionChange(email, apps, isNewUser) {
     appsList = 'ไม่มี (สิทธิ์ถูกยกเลิก)';
   }
   
+  // ดึง URL จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
   const body = `เรียน ผู้ใช้งานระบบ\n\n` +
-               `${isNewUser ? 'คำขอเข้าใช้ระบบของคุณได้รับการอนุมัติแล้ว!' : 'สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง'}\n\n` +
+               `${isNewUser ? 'คำขอเข้าใช้ระบบของคุณได้รับการอนุมัติแล้ว! 🎉' : 'สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง'}\n\n` +
                `ระบบงานที่คุณสามารถเข้าถึงได้:\n${appsList}\n\n` +
-               `${apps && apps.length > 0 ? 'คุณสามารถเข้าใช้งานระบบได้ทันที' : 'หากมีข้อสงสัย กรุณาติดต่อ Admin'}\n\n` +
-               `ขอบคุณครับ/ค่ะ\n` +
+               `${apps && apps.length > 0 ? '✨ คุณสามารถเข้าใช้งานระบบได้ทันที!\n\n' : 'หากมีข้อสงสัย กรุณาติดต่อ Admin\n\n'}` +
+               `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl}\n\n` +
+               `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
                `ทีมงานระบบ`;
   
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🚀 ศูนย์รวมระบบงาน</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">
+          ${isNewUser ? '✅ คำขอเข้าใช้ระบบได้รับการอนุมัติ' : '🔔 สิทธิ์การเข้าถึงระบบมีการเปลี่ยนแปลง'}
+        </h2>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          ${isNewUser ? 'ยินดีต้อนรับ! คำขอของคุณได้รับการอนุมัติแล้ว 🎉' : 'สิทธิ์การเข้าถึงของคุณได้รับการอัปเดต'}
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #667eea; margin-top: 0;">📋 ระบบงานที่คุณสามารถเข้าถึง:</h3>
+          ${apps && apps.length > 0 ? 
+            `<ul style="color: #333; line-height: 2;">${apps.map(app => `<li><strong>${app}</strong></li>`).join('')}</ul>` : 
+            '<p style="color: #999;">ไม่มี (สิทธิ์ถูกยกเลิก)</p>'
+          }
+        </div>
+        
+        ${apps && apps.length > 0 ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🔗 เข้าใช้งานระบบ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
   try {
-    MailApp.sendEmail(email, subject, body);
-    Logger.log('ส่งอีเมลแจ้งเตือนให้: ' + email);
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody
+    });
+    Logger.log('✅ ส่งอีเมลแจ้งเตือนให้: ' + email);
   } catch (e) {
-    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
   }
 }
 
