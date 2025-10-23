@@ -6,7 +6,23 @@ function doGet() {
 
 function getApps() {
   const sheet = getOrCreateSheet();
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  
+  // ถ้าไม่มีข้อมูล return เลย
+  if (lastRow <= 1) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    const userIsAdmin = isAdmin(userEmail);
+    
+    return { 
+      apps: [], 
+      isAdmin: userIsAdmin, 
+      userEmail: userEmail 
+    };
+  }
+  
+  const data = sheet.getRange(1, 1, lastRow, 4).getValues(); // ดึงเฉพาะแถวที่มีข้อมูล
   const currentUser = Session.getActiveUser().getEmail();
   const effectiveUser = Session.getEffectiveUser().getEmail();
   const userEmail = currentUser || effectiveUser;
@@ -574,19 +590,30 @@ function notifyAppUpdate(appName, url, users) {
     </div>
   `;
   
-  try {
-    users.forEach(function(email) {
+  // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+  const batchSize = 100;
+  let successCount = 0;
+  
+  for (let i = 0; i < users.length; i += batchSize) {
+    const batch = users.slice(i, i + batchSize);
+    
+    try {
       MailApp.sendEmail({
-        to: email,
+        to: batch[0],
+        bcc: batch.slice(1).join(','),
         subject: subject,
         body: body,
-        htmlBody: htmlBody
+        htmlBody: htmlBody,
+        name: 'ศูนย์รวมระบบงาน'
       });
-    });
-    Logger.log('✅ ส่งอีเมลแจ้งเตือนให้ผู้ใช้ ' + users.length + ' คน');
-  } catch (e) {
-    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
+      successCount += batch.length;
+      Logger.log('✅ ส่งอีเมลแจ้งแอปอัปเดต Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+    } catch (e) {
+      Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+    }
   }
+  
+  Logger.log('✅ ส่งอีเมลแจ้งเตือนแอปอัปเดตสำเร็จ: ' + successCount + '/' + users.length + ' คน');
 }
 
 // ฟังก์ชันดึง URL จาก Sheet "Link"
@@ -1144,3 +1171,414 @@ function testReports() {
      Logger.log('Length: ' + (result ? result.length : 'null'));
    }
 
+// ฟังก์ชันส่งอีเมลอัปเดตลิงค์ใหม่ให้ทุกคน (จาก Google Sheets Menu)
+function updateAndNotifyNewLink() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // แสดง Popup ให้กรอกลิงค์ใหม่
+  const response = ui.prompt(
+    '🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน',
+    'กรุณากรอกลิงค์ใหม่ของศูนย์รวมระบบงาน:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  // ตรวจสอบว่ากด OK หรือไม่
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    ui.alert('❌ ยกเลิกการอัปเดต');
+    return;
+  }
+  
+  const newUrl = response.getResponseText().trim();
+  
+  // ตรวจสอบว่ากรอกลิงค์หรือไม่
+  if (!newUrl) {
+    ui.alert('⚠️ กรุณากรอกลิงค์');
+    return;
+  }
+  
+  // ตรวจสอบว่าเป็น URL ที่ถูกต้องหรือไม่
+  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+    ui.alert('⚠️ ลิงค์ไม่ถูกต้อง กรุณาใส่ลิงค์ที่ขึ้นต้นด้วย http:// หรือ https://');
+    return;
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. อัปเดต URL ใน Sheet "Link"
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+      Logger.log('✅ สร้าง Sheet "Link" ใหม่');
+    } else {
+      const data = linkSheet.getDataRange().getValues();
+      let updated = false;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'ศูนย์รวมระบบงาน') {
+          linkSheet.getRange(i + 1, 2).setValue(newUrl);
+          updated = true;
+          Logger.log('✅ อัปเดต URL ใน Sheet "Link"');
+          break;
+        }
+      }
+      
+      if (!updated) {
+        linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+        Logger.log('✅ เพิ่ม URL ใหม่ใน Sheet "Link"');
+      }
+    }
+    
+    // 2. ดึงอีเมลทุกคนจาก Sheet "Permission" Column A
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      ui.alert('⚠️ ไม่พบ Sheet "Permission"');
+      return;
+    }
+    
+    const permData = permSheet.getDataRange().getValues();
+    const emailList = [];
+    
+    for (let i = 1; i < permData.length; i++) {
+      if (permData[i][0] && permData[i][0].toString().includes('@')) {
+        emailList.push(permData[i][0]);
+      }
+    }
+    
+    if (emailList.length === 0) {
+      ui.alert('⚠️ ไม่พบผู้ใช้ในระบบ');
+      return;
+    }
+    
+    Logger.log('📧 พบผู้ใช้ทั้งหมด: ' + emailList.length + ' คน');
+    
+    // 3. ส่งอีเมลแจ้งทุกคน
+    const subject = '🔔 แจ้งเตือน: ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง';
+    const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+                 `ระบบศูนย์รวมระบบงานได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่\n\n` +
+                 `🔗 ลิงค์เข้าใช้งานใหม่:\n${newUrl}\n\n` +
+                 `กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน\n\n` +
+                 `หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin\n\n` +
+                 `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    // สร้าง HTML Email สวยงาม
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสำคัญ</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง</h2>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ สำคัญ:</strong> ระบบได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่
+            </p>
+          </div>
+          
+          <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            ลิงค์เข้าใช้งานศูนย์รวมระบบงานได้ถูกอัปเดตเป็นลิงค์ใหม่แล้ว กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${newUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าสู่ระบบ (ลิงค์ใหม่)
+            </a>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <p style="color: #666; margin: 0; font-size: 14px; text-align: center;">
+              <strong>🔗 ลิงค์ใหม่:</strong><br>
+              <code style="background: white; padding: 10px 15px; border-radius: 5px; color: #667eea; display: inline-block; margin-top: 10px; word-break: break-all;">${newUrl}</code>
+            </p>
+          </div>
+          
+          <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0; font-size: 14px;">
+              <strong>💡 เคล็ดลับ:</strong> กด Ctrl+D (Windows) หรือ Cmd+D (Mac) เพื่อบุ๊คมาร์คหน้านี้
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+            หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin<br><br>
+            ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+    const batchSize = 100;
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (let i = 0; i < emailList.length; i += batchSize) {
+      const batch = emailList.slice(i, i + batchSize);
+      
+      try {
+        MailApp.sendEmail({
+          to: batch[0],
+          bcc: batch.slice(1).join(','),
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+        successCount += batch.length;
+        Logger.log('✅ ส่งอีเมล Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+      } catch (e) {
+        failCount += batch.length;
+        Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+      }
+    }
+    
+    // แสดงผลลัพธ์
+    ui.alert(
+      '✅ อัปเดตลิงค์สำเร็จ!',
+      `ลิงค์ใหม่: ${newUrl}\n\n` +
+      `📧 ส่งอีเมลแจ้งเตือน:\n` +
+      `- สำเร็จ: ${successCount} คน\n` +
+      `- ไม่สำเร็จ: ${failCount} คน\n` +
+      `- รวมทั้งหมด: ${emailList.length} คน`,
+      ui.ButtonSet.OK
+    );
+    
+    Logger.log('=== สรุปผล ===');
+    Logger.log('✅ อัปเดต URL ใน Sheet "Link" สำเร็จ');
+    Logger.log('📧 ส่งอีเมลสำเร็จ: ' + successCount + ' คน');
+    Logger.log('❌ ส่งอีเมลไม่สำเร็จ: ' + failCount + ' คน');
+    
+  } catch (error) {
+    Logger.log('❌ เกิดข้อผิดพลาด: ' + error);
+    ui.alert('❌ เกิดข้อผิดพลาด: ' + error);
+  }
+}
+
+// ฟังก์ชันสร้างเมนูใน Google Sheets
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🚀 ระบบจัดการ')
+    .addItem('🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน', 'updateAndNotifyNewLink')
+    .addSeparator()
+    .addItem('📋 สร้าง Sheet Report', 'createReportSheet')
+    .addItem('👥 ดูรายชื่อผู้ใช้', 'showAllUsers')
+    .addItem('📊 ดูสถิติการใช้งาน', 'showStatistics')
+    .addToUi();
+}
+
+// ฟังก์ชันแสดงรายชื่อผู้ใช้ทั้งหมด
+function showAllUsers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    SpreadsheetApp.getUi().alert('⚠️ ไม่พบ Sheet "Permission"');
+    return;
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  let userList = '📋 รายชื่อผู้ใช้ทั้งหมดในระบบ:\n\n';
+  let count = 0;
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().includes('@')) {
+      count++;
+      const name = data[i][2] || '-';
+      const appsCount = data[i][1] ? JSON.parse(data[i][1]).length : 0;
+      userList += `${count}. ${data[i][0]}\n   ชื่อ: ${name}\n   จำนวนสิทธิ์: ${appsCount} ระบบ\n\n`;
+    }
+  }
+  
+  userList += `รวมทั้งหมด: ${count} คน`;
+  
+  SpreadsheetApp.getUi().alert(userList);
+}
+
+// ฟังก์ชันแสดงสถิติ
+function showStatistics() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // นับจำนวนแอป
+  let appsSheet = ss.getSheetByName('Apps');
+  const appsCount = appsSheet ? appsSheet.getLastRow() - 1 : 0;
+  
+  // นับจำนวนผู้ใช้
+  let permSheet = ss.getSheetByName('Permission');
+  const usersCount = permSheet ? permSheet.getLastRow() - 1 : 0;
+  
+  // นับจำนวนรายงาน
+  let reportSheet = ss.getSheetByName('Report');
+  const reportsCount = reportSheet ? reportSheet.getLastRow() - 1 : 0;
+  
+  const stats = `📊 สถิติการใช้งานระบบ\n\n` +
+                `📱 จำนวนระบบงาน: ${appsCount} ระบบ\n` +
+                `👥 จำนวนผู้ใช้: ${usersCount} คน\n` +
+                `📢 จำนวนรายงาน: ${reportsCount} รายการ\n\n` +
+                `วันที่: ${new Date().toLocaleDateString('th-TH')}`;
+  
+  SpreadsheetApp.getUi().alert(stats);
+}
+
+// ฟังก์ชันสำหรับ Web App - อัปเดตลิงค์และส่งอีเมล
+function updateLinkAndNotifyUsers(newUrl) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  if (!newUrl) {
+    return { success: false, message: 'กรุณากรอกลิงค์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. อัปเดต URL ใน Sheet "Link"
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+    } else {
+      const data = linkSheet.getDataRange().getValues();
+      let updated = false;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'ศูนย์รวมระบบงาน') {
+          linkSheet.getRange(i + 1, 2).setValue(newUrl);
+          updated = true;
+          break;
+        }
+      }
+      
+      if (!updated) {
+        linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+      }
+    }
+    
+    // 2. ดึงอีเมลทุกคนจาก Sheet "Permission"
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      return { success: false, message: 'ไม่พบ Sheet "Permission"' };
+    }
+    
+    const permData = permSheet.getDataRange().getValues();
+    const emailList = [];
+    
+    for (let i = 1; i < permData.length; i++) {
+      if (permData[i][0] && permData[i][0].toString().includes('@')) {
+        emailList.push(permData[i][0]);
+      }
+    }
+    
+    if (emailList.length === 0) {
+      return { success: true, message: 'อัปเดตลิงค์สำเร็จ แต่ไม่มีผู้ใช้ในระบบ', successCount: 0, totalCount: 0 };
+    }
+    
+    // 3. ส่งอีเมลแบบ Batch
+    const subject = '🔔 แจ้งเตือน: ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง';
+    const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+                 `ระบบศูนย์รวมระบบงานได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่\n\n` +
+                 `🔗 ลิงค์เข้าใช้งานใหม่:\n${newUrl}\n\n` +
+                 `กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน\n\n` +
+                 `หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin\n\n` +
+                 `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสำคัญ</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง</h2>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ สำคัญ:</strong> ระบบได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่
+            </p>
+          </div>
+          
+          <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            ลิงค์เข้าใช้งานศูนย์รวมระบบงานได้ถูกอัปเดตเป็นลิงค์ใหม่แล้ว กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${newUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าสู่ระบบ (ลิงค์ใหม่)
+            </a>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <p style="color: #666; margin: 0; font-size: 14px; text-align: center;">
+              <strong>🔗 ลิงค์ใหม่:</strong><br>
+              <code style="background: white; padding: 10px 15px; border-radius: 5px; color: #667eea; display: inline-block; margin-top: 10px; word-break: break-all;">${newUrl}</code>
+            </p>
+          </div>
+          
+          <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0; font-size: 14px;">
+              <strong>💡 เคล็ดลับ:</strong> กด Ctrl+D (Windows) หรือ Cmd+D (Mac) เพื่อบุ๊คมาร์คหน้านี้
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+            หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin<br><br>
+            ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+    const batchSize = 100;
+    let successCount = 0;
+    
+    for (let i = 0; i < emailList.length; i += batchSize) {
+      const batch = emailList.slice(i, i + batchSize);
+      
+      try {
+        MailApp.sendEmail({
+          to: batch[0],
+          bcc: batch.slice(1).join(','),
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+        successCount += batch.length;
+        Logger.log('✅ ส่งอีเมล Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+      } catch (e) {
+        Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+      }
+    }
+    
+    return { 
+      success: true, 
+      successCount: successCount, 
+      totalCount: emailList.length 
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
+}
