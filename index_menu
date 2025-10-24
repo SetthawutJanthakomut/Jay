@@ -1422,31 +1422,6 @@ select:focus {
   </div>
 </div>
 
-
-    
-    <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-      <div style="font-size: 13px; color: #666; margin-bottom: 5px;">📍 ลิงค์ปัจจุบัน:</div>
-      <div id="currentLinkDisplay" style="font-size: 14px; color: #667eea; word-break: break-all; font-weight: 500;">กำลังโหลด...</div>
-    </div>
-    
-    <form id="newLinkForm">
-      <div class="form-group">
-        <label>ลิงค์ใหม่ *</label>
-        <input type="url" id="newLinkUrl" required placeholder="https://script.google.com/macros/s/...">
-      </div>
-      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
-        <div style="font-size: 13px; color: #856404;">
-          <strong>⚠️ หมายเหตุ:</strong> ระบบจะอัปเดตลิงค์ใน Sheet "Link" และส่งอีเมลแจ้งเตือนให้ผู้ใช้ทุกคนในระบบ
-        </div>
-      </div>
-      <div class="modal-buttons">
-        <button type="button" class="btn btn-cancel" onclick="closeNewLinkModal()">ยกเลิก</button>
-        <button type="submit" class="btn btn-submit">อัปเดตและส่งอีเมล</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div class="modal" id="viewRequestsModal">
   <div class="modal-content large">
     <div class="modal-header">
