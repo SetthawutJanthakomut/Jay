@@ -1507,17 +1507,6 @@ function updateAndNotifyNewLink() {
   }
 }
 
-// ฟังก์ชันสร้างเมนูใน Google Sheets
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🚀 ระบบจัดการ')
-    .addItem('🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน', 'updateAndNotifyNewLink')
-    .addSeparator()
-    .addItem('📋 สร้าง Sheet Report', 'createReportSheet')
-    .addItem('👥 ดูรายชื่อผู้ใช้', 'showAllUsers')
-    .addItem('📊 ดูสถิติการใช้งาน', 'showStatistics')
-    .addToUi();
-}
 
 // ฟังก์ชันแสดงรายชื่อผู้ใช้ทั้งหมด
 function showAllUsers() {
@@ -1938,5 +1927,43 @@ function deleteAppRequest(rowIndex) {
   
   requestSheet.deleteRow(rowIndex);
   return { success: true };
+}
+
+// เพิ่มฟังก์ชันนี้ใน MenuAPP.gs
+
+function deleteUser(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      return { success: false, message: 'ไม่พบ Sheet Permission' };
+    }
+    
+    const data = permSheet.getDataRange().getValues();
+    
+    // หาแถวที่ตรงกับอีเมลที่ต้องการลบ
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+        permSheet.deleteRow(i + 1);
+        Logger.log('✅ ลบผู้ใช้: ' + email);
+        return { success: true, message: 'ลบผู้ใช้สำเร็จ' };
+      }
+    }
+    
+    return { success: false, message: 'ไม่พบผู้ใช้นี้ในระบบ' };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
 }
 
