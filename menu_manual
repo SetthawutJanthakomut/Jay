@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📚 คู่มือการใช้งานศูนย์รวมระบบงาน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* Header */
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      animation: slideDown 0.6s ease-out;
+    }
+    
+    .header h1 {
+      font-size: 42px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 18px;
+    }
+    
+    /* Tab Navigation */
+    .tab-nav {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: slideDown 0.7s ease-out;
+    }
+    
+    .tab-btn {
+      background: #f5f6f7;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 15px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .tab-btn:hover {
+      background: #e4e6eb;
+      transform: translateY(-2px);
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Content Area */
+    .content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 0.8s ease-out;
+      min-height: 500px;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    /* Typography */
+    h2 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #667eea;
+    }
+    
+    h3 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #764ba2;
+      margin-top: 30px;
+      margin-bottom: 15px;
+    }
+    
+    h4 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    
+    ul, ol {
+      margin-left: 30px;
+      margin-bottom: 15px;
+    }
+    
+    li {
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+    
+    strong {
+      color: #333;
+      font-weight: 600;
+    }
+    
+    /* Code Blocks */
+    .code-block {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    /* Info Boxes */
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    
+    .info-box.success {
+      background: #e8f5e9;
+      border-left-color: #4caf50;
+    }
+    
+    .info-box.warning {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    
+    .info-box.error {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    
+    /* Button List */
+    .button-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .button-item {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 15px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+    
+    .button-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .button-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .button-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .button-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    /* Screenshots */
+    .screenshot {
+      background: #f8f9fa;
+      border: 2px solid #e4e6eb;
+      border-radius: 15px;
+      padding: 30px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .screenshot pre {
+      text-align: left;
+      display: inline-block;
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    /* FAQ */
+    .faq-item {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .faq-question {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .faq-answer {
+      color: #555;
+      line-height: 1.8;
+    }
+    
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #e4e6eb;
+      color: #555;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:hover {
+      background: #f8f9fa;
+    }
+    
+    /* Back to Top */
+    .back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .back-to-top.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    
+    .back-to-top:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+    
+    /* Animations */
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 32px;
+      }
+      
+      .header p {
+        font-size: 16px;
+      }
+      
+      .tab-nav {
+        padding: 15px;
+        gap: 10px;
+      }
+      
+      .tab-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+      }
+      
+      .content {
+        padding: 25px;
+      }
+      
+      h2 {
+        font-size: 26px;
+      }
+      
+      h3 {
+        font-size: 20px;
+      }
+      
+      .button-list {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Search Box */
+    .search-box {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: slideDown 0.65s ease-out;
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid #e4e6eb;
+      border-radius: 15px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    
+    /* Highlight search results */
+    .highlight {
+      background-color: #ffeb3b;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>📚 คู่มือการใช้งานศูนย์รวมระบบงาน</h1>
+      <p>คู่มือฉบับสมบูรณ์สำหรับผู้ใช้งานและ Admin</p>
+    </div>
+    
+    <!-- Search Box -->
+    <div class="search-box">
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="🔍 ค้นหาในคู่มือ... (เช่น การเข้าสู่ระบบ, จัดการสิทธิ์)" 
+        id="searchInput"
+      >
+    </div>
+    
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('overview')">
+        <span>🎯</span>
+        <span>ภาพรวม</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('authorization')">
+        <span>🔐</span>
+        <span>การ Authorize</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('user')">
+        <span>👤</span>
+        <span>ผู้ใช้ทั่วไป</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('admin')">
+        <span>👑</span>
+        <span>Admin</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('sheets')">
+        <span>📊</span>
+        <span>Google Sheets</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('faq')">
+        <span>❓</span>
+        <span>FAQ</span>
+      </button>
+      <button class="tab-btn" onclick="showTab('troubleshooting')">
+        <span>🔧</span>
+        <span>แก้ปัญหา</span>
+      </button>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content">
+      <!-- Overview Tab -->
+      <div id="overview" class="tab-content active">
+        <h2>🎯 ภาพรวมระบบ</h2>
+        
+        <p><strong>ศูนย์รวมระบบงาน</strong> เป็นแพลตฟอร์มที่รวบรวมระบบงานต่างๆ ของหน่วยงานไว้ในที่เดียว ช่วยให้ผู้ใช้สามารถเข้าถึงระบบงานที่ได้รับสิทธิ์ได้อย่างสะดวกและรวดเร็ว</p>
+        
+        <h3>✨ ฟีเจอร์หลัก</h3>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">🔐</div>
+            <div class="button-name">Login ด้วย Google</div>
+            <div class="button-desc">เข้าสู่ระบบอย่างปลอดภัยด้วย Google Account</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📱</div>
+            <div class="button-name">แสดงระบบงาน</div>
+            <div class="button-desc">เห็นเฉพาะระบบที่มีสิทธิ์เข้าถึง</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📝</div>
+            <div class="button-name">ขอสิทธิ์</div>
+            <div class="button-desc">ส่งคำขอเข้าใช้งานระบบใหม่</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📢</div>
+            <div class="button-name">รายงานปัญหา</div>
+            <div class="button-desc">แจ้งปัญหาหรือข้อเสนอแนะ</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">👑</div>
+            <div class="button-name">จัดการระบบ (Admin)</div>
+            <div class="button-desc">เพิ่ม/แก้ไข/ลบระบบและจัดการสิทธิ์</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📧</div>
+            <div class="button-name">แจ้งเตือนอัตโนมัติ</div>
+            <div class="button-desc">ส่งอีเมลแจ้งเมื่อมีการเปลี่ยนแปลง</div>
+          </div>
+        </div>
+        
+        <h3>🚀 เริ่มต้นใช้งาน</h3>
+        
+        <div class="info-box">
+          <strong>สำหรับผู้ใช้งานทั่วไป:</strong>
+          <ol>
+            <li>เปิดลิงค์ระบบที่ได้รับจาก Admin</li>
+            <li>คลิก "เข้าสู่ระบบด้วย Google"</li>
+            <li>เลือก Google Account ที่ต้องการใช้งาน</li>
+            <li>เริ่มใช้งานระบบที่มีสิทธิ์เข้าถึง</li>
+          </ol>
+        </div>
+        
+        <div class="info-box warning">
+          <strong>⚠️ หมายเหตุ:</strong>
+          <ul>
+            <li>ต้องใช้ Google Account ที่ Admin อนุมัติสิทธิ์แล้ว</li>
+            <li>ถ้ายังไม่มีสิทธิ์ ให้คลิกปุ่ม "📝 ขอสิทธิ์" เพื่อส่งคำขอ</li>
+          </ul>
+        </div>
+        
+        <h3>📌 สิ่งสำคัญที่ควรรู้</h3>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>หัวข้อ</th>
+              <th>รายละเอียด</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Session Timeout</strong></td>
+              <td>5 นาที (จะต้อง Login ใหม่)</td>
+            </tr>
+            <tr>
+              <td><strong>การอนุมัติคำขอ</strong></td>
+              <td>ขึ้นอยู่กับ Admin (จะได้รับอีเมลแจ้งเตือน)</td>
+            </tr>
+            <tr>
+              <td><strong>การรายงานปัญหา</strong></td>
+              <td>Admin จะตอบกลับภายใน 24 ชั่วโมง</td>
+            </tr>
+            <tr>
+              <td><strong>แอปที่แสดง</strong></td>
+              <td>เฉพาะที่ได้รับสิทธิ์เท่านั้น</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Authorization Tab -->
+      <div id="authorization" class="tab-content">
+        <h2>🔐 การเข้าใช้งานครั้งแรก - การขอสิทธิ์ Google</h2>
+        
+        <div class="info-box warning">
+          <strong>📌 สำคัญ!</strong> คุณจะต้องผ่านขั้นตอนนี้เพียง<strong>ครั้งแรกเท่านั้น</strong> หรือเมื่อ Admin อัปเดตระบบ
+        </div>
+        
+        <h3>🎯 ภาพรวม - ทำไมต้อง Authorize?</h3>
+        
+        <p>เมื่อคุณเข้าใช้งานระบบครั้งแรก คุณจะต้อง <strong>อนุญาตให้ระบบเข้าถึงข้อมูล Google Account</strong> ของคุณ</p>
+        
+        <div class="info-box">
+          <strong>❓ ทำไมต้อง Authorize?</strong>
+          <ul>
+            <li>✅ เพื่อให้ระบบรู้ว่าคุณเป็นใคร (อีเมล)</li>
+            <li>✅ เพื่อตรวจสอบสิทธิ์การเข้าถึงระบบงาน</li>
+            <li>✅ เพื่อส่งอีเมลแจ้งเตือนให้คุณ</li>
+            <li>✅ เพื่อให้ Admin จัดการสิทธิ์ของคุณได้</li>
+          </ul>
+        </div>
+        
+        <div class="info-box warning">
+          <strong>🔒 ระบบจะขอสิทธิ์อะไรบ้าง?</strong>
+          <ol>
+            <li><strong>See your email address</strong> - เพื่อระบุตัวตนและตรวจสอบสิทธิ์</li>
+            <li><strong>Send email on your behalf</strong> - เพื่อส่งอีเมลแจ้งเตือนเมื่อมีการเปลี่ยนแปลง</li>
+            <li><strong>Access Google Sheets</strong> - เพื่อดึงข้อมูลระบบงานและสิทธิ์</li>
+          </ol>
+        </div>
+        
+        <h3>🚀 ขั้นตอนการ Authorize ทั้งหมด 7 ขั้นตอน</h3>
+        
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 100px;">ขั้นตอน</th>
+              <th>การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1️⃣</strong></td>
+              <td>🔵 คลิก "เข้าสู่ระบบด้วย Google"</td>
+            </tr>
+            <tr>
+              <td><strong>2️⃣</strong></td>
+              <td>👤 เลือก Google Account ที่ต้องการใช้</td>
+            </tr>
+            <tr>
+              <td><strong>3️⃣</strong></td>
+              <td>⚠️ อาจเห็นหน้า "Google hasn't verified this app"</td>
+            </tr>
+            <tr>
+              <td><strong>4️⃣</strong></td>
+              <td>🔧 คลิก "Advanced" (หรือ "ขั้นสูง")</td>
+            </tr>
+            <tr>
+              <td><strong>5️⃣</strong></td>
+              <td>🔗 คลิก "Go to [ชื่อโปรเจค] (unsafe)"</td>
+            </tr>
+            <tr>
+              <td><strong>6️⃣</strong></td>
+              <td>✅ คลิก "Allow" (หรือ "อนุญาต")</td>
+            </tr>
+            <tr>
+              <td><strong>7️⃣</strong></td>
+              <td>🎉 เข้าสู่ระบบสำเร็จ!</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>📝 รายละเอียดแต่ละขั้นตอน</h3>
+        
+        <h4>ขั้นตอนที่ 1️⃣: เปิดลิงค์ระบบ</h4>
+        
+        <p>เมื่อเปิดลิงค์ระบบครั้งแรก จะเห็นหน้าจอ Login:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────┐
+│        🚀                       │
+│   ศูนย์รวมระบบงาน               │
+│   เข้าสู่ระบบด้วย Google Account│
+│                                 │
+│  [🔵 เข้าสู่ระบบด้วย Google]   │
+└─────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <div class="info-box success">
+          <strong>👉 การกระทำ:</strong> คลิกปุ่ม <strong>"เข้าสู่ระบบด้วย Google"</strong>
+        </div>
+        
+        <h4>ขั้นตอนที่ 2️⃣: เลือก Google Account</h4>
+        
+        <p>จะเห็นหน้าจอให้เลือก Account:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────────────┐
+│  Sign in with Google                    │
+│                                         │
+│  Choose an account                      │
+│  to continue to RFI_List                │
+│                                         │
+│  ┌────────────────────────────────┐    │
+│  │  👤 your.email@gmail.com        │    │
+│  │  Your Name                      │    │
+│  └────────────────────────────────┘    │
+│                                         │
+│  ⊕ Use another account                 │
+│                                         │
+└─────────────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <div class="info-box success">
+          <strong>👉 การกระทำ:</strong> คลิกเลือก <strong>Google Account ที่ต้องการใช้งาน</strong>
+        </div>
+        
+        <div class="info-box warning">
+          <strong>⚠️ หมายเหตุ:</strong> ต้องเลือก Account ที่ <strong>Admin อนุมัติสิทธิ์ไว้แล้ว</strong>
+        </div>
+        
+        <h4>ขั้นตอนที่ 3️⃣-5️⃣: หน้า Authorization Warning (อาจปรากฏ)</h4>
+        
+        <p>หลังจากเลือก Account แล้ว <strong>อาจจะเห็น</strong> หน้าต่างแจ้งเตือนแบบนี้:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────────────────────┐
+│  🔴 Google hasn't verified this app             │
+│                                                 │
+│  This app hasn't been verified by Google yet.  │
+│  Only proceed if you know and trust the        │
+│  developer.                                     │
+│                                                 │
+│  [← Back to safety]  [Advanced ▼]              │
+└─────────────────────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <div class="info-box">
+          <strong>💡 ทำไมถึงเห็นหน้านี้?</strong>
+          <ul>
+            <li>ระบบนี้เป็น Google Apps Script ที่ไม่ได้ Verify กับ Google</li>
+            <li><strong>แต่ปลอดภัย</strong> เพราะเป็นระบบภายในของบริษัท/องค์กร</li>
+            <li>Admin เป็นผู้พัฒนาและควบคุม</li>
+          </ul>
+        </div>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">4️⃣</div>
+            <div class="button-name">คลิก "Advanced"</div>
+            <div class="button-desc">หรือ "ขั้นสูง" ถ้าเป็นภาษาไทย</div>
+          </div>
+        </div>
+        
+        <p>หลังคลิก Advanced จะมีลิงค์เพิ่มขึ้นมา:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────────────────────┐
+│  🔴 Google hasn't verified this app             │
+│                                                 │
+│  This app hasn't been verified by Google yet.  │
+│  Only proceed if you know and trust the        │
+│  developer.                                     │
+│                                                 │
+│  [← Back to safety]  [Advanced ▼]              │
+│                                                 │
+│  🔗 Go to RFI_List (unsafe)  ← คลิกตรงนี้       │
+└─────────────────────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">5️⃣</div>
+            <div class="button-name">คลิก "Go to [ชื่อโปรเจค] (unsafe)"</div>
+            <div class="button-desc">ตัวอย่าง: "Go to RFI_List (unsafe)"</div>
+          </div>
+        </div>
+        
+        <div class="info-box warning">
+          <strong>⚠️ เกี่ยวกับคำว่า "unsafe":</strong>
+          <ul>
+            <li>คำว่า "unsafe" <strong>ไม่ได้แปลว่าอันตราย</strong></li>
+            <li>แค่หมายความว่า Google ยังไม่ได้ตรวจสอบแอปนี้</li>
+            <li><strong>ปลอดภัย</strong> ถ้าคุณเชื่อถือ Admin/ผู้พัฒนา</li>
+          </ul>
+        </div>
+        
+        <h4>ขั้นตอนที่ 6️⃣: หน้า Permission Request</h4>
+        
+        <p>จะเห็นหน้าขอสิทธิ์:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────────────────────┐
+│  [Project Name] wants to access                 │
+│  your Google Account                            │
+│                                                 │
+│  This will allow [Project Name] to:             │
+│                                                 │
+│  ✓ See your email address                      │
+│  ✓ Send email on your behalf                   │
+│  ✓ See, edit, create, and delete your          │
+│    spreadsheets in Google Drive                 │
+│                                                 │
+│  Make sure you trust [Project Name]             │
+│                                                 │
+│  [Cancel]              [Allow]  ← คลิกตรงนี้    │
+└─────────────────────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">📧</div>
+            <div class="button-name">See your email address</div>
+            <div class="button-desc">เพื่อระบุตัวตนและตรวจสอบสิทธิ์</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">✉️</div>
+            <div class="button-name">Send email on your behalf</div>
+            <div class="button-desc">เพื่อส่งอีเมลแจ้งเตือนเมื่อมีการเปลี่ยนแปลง</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📊</div>
+            <div class="button-name">Access Google Sheets</div>
+            <div class="button-desc">เพื่อดึงข้อมูลระบบงานและสิทธิ์</div>
+          </div>
+        </div>
+        
+        <div class="info-box success">
+          <strong>👉 การกระทำ:</strong> คลิก <strong>"Allow"</strong> (หรือ "อนุญาต")
+        </div>
+        
+        <h4>ขั้นตอนที่ 7️⃣: เข้าสู่ระบบสำเร็จ! 🎉</h4>
+        
+        <p>หลังจากกด Allow แล้ว จะเข้าสู่หน้าหลักของระบบ:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌────────────────────────────────────────────────────────┐
+│ 🚀 ศูนย์รวมระบบงาน            user@example.com        │
+│ เลือกระบบงานที่ต้องการใช้งาน  [📝] [📢] [🚪]           │
+└────────────────────────────────────────────────────────┘
+
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│  [📱]    │  │  [🚗]    │  │  [📋]    │
+│ Survey   │  │ Car Book │  │   RFI    │
+│ System   │  │ System   │  │ System   │
+│👤 Owner  │  │👤 Owner  │  │👤 Owner  │
+└──────────┘  └──────────┘  └──────────┘
+          </pre>
+        </div>
+        
+        <div class="info-box success">
+          <strong>🎉 เสร็จสิ้น!</strong> คุณสามารถใช้งานระบบได้แล้ว
+        </div>
+        
+        <h3>🔧 การแก้ปัญหา Authorization</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ไม่เห็นปุ่ม "Advanced"</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong> Browser บางตัวอาจซ่อนปุ่มนี้
+            <br><br>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>Refresh หน้า</strong> (F5)</li>
+              <li><strong>ลองใช้ Browser อื่น</strong> (Chrome, Edge, Firefox)</li>
+              <li><strong>ลองใช้ Incognito/Private Mode</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ คลิก "Allow" แล้วกลับมาหน้า Login อีกรอบ</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>Session timeout</li>
+              <li>Browser Block Cookies</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>อนุญาต Cookies</strong> สำหรับ script.google.com</li>
+              <li><strong>ปิด Ad Blocker/Privacy Extensions</strong></li>
+              <li><strong>ลองใช้ Incognito/Private Mode</strong></li>
+              <li><strong>Clear Browser Cache และ Cookies</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ หลัง Allow แล้วขึ้น "Access Denied"</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong> Google Account ที่เลือกยังไม่ได้รับสิทธิ์จาก Admin
+            <br><br>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>ตรวจสอบว่าใช้ Google Account ที่ถูกต้องหรือไม่</strong></li>
+              <li><strong>ติดต่อ Admin เพื่อขอเพิ่มสิทธิ์</strong></li>
+              <li><strong>หรือคลิกปุ่ม 📝 ขอสิทธิ์</strong> เพื่อส่ง Request</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ไม่เห็นหน้า Authorization เลย</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>เคย Authorize ไปแล้ว</li>
+              <li>Browser จำ Session เดิมอยู่</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ul>
+              <li><strong>ไม่ต้องทำอะไร!</strong> Login ได้เลย</li>
+              <li>ถ้าต้องการ Authorize ใหม่:
+                <ol>
+                  <li>ไปที่ <a href="https://myaccount.google.com/permissions" target="_blank">https://myaccount.google.com/permissions</a></li>
+                  <li>เลือกแอปที่ชื่อตรงกับระบบ</li>
+                  <li>คลิก "Remove Access"</li>
+                  <li>Login ใหม่</li>
+                </ol>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <h3>❓ คำถามที่พบบ่อยเกี่ยวกับ Authorization</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q1: ปลอดภัยไหม? ทำไมต้องให้สิทธิ์ส่งอีเมล?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> <strong>ปลอดภัย!</strong> เพราะ:
+            <ul>
+              <li>✅ ระบบนี้พัฒนาโดย Admin ที่คุณเชื่อถือ</li>
+              <li>✅ ทำงานบน Google Apps Script (แพลตฟอร์มของ Google)</li>
+              <li>✅ ส่งอีเมลเฉพาะการแจ้งเตือนระบบ (เช่น การอนุมัติสิทธิ์, การอัปเดต)</li>
+              <li>✅ ไม่มีการเก็บรหัสผ่านหรือข้อมูลส่วนตัว</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q2: ต้อง Authorize ทุกครั้งที่เข้าใช้งานไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> <strong>ไม่ต้อง!</strong> Authorize แค่ครั้งแรก หรือเมื่อ:
+            <ul>
+              <li>Admin อัปเดตระบบและขอสิทธิ์เพิ่ม</li>
+              <li>คุณลบสิทธิ์ออกจาก Google Account</li>
+              <li>Session หมดอายุ (นานมาก - หลายเดือน/ปี)</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q3: ถ้าไม่กด "Allow" จะใช้งานได้ไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> <strong>ใช้งานไม่ได้</strong> เพราะ:
+            <ul>
+              <li>ระบบต้องรู้ว่าคุณเป็นใคร (อีเมล)</li>
+              <li>ต้องตรวจสอบสิทธิ์จาก Google Sheets</li>
+              <li>ต้องส่งอีเมลแจ้งเตือนให้คุณ</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q4: ทำไมต้องผ่านหน้า "Google hasn't verified this app"?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> เพราะ:
+            <ul>
+              <li>ระบบนี้เป็น Google Apps Script ภายในองค์กร</li>
+              <li>ไม่ได้เผยแพร่สาธารณะ (Public App)</li>
+              <li>ไม่จำเป็นต้อง Verify กับ Google</li>
+              <li><strong>ปลอดภัย</strong> ถ้าคุณเชื่อถือ Admin/ผู้พัฒนา</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q5: สามารถถอนสิทธิ์ได้ไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> <strong>ได้!</strong>
+            <ol>
+              <li>ไปที่ <a href="https://myaccount.google.com/permissions" target="_blank">https://myaccount.google.com/permissions</a></li>
+              <li>เลือกแอปที่ชื่อตรงกับระบบ</li>
+              <li>คลิก "Remove Access"</li>
+              <li>เสร็จสิ้น!</li>
+            </ol>
+            <p><strong>หมายเหตุ:</strong> หลังถอนสิทธิ์แล้ว จะต้อง Authorize ใหม่เมื่อเข้าใช้งานครั้งถัดไป</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q6: ถ้า Admin อัปเดตระบบ ต้อง Authorize ใหม่ไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> <strong>บางครั้ง</strong> - ถ้า Admin เพิ่มสิทธิ์ใหม่ที่ต้องการ (เช่น เพิ่มการส่ง SMS, เข้าถึง Google Calendar)
+            <br><br>
+            จะเห็นหน้า Authorization อีกครั้ง แค่กด "Allow" ใหม่อีกรอบ
+          </div>
+        </div>
+        
+        <h3>🎓 สรุป - สิ่งสำคัญที่ต้องจำ</h3>
+        
+        <div class="info-box success">
+          <strong>✅ Key Points:</strong>
+          <ul>
+            <li><strong>Authorize แค่ครั้งแรกเท่านั้น</strong> (หรือเมื่อ Admin อัปเดต)</li>
+            <li><strong>ปลอดภัย</strong> ถ้าเชื่อถือ Admin/ผู้พัฒนา</li>
+            <li><strong>ไม่มีการเก็บรหัสผ่าน</strong> หรือข้อมูลส่วนตัว</li>
+            <li><strong>สามารถถอนสิทธิ์ได้ตลอดเวลา</strong> ที่ Google Account</li>
+            <li>คำว่า <strong>"unsafe" ไม่ได้แปลว่าอันตราย</strong></li>
+          </ul>
+        </div>
+        
+        <div class="info-box">
+          <strong>📞 ต้องการความช่วยเหลือ?</strong>
+          <ul>
+            <li>📧 Email: setthawut.se11@gmail.com</li>
+            <li>📢 ใช้ปุ่ม "รายงาน" ในระบบ (หลังจาก Login สำเร็จ)</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- User Tab -->
+      <div id="user" class="tab-content">
+        <h2>👤 คู่มือสำหรับผู้ใช้งานทั่วไป</h2>
+        
+        <h3>1️⃣ การเข้าสู่ระบบ</h3>
+        
+        <p>เมื่อเข้าสู่ระบบครั้งแรก จะพบหน้าจอต้อนรับ:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌─────────────────────────────────┐
+│        🚀                       │
+│   ศูนย์รวมระบบงาน               │
+│   เข้าสู่ระบบด้วย Google Account│
+│                                 │
+│  [🔵 เข้าสู่ระบบด้วย Google]   │
+└─────────────────────────────────┘
+          </pre>
+        </div>
+        
+        <p><strong>ขั้นตอน:</strong></p>
+        <ol>
+          <li>คลิกปุ่ม <strong>"เข้าสู่ระบบด้วย Google"</strong></li>
+          <li>เลือก Google Account ที่ต้องการใช้งาน</li>
+          <li>ระบบจะตรวจสอบสิทธิ์และพาเข้าสู่หน้าหลักอัตโนมัติ</li>
+        </ol>
+        
+        <div class="info-box warning">
+          <strong>⚠️ หมายเหตุ:</strong> ต้องใช้ Google Account ที่ Admin อนุมัติสิทธิ์แล้วเท่านั้น
+        </div>
+        
+        <h3>2️⃣ หน้าหลัก (Dashboard)</h3>
+        
+        <p>หลังจาก Login สำเร็จ จะเห็นหน้าหลักที่ประกอบด้วย:</p>
+        
+        <div class="screenshot">
+          <pre>
+┌────────────────────────────────────────────────────────┐
+│ 🚀 ศูนย์รวมระบบงาน            user@example.com        │
+│ เลือกระบบงานที่ต้องการใช้งาน  [📝 ขอสิทธิ์] [📢 รายงาน] [🚪 ออก] │
+└────────────────────────────────────────────────────────┘
+
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│  [📱]    │  │  [🚗]    │  │  [📋]    │
+│ Survey   │  │ Car Book │  │   RFI    │
+│ System   │  │ System   │  │ System   │
+│👤 Owner  │  │👤 Owner  │  │👤 Owner  │
+└──────────┘  └──────────┘  └──────────┘
+          </pre>
+        </div>
+        
+        <h4>🖱️ ส่วนหัว (Header)</h4>
+        <ul>
+          <li><strong>ชื่อระบบ:</strong> แสดงชื่อ "🚀 ศูนย์รวมระบบงาน"</li>
+          <li><strong>อีเมลผู้ใช้:</strong> แสดงอีเมล Google Account ที่ล็อกอินอยู่</li>
+          <li><strong>ปุ่มด้านขวา:</strong>
+            <ul>
+              <li><code>📝 ขอสิทธิ์</code> - ขอสิทธิ์เข้าใช้งานระบบ</li>
+              <li><code>📢 รายงาน</code> - รายงานปัญหา/ข้อเสนอแนะ</li>
+              <li><code>🚪 ออกจากระบบ</code> - ออกจากระบบ</li>
+            </ul>
+          </li>
+        </ul>
+        
+        <h4>📱 การ์ดระบบงาน (App Cards)</h4>
+        <p>แต่ละการ์ดแสดง:</p>
+        <ul>
+          <li><strong>ไอคอน:</strong> รูปภาพประจำระบบ</li>
+          <li><strong>ชื่อระบบ:</strong> ชื่อของระบบงาน</li>
+          <li><strong>เจ้าของ:</strong> อีเมลผู้สร้าง/ผู้ดูแลระบบ</li>
+        </ul>
+        
+        <div class="info-box success">
+          <strong>💡 วิธีใช้งาน:</strong> คลิกที่การ์ดเพื่อเปิดระบบงานในแท็บใหม่
+        </div>
+        
+        <h3>3️⃣ การขอสิทธิ์เข้าใช้งาน</h3>
+        
+        <p>เมื่อต้องการเข้าถึงระบบงานใหม่:</p>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>📝 ขอสิทธิ์</strong> ที่มุมขวาบน</li>
+          <li>กรอกข้อมูลในฟอร์ม:
+            <ul>
+              <li><strong>ชื่อ-นามสกุล (บังคับ):</strong> กรอกชื่อ-นามสกุลจริง</li>
+              <li><strong>หมายเหตุ (ไม่บังคับ):</strong> อธิบายเหตุผลที่ต้องการสิทธิ์</li>
+            </ul>
+          </li>
+          <li>คลิก <strong>"ส่งคำขอ"</strong></li>
+        </ol>
+        
+        <div class="info-box">
+          <strong>📋 ผลลัพธ์:</strong>
+          <ul>
+            <li>✅ คำขอถูกส่งไปยัง Admin</li>
+            <li>📧 Admin จะได้รับอีเมลแจ้งเตือน</li>
+            <li>⏳ รอ Admin อนุมัติ (จะได้รับอีเมลแจ้งเตือนเมื่อได้รับสิทธิ์)</li>
+          </ul>
+        </div>
+        
+        <h3>4️⃣ การรายงานปัญหา</h3>
+        
+        <p>เมื่อพบปัญหาหรือมีข้อเสนอแนะ:</p>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>📢 รายงาน</strong></li>
+          <li>กรอกรายละเอียดปัญหา</li>
+          <li>คลิก <strong>"ส่งรายงาน"</strong></li>
+        </ol>
+        
+        <p><strong>ประเภทรายงานที่สามารถแจ้งได้:</strong></p>
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">🐛</div>
+            <div class="button-name">Bug</div>
+            <div class="button-desc">พบข้อผิดพลาดในระบบ</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">💡</div>
+            <div class="button-name">ข้อเสนอแนะ</div>
+            <div class="button-desc">แนะนำการปรับปรุง</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">❓</div>
+            <div class="button-name">คำถาม</div>
+            <div class="button-desc">สอบถามการใช้งาน</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">🔗</div>
+            <div class="button-name">ลิงค์เสีย</div>
+            <div class="button-desc">ไม่สามารถเข้าถึงได้</div>
+          </div>
+        </div>
+        
+        <div class="info-box success">
+          <strong>✅ ผลลัพธ์:</strong>
+          <ul>
+            <li>รายงานถูกบันทึกในระบบ</li>
+            <li>Admin จะได้รับอีเมลแจ้งเตือน</li>
+            <li>จะได้รับอีเมลตอบกลับเมื่อ Admin ดำเนินการแล้ว</li>
+          </ul>
+        </div>
+        
+        <h3>5️⃣ การออกจากระบบ</h3>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>🚪 ออกจากระบบ</strong> ที่มุมขวาบน</li>
+          <li>ยืนยันการออกจากระบบ</li>
+          <li>กลับสู่หน้า Login</li>
+        </ol>
+      </div>
+      
+      <!-- Admin Tab -->
+      <div id="admin" class="tab-content">
+        <h2>👑 คู่มือสำหรับ Admin</h2>
+        
+        <h3>🎯 ความสามารถของ Admin</h3>
+        
+        <p>Admin มีสิทธิ์พิเศษในการจัดการระบบทั้งหมด:</p>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">➕</div>
+            <div class="button-name">เพิ่มระบบงาน</div>
+            <div class="button-desc">เพิ่มระบบงานใหม่เข้าสู่ศูนย์รวม</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">✏️</div>
+            <div class="button-name">แก้ไขระบบงาน</div>
+            <div class="button-desc">แก้ไขข้อมูลระบบที่มีอยู่</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">🗑️</div>
+            <div class="button-name">ลบระบบงาน</div>
+            <div class="button-desc">ลบระบบออกจากศูนย์รวม</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">👥</div>
+            <div class="button-name">จัดการสิทธิ์</div>
+            <div class="button-desc">เพิ่ม/แก้ไข/ลบสิทธิ์ผู้ใช้</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📋</div>
+            <div class="button-name">ดูรายงาน</div>
+            <div class="button-desc">ดูและตอบกลับรายงานปัญหา</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">🔗</div>
+            <div class="button-name">อัปเดตลิงค์</div>
+            <div class="button-desc">เปลี่ยนลิงค์และแจ้งผู้ใช้</div>
+          </div>
+        </div>
+        
+        <h3>1️⃣ การจัดการระบบงาน</h3>
+        
+        <h4>➕ เพิ่มระบบงานใหม่</h4>
+        
+        <p><strong>ขั้นตอน:</strong></p>
+        <ol>
+          <li>คลิกปุ่ม <strong>➕ เพิ่มแอป</strong></li>
+          <li>กรอกข้อมูล:
+            <ul>
+              <li><strong>ชื่อระบบงาน:</strong> ชื่อที่จะแสดงในการ์ด (เช่น "Survey Work System")</li>
+              <li><strong>URL ของระบบ:</strong> ลิงค์ไปยังระบบงานจริง (ต้องขึ้นต้นด้วย https://)</li>
+              <li><strong>URL รูปภาพ:</strong> ลิงค์รูปไอคอน (แนะนำขนาด 120x120px)</li>
+            </ul>
+          </li>
+          <li>คลิก <strong>"เพิ่มระบบงาน"</strong></li>
+        </ol>
+        
+        <div class="info-box success">
+          <strong>✅ ผลลัพธ์:</strong>
+          <ul>
+            <li>ระบบงานใหม่ถูกเพิ่มเข้าระบบ</li>
+            <li>Admin จะได้รับอีเมลยืนยัน</li>
+            <li>🔒 ยังไม่มีผู้ใช้คนใดเข้าถึงได้ (ต้องจัดการสิทธิ์)</li>
+          </ul>
+        </div>
+        
+        <h4>✏️ แก้ไขระบบงาน</h4>
+        
+        <ol>
+          <li><strong>Hover</strong> เมาส์บนการ์ดระบบงานที่ต้องการแก้ไข</li>
+          <li>คลิกปุ่ม <strong>✏️ (แก้ไข)</strong> ที่มุมขวาบน</li>
+          <li>แก้ไขข้อมูลที่ต้องการ</li>
+          <li>คลิก <strong>"บันทึกการแก้ไข"</strong></li>
+        </ol>
+        
+        <div class="info-box">
+          <strong>📧 การแจ้งเตือน:</strong>
+          <ul>
+            <li>ผู้ใช้ที่มีสิทธิ์จะได้รับอีเมลแจ้งการเปลี่ยนแปลง</li>
+            <li>ถ้าเปลี่ยนชื่อ - สิทธิ์จะถูกอัปเดตอัตโนมัติ</li>
+          </ul>
+        </div>
+        
+        <h4>🗑️ ลบระบบงาน</h4>
+        
+        <ol>
+          <li><strong>Hover</strong> เมาส์บนการ์ดที่ต้องการลบ</li>
+          <li>คลิกปุ่ม <strong>🗑️ (ลบ)</strong></li>
+          <li>ยืนยันการลบ</li>
+        </ol>
+        
+        <div class="info-box error">
+          <strong>⚠️ คำเตือน:</strong>
+          <ul>
+            <li>ข้อมูลจะถูกลบอย่างถาวร</li>
+            <li>ไม่สามารถกู้คืนได้</li>
+            <li>สิทธิ์ผู้ใช้ที่เกี่ยวข้องจะหายไป</li>
+          </ul>
+        </div>
+        
+        <h3>2️⃣ การจัดการสิทธิ์ผู้ใช้</h3>
+        
+        <p>คลิกปุ่ม <strong>👥 จัดการสิทธิ์</strong> เพื่อเปิดหน้าจัดการ</p>
+        
+        <h4>➕ เพิ่มผู้ใช้ใหม่</h4>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>➕ เพิ่มผู้ใช้ใหม่</strong></li>
+          <li>กรอกอีเมลผู้ใช้</li>
+          <li>เลือกระบบที่ต้องการให้สิทธิ์ (Checkbox)</li>
+          <li>คลิก <strong>"บันทึก"</strong></li>
+        </ol>
+        
+        <div class="info-box success">
+          <strong>✅ ผลลัพธ์:</strong>
+          <ul>
+            <li>ผู้ใช้ถูกเพิ่มเข้าระบบ</li>
+            <li>📧 ผู้ใช้จะได้รับอีเมลแจ้งเตือน</li>
+            <li>🔓 สามารถเข้าใช้งานระบบที่ได้รับสิทธิ์ทันที</li>
+          </ul>
+        </div>
+        
+        <h4>💾 แก้ไขสิทธิ์ผู้ใช้</h4>
+        
+        <ol>
+          <li>หาผู้ใช้ที่ต้องการแก้ไขในรายการ</li>
+          <li><strong>เลือก/ยกเลิก Checkbox</strong> ของระบบที่ต้องการ</li>
+          <li><strong>เลือก/ยกเลิก Checkbox</strong> "📧 ส่งอีเมลแจ้งผู้ใช้"</li>
+          <li>คลิกปุ่ม <strong>💾 บันทึก</strong></li>
+        </ol>
+        
+        <div class="info-box">
+          <strong>💡 การส่งอีเมล:</strong>
+          <ul>
+            <li>✅ เลือก: จะส่งอีเมลแจ้งการเปลี่ยนแปลงสิทธิ์</li>
+            <li>☐ ไม่เลือก: แก้ไขแบบเงียบๆ (ไม่ส่งอีเมล)</li>
+          </ul>
+          <p><strong>แนะนำ:</strong> ใช้การไม่ส่งอีเมลเมื่อทำการแก้ไขเล็กน้อย และส่งอีเมลเมื่อเพิ่ม/ยกเลิกสิทธิ์หรือเปลี่ยนแปลงครั้งใหญ่</p>
+        </div>
+        
+        <h4>⏳ อนุมัติคำขอใหม่</h4>
+        
+        <p>ผู้ใช้ที่มี Badge <strong>"⏳ รอการอนุมัติ"</strong> คือผู้ที่ส่ง Request แต่ยังไม่มีสิทธิ์</p>
+        
+        <p><strong>ขั้นตอนอนุมัติ:</strong></p>
+        <ol>
+          <li>อ่านข้อมูล: ชื่อ-นามสกุล และหมายเหตุ (เหตุผลที่ขอ)</li>
+          <li>เลือกระบบที่อนุญาต</li>
+          <li>✅ เลือก "📧 ส่งอีเมลแจ้งผู้ใช้" (แนะนำ)</li>
+          <li>คลิก <strong>💾 บันทึก</strong></li>
+        </ol>
+        
+        <div class="info-box success">
+          <strong>🎉 ผลลัพธ์:</strong>
+          <ul>
+            <li>ผู้ใช้ได้รับสิทธิ์</li>
+            <li>📧 ได้รับอีเมลแจ้งว่าได้รับสิทธิ์แล้ว</li>
+            <li>สามารถเข้าใช้งานได้ทันที</li>
+          </ul>
+        </div>
+        
+        <h4>🗑️ ลบผู้ใช้</h4>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>🗑️ ลบ</strong> ในการ์ดผู้ใช้</li>
+          <li>ยืนยันการลบ</li>
+        </ol>
+        
+        <div class="info-box warning">
+          <strong>⚠️ ผลกระทบ:</strong>
+          <ul>
+            <li>ผู้ใช้จะไม่สามารถเข้าถึงระบบใดๆ</li>
+            <li>ต้องส่ง Request ใหม่ถ้าต้องการกลับมาใช้งาน</li>
+          </ul>
+          <p><strong>ทางเลือก:</strong> แทนที่จะลบ ให้ยกเลิก Checkbox ทุกระบบ (เหลือ Apps = [])</p>
+        </div>
+        
+        <h3>3️⃣ การดูและตอบรายงาน</h3>
+        
+        <p>คลิกปุ่ม <strong>📋 ดูรายงาน</strong> เพื่อเปิดหน้าจัดการรายงาน</p>
+        
+        <h4>✉️ ตอบกลับรายงาน</h4>
+        
+        <ol>
+          <li>คลิกปุ่ม <strong>✉️ ตอบกลับ</strong> ในรายงานที่ต้องการตอบ</li>
+          <li>เลือกสถานะ:
+            <ul>
+              <li>⏳ <strong>รอดำเนินการ:</strong> ยังไม่ได้เริ่มแก้ไข</li>
+              <li>🔧 <strong>กำลังแก้ไข:</strong> อยู่ระหว่างดำเนินการ</li>
+              <li>✅ <strong>เสร็จสิ้น:</strong> แก้ไขเสร็จแล้ว</li>
+            </ul>
+          </li>
+          <li>พิมพ์คำตอบหรือแนวทางแก้ไข</li>
+          <li>คลิก <strong>"ส่งคำตอบ"</strong></li>
+        </ol>
+        
+        <div class="info-box success">
+          <strong>✅ ผลลัพธ์:</strong>
+          <ul>
+            <li>สถานะถูกอัปเดต</li>
+            <li>📧 ผู้รายงานได้รับอีเมลคำตอบ</li>
+            <li>📝 บันทึกประวัติการตอบกลับ</li>
+          </ul>
+        </div>
+        
+        <h4>🗑️ ลบรายงาน</h4>
+        
+        <p><strong>เมื่อใด:</strong></p>
+        <ul>
+          <li>รายงานซ้ำซ้อน</li>
+          <li>รายงานไม่เกี่ยวข้อง</li>
+          <li>แก้ไขเสร็จและต้องการล้างข้อมูล</li>
+        </ul>
+        
+        <h3>4️⃣ การอัปเดตลิงค์ระบบ</h3>
+        
+        <p>เมื่อ URL เว็บแอปเปลี่ยน (Deploy ใหม่, เปลี่ยนโดเมน)</p>
+        
+        <p>คลิกปุ่ม <strong>🔗 New Link</strong></p>
+        
+        <ol>
+          <li>Copy URL ใหม่ (จาก Deploy > New deployment)</li>
+          <li>Paste ในช่อง "ลิงค์ใหม่"</li>
+          <li>ตรวจสอบ URL ว่าถูกต้อง</li>
+          <li>คลิก <strong>"อัปเดตและส่งอีเมล"</strong></li>
+        </ol>
+        
+        <div class="info-box">
+          <strong>🔄 ระบบจะทำ:</strong>
+          <ol>
+            <li>✅ อัปเดต URL ใน Sheet "Link"</li>
+            <li>📧 ส่งอีเมลแจ้งผู้ใช้ทุกคน (Batch 100 คน/ครั้ง)</li>
+            <li>📊 แสดงสถิติการส่ง (สำเร็จ/ล้มเหลว)</li>
+          </ol>
+        </div>
+        
+        <div class="info-box success">
+          <strong>📊 ตัวอย่างผลลัพธ์:</strong>
+          <div class="code-block">✅ อัปเดตลิงค์สำเร็จ!
+
+📧 ส่งอีเมลแจ้งเตือน:
+- สำเร็จ: 150 คน
+- ไม่สำเร็จ: 0 คน
+- รวมทั้งหมด: 150 คน</div>
+        </div>
+      </div>
+      
+      <!-- Sheets Tab -->
+      <div id="sheets" class="tab-content">
+        <h2>📊 Google Sheets</h2>
+        
+        <h3>📁 โครงสร้าง Spreadsheet</h3>
+        
+        <p>ระบบใช้ Google Sheets เป็นฐานข้อมูล ประกอบด้วย 4 Sheets หลัก:</p>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">📄</div>
+            <div class="button-name">Apps</div>
+            <div class="button-desc">เก็บข้อมูลระบบงานทั้งหมด</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📄</div>
+            <div class="button-name">Permission</div>
+            <div class="button-desc">เก็บสิทธิ์ผู้ใช้</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📄</div>
+            <div class="button-name">Report</div>
+            <div class="button-desc">เก็บรายงานปัญหา</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📄</div>
+            <div class="button-name">Link</div>
+            <div class="button-desc">เก็บ URL ศูนย์รวมระบบ</div>
+          </div>
+        </div>
+        
+        <h3>📄 Sheet: Apps</h3>
+        
+        <p>เก็บข้อมูลระบบงานทั้งหมด</p>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>คอลัมน์</th>
+              <th>คำอธิบาย</th>
+              <th>ตัวอย่าง</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Name</strong></td>
+              <td>ชื่อระบบงาน</td>
+              <td>Survey Work System</td>
+            </tr>
+            <tr>
+              <td><strong>URL_Web</strong></td>
+              <td>ลิงค์ไปยังระบบ</td>
+              <td>https://example.com/survey</td>
+            </tr>
+            <tr>
+              <td><strong>URL_Photo</strong></td>
+              <td>ลิงค์รูปไอคอน</td>
+              <td>https://example.com/icon.png</td>
+            </tr>
+            <tr>
+              <td><strong>Owner</strong></td>
+              <td>อีเมลผู้สร้าง</td>
+              <td>admin@example.com</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>📄 Sheet: Permission</h3>
+        
+        <p>เก็บสิทธิ์ผู้ใช้</p>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>คอลัมน์</th>
+              <th>คำอธิบาย</th>
+              <th>ตัวอย่าง</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>UserEmail</strong></td>
+              <td>อีเมลผู้ใช้</td>
+              <td>user1@example.com</td>
+            </tr>
+            <tr>
+              <td><strong>Apps</strong></td>
+              <td>JSON Array ของระบบที่มีสิทธิ์</td>
+              <td>["Survey Work","Car Booking"]</td>
+            </tr>
+            <tr>
+              <td><strong>Name</strong></td>
+              <td>ชื่อผู้ใช้</td>
+              <td>นาย ก</td>
+            </tr>
+            <tr>
+              <td><strong>Note</strong></td>
+              <td>หมายเหตุจากผู้ใช้</td>
+              <td>ต้องการใช้งาน Survey</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="info-box">
+          <strong>📋 รูปแบบ Apps JSON:</strong>
+          <div class="code-block">[]  // รอการอนุมัติ
+["Survey Work System"]  // มีสิทธิ์ 1 ระบบ
+["Survey Work", "Car Booking", "RFI"]  // มีสิทธิ์ 3 ระบบ</div>
+        </div>
+        
+        <h3>📄 Sheet: Report</h3>
+        
+        <p>เก็บรายงานปัญหา</p>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>คอลัมน์</th>
+              <th>คำอธิบาย</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Timestamp</strong></td>
+              <td>วันเวลาที่รายงาน</td>
+            </tr>
+            <tr>
+              <td><strong>UserEmail</strong></td>
+              <td>ผู้รายงาน</td>
+            </tr>
+            <tr>
+              <td><strong>Message</strong></td>
+              <td>รายละเอียดปัญหา</td>
+            </tr>
+            <tr>
+              <td><strong>Status</strong></td>
+              <td>สถานะ (รอดำเนินการ/กำลังแก้ไข/เสร็จสิ้น)</td>
+            </tr>
+            <tr>
+              <td><strong>AdminReply</strong></td>
+              <td>คำตอบจาก Admin</td>
+            </tr>
+            <tr>
+              <td><strong>ReplyDate</strong></td>
+              <td>วันเวลาที่ตอบกลับ</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>📄 Sheet: Link</h3>
+        
+        <p>เก็บ URL ของระบบ (ใช้สำหรับส่งลิงค์ในอีเมลแจ้งเตือน)</p>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อระบบ</th>
+              <th>URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ศูนย์รวมระบบงาน</td>
+              <td>https://script.google.com/macros/s/.../exec</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>🚀 Menu ใน Google Sheets</h3>
+        
+        <p>เมื่อเปิด Google Sheets จะมีเมนูพิเศษ <strong>"🚀 ระบบจัดการ"</strong></p>
+        
+        <div class="button-list">
+          <div class="button-item">
+            <div class="button-icon">🔗</div>
+            <div class="button-name">อัปเดตลิงค์ศูนย์รวมระบบงาน</div>
+            <div class="button-desc">ทำงานเหมือนปุ่ม "New Link" ใน Web</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📋</div>
+            <div class="button-name">สร้าง Sheet Report</div>
+            <div class="button-desc">สร้างตาราง Report (Run ครั้งเดียวตอนติดตั้ง)</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">👥</div>
+            <div class="button-name">ดูรายชื่อผู้ใช้</div>
+            <div class="button-desc">แสดงสถิติผู้ใช้ทั้งหมด</div>
+          </div>
+          
+          <div class="button-item">
+            <div class="button-icon">📊</div>
+            <div class="button-name">ดูสถิติการใช้งาน</div>
+            <div class="button-desc">จำนวนระบบ, ผู้ใช้, รายงาน</div>
+          </div>
+        </div>
+        
+        <div class="info-box warning">
+          <strong>⚠️ คำเตือน:</strong>
+          <ul>
+            <li>อย่าแก้ไขข้อมูลใน Sheet โดยตรง (ใช้ Web UI แทน)</li>
+            <li>อย่าลบ Sheet สำคัญ (Apps, Permission, Report, Link)</li>
+            <li>อย่าเปลี่ยนชื่อคอลัมน์ (จะทำให้ระบบทำงานผิดพลาด)</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- FAQ Tab -->
+      <div id="faq" class="tab-content">
+        <h2>❓ คำถามที่พบบ่อย (FAQ)</h2>
+        
+        <h3>👤 สำหรับผู้ใช้ทั่วไป</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q1: ไม่เห็นระบบงานใดเลย แสดงว่าไม่มีระบบงาน</div>
+          <div class="faq-answer">
+            <strong>A:</strong> คุณยังไม่ได้รับสิทธิ์เข้าถึงระบบใดๆ<br>
+            <strong>แก้ไข:</strong> คลิกปุ่ม "📝 ขอสิทธิ์" เพื่อส่ง Request ไปยัง Admin
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q2: ส่ง Request แล้ว ต้องรอนานแค่ไหน?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ขึ้นอยู่กับ Admin<br>
+            คุณจะได้รับอีเมลแจ้งเตือนทันทีเมื่อ Admin อนุมัติ<br>
+            ถ้ารอนาน: รายงานปัญหาหรือติดต่อ Admin โดยตรง
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q3: คลิกเข้าระบบแล้วแสดง "Access Denied"</div>
+          <div class="faq-answer">
+            <strong>A:</strong> อาจเป็นได้ 2 กรณี:<br>
+            1. สิทธิ์ถูกยกเลิก - ติดต่อ Admin<br>
+            2. ระบบปลายทางมีปัญหา - รายงานผ่านปุ่ม "📢 รายงาน"
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q4: อยากเข้าถึงระบบเพิ่ม</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ส่ง Request ใหม่:<br>
+            • คลิก "📝 ขอสิทธิ์"<br>
+            • ระบุระบบที่ต้องการในช่อง "หมายเหตุ"
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q5: รายงานปัญหาแล้ว จะทราบได้อย่างไรว่า Admin ตอบกลับ?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> จะได้รับอีเมลอัตโนมัติเมื่อ Admin ตอบกลับ
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q6: ออกจากระบบแล้วต้อง Login ใหม่ทุกครั้ง?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ไม่ - ระบบจะจำ Session อยู่ 5 นาที<br>
+            ถ้าเกิน 5 นาที จะต้อง Login ใหม่
+          </div>
+        </div>
+        
+        <h3>👑 สำหรับ Admin</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q7: ผู้ใช้ที่มี Badge "⏳ รอการอนุมัติ" คืออะไร?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ผู้ใช้ที่ส่ง Request แต่ยังไม่มีสิทธิ์ใดๆ (Apps = [])<br>
+            <strong>จัดการ:</strong> ให้ Checkbox เลือกระบบที่อนุญาต แล้วกด "💾 บันทึก"
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q8: ถ้าแก้ไขสิทธิ์ไม่เลือก "📧 ส่งอีเมล" ผู้ใช้จะรู้ไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ไม่ - ผู้ใช้ต้องล็อกอินใหม่หรือ Refresh หน้าจึงจะเห็นสิทธิ์ใหม่<br>
+            <strong>แนะนำ:</strong> เลือก "📧 ส่งอีเมล" เมื่อเปลี่ยนแปลงครั้งใหญ่
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q9: ลบผู้ใช้แล้ว ข้อมูลหายไปด้วยไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ใช่ - ข้อมูลในตาราง Permission จะถูกลบถาวร<br>
+            <strong>ทางเลือก:</strong> แทนที่จะลบ ให้ยกเลิก Checkbox ทุกระบบ (เหลือ Apps = [])
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q10: แก้ไขระบบงานแล้ว ผู้ใช้จะได้อีเมลแจ้งไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ใช่ - ถ้ามีผู้ใช้ที่มีสิทธิ์เข้าถึงระบบนั้น<br>
+            อีเมลจะบอกว่ามีการอัปเดต และลิงค์ใหม่
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q11: ถ้าเปลี่ยนชื่อระบบจะเกิดอะไรขึ้น?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ระบบจะอัปเดตชื่อใหม่ใน:<br>
+            • Sheet "Apps"<br>
+            • Sheet "Permission" (Apps JSON)<br>
+            • สิทธิ์ผู้ใช้ทุกคน
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q12: กด "🔗 New Link" แล้วส่งอีเมลกี่คน?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ส่งให้ผู้ใช้ทุกคนใน Sheet "Permission" (ไม่ว่าจะมีสิทธิ์หรือไม่)<br>
+            <strong>Batch:</strong> ส่งทีละ 100 คนเพื่อไม่ให้เกิน Quota
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Q13: สามารถดูสถิติการใช้งานได้ไหม?</div>
+          <div class="faq-answer">
+            <strong>A:</strong> ได้ - ใน Google Sheets เมนู "🚀 ระบบจัดการ" > "📊 ดูสถิติการใช้งาน"<br>
+            แสดง: จำนวนระบบงาน, จำนวนผู้ใช้, จำนวนรายงาน
+          </div>
+        </div>
+      </div>
+      
+      <!-- Troubleshooting Tab -->
+      <div id="troubleshooting" class="tab-content">
+        <h2>🔧 แก้ไขปัญหา</h2>
+        
+        <div class="info-box warning">
+          <strong>💡 เคล็ดลับก่อนแก้ปัญหา:</strong>
+          <ul>
+            <li>📸 Screenshot หน้าจอที่เกิดปัญหา</li>
+            <li>🔄 Refresh หน้า (F5) ก่อนเสมอ</li>
+            <li>🌐 ลองใช้ Browser อื่น</li>
+            <li>🔍 ตรวจสอบข้อความ Error (ถ้ามี)</li>
+          </ul>
+        </div>
+        
+        <h3>🚨 ปัญหาการ Login</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ หน้าจอขาว/ไม่โหลดเลย</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุที่เป็นไปได้:</strong>
+            <ul>
+              <li>Internet Connection ขาดหาย</li>
+              <li>Connection timeout (โหลดช้า)</li>
+              <li>Script error ในระบบ</li>
+              <li>Browser Cache ปัญหา</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>Refresh หน้า</strong> - กด F5 หรือ Ctrl+R (Windows) / Cmd+R (Mac)</li>
+              <li><strong>Clear Browser Cache</strong>:
+                <ul>
+                  <li>Chrome: Ctrl+Shift+Del > Clear Data</li>
+                  <li>Firefox: Ctrl+Shift+Del > Clear</li>
+                  <li>Safari: Cmd+Option+E</li>
+                </ul>
+              </li>
+              <li><strong>ลองใช้ Incognito/Private Mode</strong>:
+                <ul>
+                  <li>Chrome: Ctrl+Shift+N</li>
+                  <li>Firefox: Ctrl+Shift+P</li>
+                  <li>Safari: Cmd+Shift+N</li>
+                </ul>
+              </li>
+              <li><strong>ลองใช้ Browser อื่น</strong> (Chrome, Firefox, Edge)</li>
+              <li><strong>ตรวจสอบ Internet</strong> - ลองเปิดเว็บอื่นดู</li>
+              <li>ถ้ายังไม่ได้ - <strong>รายงานปัญหา</strong> หรือ <strong>ติดต่อ Admin</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ Login แล้วกลับมาหน้า Login อีก (วนลูป)</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>Browser Block Cookies</li>
+              <li>Session timeout</li>
+              <li>Privacy Extension ขัดขวาง</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>อนุญาต Cookies</strong>:
+                <ul>
+                  <li>Chrome: Settings > Privacy > Allow cookies from script.google.com</li>
+                  <li>Firefox: Settings > Privacy > Cookies and Site Data</li>
+                </ul>
+              </li>
+              <li><strong>ปิด Ad Blocker/Privacy Extensions</strong> (uBlock Origin, Privacy Badger, etc.)</li>
+              <li><strong>ลองใช้ Incognito Mode</strong></li>
+              <li><strong>Clear Browser Cache และ Cookies</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ขึ้น "Google hasn't verified this app"</div>
+          <div class="faq-answer">
+            <strong>🔍 นี่คืออะไร?</strong>
+            <p>นี่คือหน้าเตือนของ Google เพื่อความปลอดภัย เมื่อคุณใช้แอปที่ไม่ได้ Verify กับ Google</p>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>คลิก "Advanced"</strong> (หรือ "ขั้นสูง")</li>
+              <li><strong>คลิก "Go to [ชื่อโปรเจค] (unsafe)"</strong></li>
+              <li><strong>คลิก "Allow"</strong> เพื่ออนุญาตสิทธิ์</li>
+            </ol>
+            <div class="info-box">
+              <strong>💡 หมายเหตุ:</strong> คำว่า "unsafe" ไม่ได้แปลว่าอันตราย แค่หมายความว่า Google ยังไม่ได้ตรวจสอบแอปนี้ ระบบนี้<strong>ปลอดภัย</strong>ถ้าคุณเชื่อถือ Admin/ผู้พัฒนา
+            </div>
+          </div>
+        </div>
+        
+        <h3>🔐 ปัญหาสิทธิ์การเข้าถึง</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ "คุณไม่มีสิทธิ์เข้าถึงระบบ"</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>ยังไม่ได้รับสิทธิ์จาก Admin</li>
+              <li>Login ด้วย Google Account ผิด</li>
+              <li>สิทธิ์ถูกยกเลิกโดย Admin</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>ตรวจสอบ Email ที่ Login</strong> - ดูมุมบนขวา ตรงชื่อผู้ใช้</li>
+              <li><strong>ถ้า Email ถูกต้อง</strong> - คลิกปุ่ม <strong>"📝 ขอสิทธิ์"</strong> เพื่อส่ง Request</li>
+              <li><strong>ถ้า Email ผิด</strong> - คลิก <strong>"🚪 ออกจากระบบ"</strong> แล้ว Login ใหม่ด้วย Account ที่ถูกต้อง</li>
+              <li><strong>รอ Admin อนุมัติ</strong> - จะได้รับอีเมลแจ้งเตือนเมื่ออนุมัติ</li>
+              <li>ถ้ารอนาน - <strong>ติดต่อ Admin โดยตรง</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ไม่เห็นระบบงานใดเลย (แสดง "ไม่มีระบบงาน")</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>ยังไม่ได้รับสิทธิ์ระบบใดๆ</li>
+              <li>Request ยังไม่ได้รับการอนุมัติ</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li>คลิกปุ่ม <strong>"📝 ขอสิทธิ์"</strong></li>
+              <li>กรอกข้อมูล:
+                <ul>
+                  <li><strong>ชื่อ-นามสกุล:</strong> ชื่อจริงของคุณ</li>
+                  <li><strong>แผนก/ตำแหน่ง:</strong> ตำแหน่งงาน</li>
+                  <li><strong>หมายเหตุ:</strong> ระบุระบบที่ต้องการ (เช่น Survey System, Car Book)</li>
+                </ul>
+              </li>
+              <li>คลิก <strong>"📤 ส่ง Request"</strong></li>
+              <li>รอ Admin อนุมัติ - จะได้รับอีเมลแจ้งเตือน</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ มี Badge "⏳ รอการอนุมัติ" ทำไมยังไม่ได้สิทธิ์?</div>
+          <div class="faq-answer">
+            <strong>🔍 ความหมาย:</strong>
+            <p>Badge นี้แสดงว่าคุณส่ง Request แล้ว แต่ Admin ยังไม่ได้อนุมัติสิทธิ์ใดๆ</p>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>รอ Admin อนุมัติ</strong> - จะได้รับอีเมลเมื่ออนุมัติ</li>
+              <li>ถ้ารอนาน (มากกว่า 1-2 วัน):
+                <ul>
+                  <li>คลิก <strong>"📢 รายงาน"</strong> เพื่อติดตาม</li>
+                  <li>หรือติดต่อ Admin โดยตรง</li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+        </div>
+        
+        <h3>🔗 ปัญหาการเปิดระบบงาน</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ คลิกการ์ดระบบแล้วไม่เปิด</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>Browser Block Pop-up</li>
+              <li>URL ผิดหรือหมดอายุ</li>
+              <li>ระบบปลายทางปิดใช้งาน</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>อนุญาต Pop-up</strong>:
+                <ul>
+                  <li>Chrome: ดูที่มุมขวาของ Address Bar > คลิก "Pop-ups blocked" > Allow</li>
+                  <li>Firefox: ดูที่มุมซ้ายของ Address Bar > คลิก "Blocked Pop-up" > Allow</li>
+                  <li>Edge: คล้าย Chrome</li>
+                </ul>
+              </li>
+              <li><strong>ลองคลิกอีกครั้ง</strong> หลังอนุญาต Pop-up</li>
+              <li>ถ้ายังไม่ได้:
+                <ul>
+                  <li>คลิก <strong>"📢 รายงาน"</strong></li>
+                  <li>เลือกปัญหา: <strong>"ระบบทำงานผิดพลาด"</strong></li>
+                  <li>ระบุชื่อระบบที่เปิดไม่ได้</li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ เปิดระบบแล้วขึ้น "Access Denied" หรือ "404 Not Found"</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>URL เปลี่ยนแปลง/หมดอายุ</li>
+              <li>สิทธิ์ถูกยกเลิกในระบบปลายทาง</li>
+              <li>ระบบปลายทางถูกลบ/ปิด</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>กลับมาหน้าหลัก</strong> แล้ว Refresh (F5)</li>
+              <li>ถ้ายังเป็นอยู่:
+                <ul>
+                  <li>คลิก <strong>"📢 รายงาน"</strong></li>
+                  <li>เลือก: <strong>"ระบบทำงานผิดพลาด"</strong></li>
+                  <li>ระบุว่าเปิดระบบไหน</li>
+                  <li>แนบ Screenshot ข้อความ Error</li>
+                </ul>
+              </li>
+              <li>Admin จะตรวจสอบและแก้ไข URL</li>
+            </ol>
+          </div>
+        </div>
+        
+        <h3>📧 ปัญหาอีเมล</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ไม่ได้รับอีเมลแจ้งเตือน</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>อีเมลถูกส่งไปที่ Spam/Junk</li>
+              <li>Email ในระบบไม่ตรงกับที่ใช้จริง</li>
+              <li>Admin ไม่เลือก "📧 ส่งอีเมล" ตอนอนุมัติ</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>ตรวจ Spam/Junk Folder</strong> ในอีเมล</li>
+              <li><strong>เพิ่ม setthawut.se11@gmail.com เป็น Safe Sender</strong></li>
+              <li><strong>ตรวจสอบ Email</strong>:
+                <ul>
+                  <li>Login เข้าระบบ > ดูมุมบนขวา > ตรงชื่อผู้ใช้</li>
+                  <li>ถ้าไม่ตรง - ติดต่อ Admin เพื่อแก้ไข</li>
+                </ul>
+              </li>
+              <li>ถ้ายังไม่ได้รับ - คลิก <strong>"📢 รายงาน"</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <h3>👑 ปัญหาสำหรับ Admin</h3>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ส่งอีเมลไม่ได้ / ขึ้น Error "Quota Exceeded"</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>เกิน Quota Gmail API (100 emails/day สำหรับ Free Account)</li>
+              <li>อีเมลผู้รับไม่ถูกต้อง</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>ตรวจสอบ Quota</strong>:
+                <ul>
+                  <li>ไปที่: <a href="https://console.cloud.google.com" target="_blank">https://console.cloud.google.com</a></li>
+                  <li>เลือก Project > APIs & Services > Dashboard</li>
+                  <li>ดู Gmail API Quota</li>
+                </ul>
+              </li>
+              <li><strong>ถ้าเกิน Quota</strong>:
+                <ul>
+                  <li>รอ 24 ชั่วโมง (Quota จะ Reset)</li>
+                  <li>หรือส่งอีเมลทีละน้อย</li>
+                  <li>หรือ Upgrade เป็น Google Workspace</li>
+                </ul>
+              </li>
+              <li><strong>ถ้าไม่เกิน Quota</strong>:
+                <ul>
+                  <li>ตรวจสอบอีเมลผู้รับว่าถูกต้อง</li>
+                  <li>ดู Error Log ใน Apps Script</li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ แก้ไขข้อมูลใน Sheet แล้ว Web UI ไม่อัปเดต</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>Cache ของ Apps Script</li>
+              <li>Session ยังไม่หมดอายุ</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>Refresh หน้า</strong> (F5)</li>
+              <li><strong>ออกจากระบบ</strong> แล้ว Login ใหม่</li>
+              <li><strong>รอ 5 นาที</strong> (Session จะหมดอายุ)</li>
+              <li><strong>Clear Cache</strong> (Ctrl+Shift+Del)</li>
+            </ol>
+            <div class="info-box warning">
+              <strong>⚠️ คำเตือน:</strong> ไม่แนะนำให้แก้ไขข้อมูลใน Sheet โดยตรง ควรใช้ Web UI เพื่อความปลอดภัย
+            </div>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">❌ ระบบช้า / โหลดนาน</div>
+          <div class="faq-answer">
+            <strong>🔍 สาเหตุ:</strong>
+            <ul>
+              <li>ข้อมูลใน Sheet มากเกินไป</li>
+              <li>Script มี Performance Issue</li>
+              <li>Internet Connection ช้า</li>
+            </ul>
+            <strong>✅ วิธีแก้:</strong>
+            <ol>
+              <li><strong>ลดขนาดข้อมูล</strong>:
+                <ul>
+                  <li>Archive ข้อมูลเก่าที่ไม่ใช้แล้ว</li>
+                  <li>ลบผู้ใช้ที่ไม่ Active</li>
+                  <li>ลบรายงานเก่า</li>
+                </ul>
+              </li>
+              <li><strong>Optimize Script</strong>:
+                <ul>
+                  <li>ตรวจสอบ Execution Log</li>
+                  <li>หา Function ที่ใช้เวลานาน</li>
+                  <li>ปรับปรุง Code</li>
+                </ul>
+              </li>
+              <li><strong>ตรวจสอบ Internet</strong></li>
+            </ol>
+          </div>
+        </div>
+        
+        <h3>🛠️ เครื่องมือช่วยแก้ปัญหา</h3>
+        
+        <div class="info-box">
+          <strong>📋 Checklist ก่อนรายงานปัญหา:</strong>
+          <ol>
+            <li>✅ Refresh หน้า (F5) แล้วหรือยัง?</li>
+            <li>✅ ลอง Incognito Mode แล้วหรือยัง?</li>
+            <li>✅ ลองใช้ Browser อื่นแล้วหรือยัง?</li>
+            <li>✅ Clear Cache แล้วหรือยัง?</li>
+            <li>✅ มี Screenshot หรือข้อความ Error ไหม?</li>
+            <li>✅ จำขั้นตอนที่ทำก่อนเกิดปัญหาได้ไหม?</li>
+          </ol>
+        </div>
+        
+        <div class="info-box success">
+          <strong>🚀 วิธีรายงานปัญหาที่ดี:</strong>
+          <ol>
+            <li><strong>หัวข้อชัดเจน</strong> - เช่น "เปิดระบบ Survey ไม่ได้"</li>
+            <li><strong>อธิบายละเอียด</strong>:
+              <ul>
+                <li>ทำอะไรก่อนเกิดปัญหา</li>
+                <li>เกิดอะไรขึ้น (พฤติกรรม/ข้อความ Error)</li>
+                <li>คาดหวังให้เกิดอะไร</li>
+              </ul>
+            </li>
+            <li><strong>แนบ Screenshot</strong> (ถ้ามี)</li>
+            <li><strong>ระบุสภาพแวดล้อม</strong>:
+              <ul>
+                <li>Browser: Chrome / Firefox / Edge / Safari</li>
+                <li>OS: Windows / Mac / Linux / iOS / Android</li>
+                <li>วันเวลาที่เกิด</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+        
+        <h3>📞 ติดต่อ Support</h3>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>ช่องทาง</th>
+              <th>วิธีใช้</th>
+              <th>เหมาะกับ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>📢 รายงานปัญหา</strong></td>
+              <td>คลิกปุ่ม "📢 รายงาน" ในระบบ</td>
+              <td>ปัญหาทั่วไป / Bug / คำแนะนำ</td>
+            </tr>
+            <tr>
+              <td><strong>📝 ขอสิทธิ์</strong></td>
+              <td>คลิกปุ่ม "📝 ขอสิทธิ์"</td>
+              <td>ขอสิทธิ์เข้าถึงระบบ</td>
+            </tr>
+            <tr>
+              <td><strong>📧 Email</strong></td>
+              <td>setthawut.se11@gmail.com</td>
+              <td>ปัญหาด่วน / Admin Only</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>💡 Tips & Best Practices</h3>
+        
+        <h4>✅ สำหรับผู้ใช้ - ควรทำ:</h4>
+        <ul>
+          <li>Bookmark ลิงค์ระบบเพื่อเข้าถึงง่าย</li>
+          <li>ตั้งชื่อ Bookmark ให้ชัดเจน</li>
+          <li>รายงานปัญหาให้ละเอียด (พร้อม Screenshot)</li>
+          <li>ระบุขั้นตอนที่ทำให้เกิดปัญหา</li>
+        </ul>
+        
+        <h4>❌ สำหรับผู้ใช้ - ไม่ควรทำ:</h4>
+        <ul>
+          <li>อย่าแชร์ข้อมูล Login ให้คนอื่น</li>
+          <li>อย่า Request สิทธิ์ที่ไม่จำเป็น</li>
+          <li>อย่า Spam Request ซ้ำๆ</li>
+        </ul>
+        
+        <h4>✅ สำหรับ Admin - ควรทำ:</h4>
+        <ul>
+          <li>ตรวจสอบ Request ใหม่อย่างน้อยวันละครั้ง</li>
+          <li>ตอบรายงานภายใน 24 ชั่วโมง</li>
+          <li>ส่งอีเมลแจ้งเมื่อเปลี่ยนแปลงสิทธิ์ครั้งใหญ่</li>
+          <li>Backup Spreadsheet เป็นประจำ</li>
+          <li>ตั้งชื่อระบบให้สั้น กระชับ ชัดเจน</li>
+          <li>ใช้รูปไอคอนที่มีขนาดเหมาะสม (120x120px)</li>
+        </ul>
+        
+        <h4>❌ สำหรับ Admin - ไม่ควรทำ:</h4>
+        <ul>
+          <li>อย่าลบผู้ใช้โดยไม่แจ้งล่วงหน้า</li>
+          <li>อย่าเปลี่ยน URL โดยไม่ใช้ฟีเจอร์ "New Link"</li>
+          <li>อย่าแก้ไขข้อมูลใน Sheet โดยตรง</li>
+          <li>อย่าลบ Sheet สำคัญ (Apps, Permission, Report, Link)</li>
+        </ul>
+        
+        <h3>📞 การติดต่อและสนับสนุน</h3>
+        
+        <div class="info-box">
+          <strong>ผู้ใช้งานทั่วไป:</strong>
+          <ul>
+            <li>📧 รายงานปัญหา: ใช้ปุ่ม "📢 รายงาน" ในระบบ</li>
+            <li>🔗 ขอสิทธิ์: ใช้ปุ่ม "📝 ขอสิทธิ์"</li>
+          </ul>
+        </div>
+        
+        <div class="info-box success">
+          <strong>Admin:</strong>
+          <ul>
+            <li>📧 Email: setthawut.se11@gmail.com</li>
+            <li>📋 Logs: Google Apps Script > Execution Log</li>
+          </ul>
+        </div>
+        
+        <h3>📝 ข้อมูลระบบ</h3>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>รายการ</th>
+              <th>รายละเอียด</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>พัฒนาโดย</strong></td>
+              <td>Setthawut (setthawut.se11@gmail.com)</td>
+            </tr>
+            <tr>
+              <td><strong>เวอร์ชัน</strong></td>
+              <td>2.0</td>
+            </tr>
+            <tr>
+              <td><strong>อัปเดตล่าสุด</strong></td>
+              <td>23 ตุลาคม 2568</td>
+            </tr>
+            <tr>
+              <td><strong>แพลตฟอร์ม</strong></td>
+              <td>Google Apps Script + Google Sheets</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Back to Top Button -->
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">
+      ↑
+    </div>
+  </div>
+  
+  <script>
+    // Tab switching
+    function showTab(tabName) {
+      // Hide all tabs
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      
+      // Remove active class from all buttons
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      // Show selected tab
+      document.getElementById(tabName).classList.add('active');
+      
+      // Add active class to clicked button
+      event.currentTarget.classList.add('active');
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Back to top button
+    window.addEventListener('scroll', function() {
+      const backToTop = document.getElementById('backToTop');
+      if (window.pageYOffset > 300) {
+        backToTop.classList.add('show');
+      } else {
+        backToTop.classList.remove('show');
+      }
+    });
+    
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    let originalContent = {};
+    let searchTimeout;
+    
+    // Store original content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      originalContent[tab.id] = tab.innerHTML;
+    });
+    
+    searchInput.addEventListener('input', function(e) {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        performSearch(e.target.value);
+      }, 300);
+    });
+    
+    function performSearch(query) {
+      query = query.toLowerCase().trim();
+      
+      if (!query) {
+        // Restore original content
+        Object.keys(originalContent).forEach(tabId => {
+          document.getElementById(tabId).innerHTML = originalContent[tabId];
+        });
+        return;
+      }
+      
+      let hasResults = false;
+      
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        const tabId = tab.id;
+        const content = originalContent[tabId];
+        
+        // Check if content contains search query
+        if (content.toLowerCase().includes(query)) {
+          hasResults = true;
+          // Highlight matching text
+          const highlighted = highlightText(content, query);
+          tab.innerHTML = highlighted;
+        } else {
+          tab.innerHTML = '<div class="no-results"><h3>😔 ไม่พบผลลัพธ์</h3><p>ลองค้นหาด้วยคำอื่น</p></div>';
+        }
+      });
+    }
+    
+    function highlightText(text, query) {
+      // Simple highlight - replace query with highlighted version
+      const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+    
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+  </script>
+</body>
+</html>
