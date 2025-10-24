@@ -1151,6 +1151,10 @@ select:focus {
       <span>📢</span>
       <span>รายงาน</span>
     </button>
+    <button class="btn-manage" onclick="openManualPage()">
+     <span>📚</span>
+     <span>คู่มือ</span>
+   </button>
 
   </div>
   
@@ -1172,6 +1176,10 @@ select:focus {
     <span>🔗</span>
     <span>New Link</span>
   </button>
+  <button class="btn-manage" onclick="openManualPage()">
+     <span>📚</span>
+     <span>คู่มือ</span>
+   </button>
         <!-- เพิ่มใน header-right -->
 
   </div>
@@ -1412,6 +1420,30 @@ select:focus {
 window.onload = function() {
   checkLoginStatus(); // เรียกเลย ไม่ต้องเช็ค version
 };
+
+function openManualPage() {
+  console.log('🔍 กำลังดึง URL คู่มือ...');
+  
+  // แสดง Loading
+  showMessage('กำลังเปิดคู่มือ... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(manualUrl) {
+      console.log('✅ ได้ URL:', manualUrl);
+      
+      if (manualUrl) {
+        // เปิดในแท็บใหม่
+        window.open(manualUrl, '_blank');
+      } else {
+        showMessage('⚠️ ไม่พบลิงค์คู่มือ กรุณาติดต่อ Admin', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getManualUrl();
+}
     
 function checkLoginStatus() {
   // ลองดึงจาก cache ก่อน
