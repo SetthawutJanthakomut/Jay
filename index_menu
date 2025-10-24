@@ -1105,6 +1105,18 @@ select:focus {
   border-color: #667eea !important;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
 }
+
+
+/* เพิ่มใน <style> */
+.report-item.status-rejected {
+  border-left-color: #ef4444;
+  opacity: 0.7;
+}
+
+.report-status.rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
     }
   </style>
 </head>
@@ -1158,31 +1170,33 @@ select:focus {
 
   </div>
   
-  <!-- ปุ่มสำหรับ Admin -->
-  <div id="adminButtons" style="display: none; flex-direction: row; gap: 10px;">
-    <button class="btn-add" onclick="openModal()">
-      <span>➕</span>
-      <span>เพิ่มแอป</span>
-    </button>
-    <button class="btn-manage" onclick="openManageModal()">
-      <span>👥</span>
-      <span>จัดการสิทธิ์</span>
-    </button>
-    <button class="btn-manage" onclick="openViewReportsModal()">
-      <span>📋</span>
-      <span>ดูรายงาน</span>
-    </button>
-      <button class="btn-manage" onclick="openNewLinkModal()">
+<!-- แก้ไขใน <div id="adminButtons"> -->
+<div id="adminButtons" style="display: none; flex-direction: row; gap: 10px;">
+  <button class="btn-add" onclick="openModal()">
+    <span>➕</span>
+    <span>เพิ่มแอป</span>
+  </button>
+  <button class="btn-manage" onclick="openManageModal()">
+    <span>👥</span>
+    <span>จัดการสิทธิ์</span>
+  </button>
+<button class="btn-manage" onclick="openViewRequestsModal()">
+  <span>📝</span>
+  <span>คำขอเข้าใช้</span>
+</button>
+  <button class="btn-manage" onclick="openViewReportsModal()">
+    <span>📋</span>
+    <span>ดูรายงาน</span>
+  </button>
+  <button class="btn-manage" onclick="openNewLinkModal()">
     <span>🔗</span>
     <span>New Link</span>
   </button>
   <button class="btn-manage" onclick="openManualPage()">
-     <span>📚</span>
-     <span>คู่มือ</span>
-   </button>
-        <!-- เพิ่มใน header-right -->
-
-  </div>
+    <span>📚</span>
+    <span>คู่มือ</span>
+  </button>
+</div>
   
   <!-- ปุ่มออกจากระบบ -->
   <button class="btn-logout" onclick="handleLogout()">
@@ -1272,28 +1286,40 @@ select:focus {
   </div>
   
   <div class="message" id="message"></div>
-    <div class="modal" id="requestModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>📝 ขอสิทธิ์เข้าใช้ระบบ</h2>
-        <p>กรอกข้อมูลเพื่อส่งคำขอเข้าใช้งาน</p>
-      </div>
-      <form id="requestForm">
-        <div class="form-group">
-          <label>ชื่อ-นามสกุล *</label>
-          <input type="text" id="requestName" required placeholder="กรอกชื่อ-นามสกุล">
-        </div>
-        <div class="form-group">
-          <label>หมายเหตุ</label>
-          <textarea id="requestNote" rows="4" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" placeholder="เช่น ต้องการใช้งานระบบ X เพื่อ..."></textarea>
-        </div>
-        <div class="modal-buttons">
-          <button type="button" class="btn btn-cancel" onclick="closeRequestModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-submit">ส่งคำขอ</button>
-        </div>
-      </form>
+
+<div class="modal" id="requestModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📝 ขอสิทธิ์เข้าใช้ระบบ</h2>
+      <p>กรอกข้อมูลและเลือกแอปที่ต้องการใช้งาน</p>
     </div>
+    <form id="requestForm">
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล *</label>
+        <input type="text" id="requestName" required placeholder="กรอกชื่อ-นามสกุล">
+      </div>
+      
+      <div class="form-group">
+        <label>เลือกแอปที่ต้องการใช้งาน * <span style="color: #999; font-size: 12px;">(เลือกได้มากกว่า 1)</span></label>
+        <div id="requestAppsCheckboxes" class="apps-checkboxes" style="max-height: 250px; overflow-y: auto; border: 2px solid #e4e6eb; border-radius: 12px; padding: 15px; background: #f8f9fa;">
+          <div class="loading">
+            <p style="color: #666; font-size: 14px;">กำลังโหลดรายการแอป...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <textarea id="requestNote" rows="4" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" placeholder="เช่น ต้องการใช้งานเพื่อ..."></textarea>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeRequestModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">ส่งคำขอ</button>
+      </div>
+    </form>
   </div>
+</div>
 
   <!-- Report Problem Modal -->
   <div class="modal" id="reportModal">
@@ -1314,6 +1340,37 @@ select:focus {
       </form>
     </div>
   </div>
+
+  <!-- New Link Modal -->
+<div class="modal" id="newLinkModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน</h2>
+      <p>อัปเดตลิงค์ใหม่และส่งอีเมลแจ้งทุกคน</p>
+    </div>
+    
+    <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+      <div style="font-size: 13px; color: #666; margin-bottom: 5px;">📍 ลิงค์ปัจจุบัน:</div>
+      <div id="currentLinkDisplay" style="font-size: 14px; color: #667eea; word-break: break-all; font-weight: 500;">กำลังโหลด...</div>
+    </div>
+    
+    <form id="newLinkForm">
+      <div class="form-group">
+        <label>ลิงค์ใหม่ *</label>
+        <input type="url" id="newLinkUrl" required placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+        <div style="font-size: 13px; color: #856404;">
+          <strong>⚠️ หมายเหตุ:</strong> ระบบจะอัปเดตลิงค์ใน Sheet "Link" และส่งอีเมลแจ้งเตือนให้ผู้ใช้ทุกคนในระบบ
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeNewLinkModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">อัปเดตและส่งอีเมล</button>
+      </div>
+    </form>
+  </div>
+</div>
 
   <!-- View Reports Modal -->
 <div class="modal" id="viewReportsModal">
@@ -1365,13 +1422,7 @@ select:focus {
   </div>
 </div>
 
-<!-- New Link Modal -->
-<div class="modal" id="newLinkModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน</h2>
-      <p>อัปเดตลิงค์ใหม่และส่งอีเมลแจ้งทุกคน</p>
-    </div>
+
     
     <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
       <div style="font-size: 13px; color: #666; margin-bottom: 5px;">📍 ลิงค์ปัจจุบัน:</div>
@@ -1395,31 +1446,97 @@ select:focus {
     </form>
   </div>
 </div>
+
+<div class="modal" id="viewRequestsModal">
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2>📝 คำขอเข้าใช้ระบบ</h2>
+      <p>ดูและจัดการคำขอจากผู้ใช้งาน</p>
+    </div>
+    
+    <div class="reports-list" id="requestsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดคำขอ...</p>
+      </div>
+    </div>
+    
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-cancel" onclick="closeViewRequestsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Request Modal -->
+<div class="modal" id="rejectRequestModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>❌ ปฏิเสธคำขอ</h2>
+      <p>ระบุเหตุผลในการปฏิเสธ</p>
+    </div>
+    <form id="rejectRequestForm">
+      <input type="hidden" id="rejectRowIndex" value="">
+      <input type="hidden" id="rejectUserEmail" value="">
+      
+      <div class="form-group">
+        <label>เหตุผล *</label>
+        <textarea id="rejectReason" rows="4" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" required placeholder="เช่น ข้อมูลไม่ครบถ้วน, ไม่มีความจำเป็น..."></textarea>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeRejectRequestModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">ปฏิเสธ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
   
 <script>
-    // ปิด Console Warnings ที่ไม่จำเป็น
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      const message = args.join(' ');
-      if (
-        message.includes('Unrecognized feature') ||
-        message.includes('sandbox attribute') ||
-        message.includes('Net state changed')
-      ) {
-        return; // ไม่แสดง warning พวกนี้
+const originalWarn = console.warn;
+  console.warn = function(...args) {
+    const message = args.join(' ');
+    if (
+      message.includes('Unrecognized feature') ||
+      message.includes('sandbox attribute') ||
+      message.includes('Net state changed')
+    ) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+  
+  // ซ่อน Modal ทั้งหมด (ยกเว้น Login Screen)
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalIds = [
+      'addModal', 
+      'manageModal', 
+      'requestModal', 
+      'reportModal', 
+      'viewReportsModal', 
+      'replyReportModal', 
+      'newLinkModal', 
+      'viewRequestsModal', 
+      'rejectRequestModal'
+    ];
+    
+    modalIds.forEach(function(id) {
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.remove('show');
       }
-      originalWarn.apply(console, args);
-    };
-    
-    let isAdmin = false;
-    let allApps = [];
-    // ... โค้ดส่วนอื่นๆ ต่อไป ...
-    let currentUserEmail = null;
-    let isLoggedIn = false;
-    
-window.onload = function() {
-  checkLoginStatus(); // เรียกเลย ไม่ต้องเช็ค version
-};
+    });
+  });
+  
+  let isAdmin = false;
+  let allApps = [];
+  let currentUserEmail = null;
+  let isLoggedIn = false;
+  
+  window.onload = function() {
+    checkLoginStatus();
+  };
 
 function openManualPage() {
   console.log('🔍 กำลังดึง URL คู่มือ...');
@@ -1446,64 +1563,71 @@ function openManualPage() {
 }
     
 function checkLoginStatus() {
-  // ลองดึงจาก cache ก่อน
-  const cachedEmail = localStorage.getItem('userEmail');
-  const cacheTime = localStorage.getItem('cacheTime');
-  const now = new Date().getTime();
-  
-  // ถ้ามี cache และยังไม่หมดอายุ (5 นาที)
-  if (cachedEmail && cacheTime && (now - parseInt(cacheTime)) < 300000) {
-    console.log('✅ Using cached session');
-    currentUserEmail = cachedEmail;
-    isLoggedIn = true;
-    showMainApp();
-    loadApps();
-    return;
-  }
-  
-  // ถ้าไม่มี cache หรือหมดอายุ -> เรียก API
-  console.log('🔄 Fetching fresh session...');
-  google.script.run
-    .withSuccessHandler(function(email) {
-      if (email && email !== 'ไม่ทราบผู้ใช้') {
-        currentUserEmail = email;
-        isLoggedIn = true;
-        
-        // บันทึก cache
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('cacheTime', new Date().getTime().toString());
-        
-        showMainApp();
-        loadApps();
-      } else {
-        showLoginScreen();
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.log('Auto-login failed:', error);
-      showLoginScreen();
-    })
-    .getCurrentUser();
-}
+    // แสดง Login Screen ก่อนเสมอ
+    showLoginScreen();
     
-    function handleGoogleLogin() {
-      google.script.run
-        .withSuccessHandler(function(email) {
-          if (email && email !== 'ไม่ทราบผู้ใช้') {
-            currentUserEmail = email;
-            isLoggedIn = true;
-            showMainApp();
-            loadApps();
-            showMessage('เข้าสู่ระบบสำเร็จ! 🎉', 'success');
-          } else {
-            showMessage('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่', 'error');
-          }
-        })
-        .withFailureHandler(function(error) {
-          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
-        })
-        .getCurrentUser();
+    // ลองดึงจาก cache ก่อน
+    const cachedEmail = localStorage.getItem('userEmail');
+    const cacheTime = localStorage.getItem('cacheTime');
+    const now = new Date().getTime();
+    
+    // ถ้ามี cache และยังไม่หมดอายุ (5 นาที)
+    if (cachedEmail && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+      console.log('✅ Using cached session');
+      currentUserEmail = cachedEmail;
+      isLoggedIn = true;
+      showMainApp();
+      loadApps();
+      return;
     }
+    
+    // ถ้าไม่มี cache หรือหมดอายุ
+    console.log('🔄 Fetching fresh session...');
+    google.script.run
+      .withSuccessHandler(function(email) {
+        if (email && email !== 'ไม่ทราบผู้ใช้') {
+          currentUserEmail = email;
+          isLoggedIn = true;
+          
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('cacheTime', new Date().getTime().toString());
+          
+          showMainApp();
+          loadApps();
+        } else {
+          console.log('No active session - showing login');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.log('Auto-login failed:', error);
+      })
+      .getCurrentUser();
+  }
+    
+  function handleGoogleLogin() {
+    showMessage('กำลังเข้าสู่ระบบ... ⏳', 'success');
+    
+    google.script.run
+      .withSuccessHandler(function(email) {
+        if (email && email !== 'ไม่ทราบผู้ใช้') {
+          currentUserEmail = email;
+          isLoggedIn = true;
+          
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('cacheTime', new Date().getTime().toString());
+          
+          showMainApp();
+          loadApps();
+          showMessage('เข้าสู่ระบบสำเร็จ! 🎉', 'success');
+        } else {
+          showMessage('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่', 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+      })
+      .getCurrentUser();
+  }
     
 function handleLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
@@ -1519,23 +1643,44 @@ function handleLogout() {
   }
 }
     
-    function showLoginScreen() {
-      document.getElementById('loginScreen').style.display = 'flex';
-      document.getElementById('mainApp').classList.remove('show');
-    }
+  function showLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
     
-    function showMainApp() {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('mainApp').classList.add('show');
+    if (loginScreen) {
+      loginScreen.style.display = 'flex';
     }
+    if (mainApp) {
+      mainApp.classList.remove('show');
+    }
+  }
+  
+  function showMainApp() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
     
+    if (loginScreen) {
+      loginScreen.style.display = 'none';
+    }
+    if (mainApp) {
+      mainApp.classList.add('show');
+    }
+  }  
     // แสดงปุ่มดูรายงานสำหรับ Admin
 function loadApps() {
-  document.getElementById('loadingText').textContent = 'กำลังตรวจสอบสิทธิ์...';
+  // ✅ ตรวจสอบว่า element มีอยู่หรือไม่ก่อน
+  const loadingText = document.getElementById('loadingText');
+  if (loadingText) {
+    loadingText.textContent = 'กำลังตรวจสอบสิทธิ์...';
+  }
   
   google.script.run
     .withSuccessHandler(function(result) {
-      document.getElementById('loadingText').textContent = 'กำลังโหลดระบบงาน...';
+      // ✅ ตรวจสอบอีกครั้ง
+      const loadingText2 = document.getElementById('loadingText');
+      if (loadingText2) {
+        loadingText2.textContent = 'กำลังโหลดระบบงาน...';
+      }
       
       isAdmin = result.isAdmin;
       currentUserEmail = result.userEmail;
@@ -1912,9 +2057,10 @@ function deleteReportItem(rowIndex) {
     }
     
     // ========== Request Access Modal ==========
-    function openRequestModal() {
-      document.getElementById('requestModal').classList.add('show');
-    }
+function openRequestModal() {
+  document.getElementById('requestModal').classList.add('show');
+  loadAvailableApps();
+}
     
     function closeRequestModal() {
       document.getElementById('requestModal').classList.remove('show');
@@ -2007,7 +2153,7 @@ function deleteReportItem(rowIndex) {
         .getAllUsers();
     }
     
-    function displayUsers(users) {
+function displayUsers(users) {
   const container = document.getElementById('usersList');
   
   if (!users || users.length === 0) {
@@ -2019,14 +2165,20 @@ function deleteReportItem(rowIndex) {
   
   users.forEach(function(user, index) {
     const isPending = user.apps.length === 0;
+    
+    // ✅ แก้ไขตรงนี้ - แปลงเป็น String ก่อน
+    const noteText = user.note ? String(user.note) : '';
+    const hasRequest = noteText.includes('ขอสิทธิ์:');
+    
     html += `
       <div class="user-item ${isPending ? 'pending-user' : ''}">
         <div class="user-email-display">
           ${user.email}
           ${isPending ? '<span class="pending-badge">⏳ รอการอนุมัติ</span>' : ''}
+          ${hasRequest ? '<span class="pending-badge" style="background: #f59e0b;">📝 มีคำขอใหม่</span>' : ''}
         </div>
         ${user.name ? `<div class="user-detail"><strong>ชื่อ:</strong> ${user.name}</div>` : ''}
-        ${user.note ? `<div class="user-detail"><strong>หมายเหตุ:</strong> ${user.note}</div>` : ''}
+        ${noteText ? `<div class="user-detail" style="white-space: pre-wrap;"><strong>หมายเหตุ:</strong> ${noteText}</div>` : ''}
         
         <div class="checkbox-item" style="margin-top: 10px; margin-bottom: 10px;">
           <input type="checkbox" id="sendEmail${index}" checked>
@@ -2034,7 +2186,7 @@ function deleteReportItem(rowIndex) {
         </div>
         
         <div class="user-actions-btn">
-          <button class="btn-save-user" onclick="saveUserPermissions('${user.email}', ${index})">💾 บันทึก</button>
+          <button class="btn-save-user" onclick="saveUserPermissions('${user.email}', ${index})">💾 อนุมัติและบันทึก</button>
           <button class="btn-delete-user" onclick="deleteUser('${user.email}')">🗑️ ลบ</button>
         </div>
         <div class="apps-checkboxes" id="userApps${index}">
@@ -2243,6 +2395,377 @@ document.getElementById('newLinkForm').addEventListener('submit', function(e) {
     .updateLinkAndNotifyUsers(newUrl);
 });
 
+
+function loadAvailableApps() {
+  const container = document.getElementById('requestAppsCheckboxes');
+  container.innerHTML = '<div class="loading"><p style="color: #666; font-size: 14px;">กำลังโหลดรายการแอป...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(apps) {
+      if (!apps || apps.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">✅ คุณมีสิทธิ์ใช้งานครบทุกแอปแล้ว</div>';
+        return;
+      }
+      
+      let html = '';
+      apps.forEach(function(app, index) {
+        html += `
+          <div class="checkbox-item">
+            <input type="checkbox" id="reqApp${index}" value="${app}">
+            <label for="reqApp${index}">${app}</label>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">❌ เกิดข้อผิดพลาด</div>';
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getAvailableAppsForUser();
+}
+
+// แก้ไข Event Listener ของ requestForm
+// ค้นหาส่วนนี้
+document.getElementById('requestForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('requestName').value.trim();
+  const note = document.getElementById('requestNote').value.trim();
+  
+  // รวบรวมแอปที่เลือก
+  const selectedApps = [];
+  const checkboxes = document.querySelectorAll('#requestAppsCheckboxes input[type="checkbox"]:checked');
+  checkboxes.forEach(cb => selectedApps.push(cb.value));
+  
+  // ✅ เพิ่ม Console log ตรงนี้
+  console.log('=== Request Form Submit ===');
+  console.log('Name:', name);
+  console.log('Note:', note);
+  console.log('Selected Apps:', selectedApps);
+  
+  if (selectedApps.length === 0) {
+    showMessage('กรุณาเลือกแอปอย่างน้อย 1 รายการ', 'error');
+    return;
+  }
+  
+  // ✅ เพิ่ม log ก่อนเรียก Google Apps Script
+  console.log('Calling requestAccess...');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      console.log('✅ Success:', result); // ✅ เพิ่ม log
+      if (result.success) {
+        showMessage(result.message || 'ส่งคำขอสำเร็จ! รอการอนุมัติจาก Admin ✅', 'success');
+        closeRequestModal();
+        
+        // Reload หน้าจอเพื่อให้เห็นสถานะล่าสุด
+        setTimeout(function() {
+          loadApps();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Failure:', error); // ✅ เพิ่ม log
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .requestAccess(name, note, selectedApps);
+});
+
+// เพิ่มใน <script> ด้านล่าง
+
+// ========== View App Requests ==========
+function openViewRequestsModal() {
+  console.log('Opening view requests modal...');
+  document.getElementById('viewRequestsModal').classList.add('show');
+  loadAppRequests();
+}
+
+function closeViewRequestsModal() {
+  document.getElementById('viewRequestsModal').classList.remove('show');
+}
+
+function loadAppRequests() {
+  console.log('=== loadAppRequests START ===');
+  
+  const loadingHtml = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดคำขอ...</p>
+    </div>
+  `;
+  document.getElementById('requestsList').innerHTML = loadingHtml;
+  
+  google.script.run
+    .withSuccessHandler(function(requests) {
+      console.log('=== SUCCESS ===');
+      console.log('Requests received:', requests);
+      displayAppRequests(requests);
+    })
+    .withFailureHandler(function(error) {
+      console.error('=== FAILURE ===');
+      console.error('Error:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      document.getElementById('requestsList').innerHTML = `
+        <div class="empty-state">
+          <h3>❌ เกิดข้อผิดพลาด</h3>
+          <p>${error.message || error}</p>
+        </div>
+      `;
+    })
+    .getAllAppRequests();
+}
+
+function displayAppRequests(requests) {
+  const container = document.getElementById('requestsList');
+  
+  console.log('=== Display App Requests ===');
+  console.log('Type:', typeof requests);
+  console.log('Is Array:', Array.isArray(requests));
+  console.log('Length:', requests ? requests.length : 'null');
+  
+  if (!Array.isArray(requests)) {
+    console.error('Requests is not an array:', typeof requests);
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>⚠️ ข้อมูลไม่ถูกต้อง</h3>
+        <p>รูปแบบข้อมูลคำขอไม่ถูกต้อง</p>
+      </div>
+    `;
+    return;
+  }
+  
+  if (requests.length === 0) {
+    console.log('No requests found');
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>📝 ยังไม่มีคำขอ</h3>
+        <p>ยังไม่มีผู้ใช้ขอเข้าใช้ระบบ</p>
+      </div>
+    `;
+    return;
+  }
+  
+  console.log('Rendering ' + requests.length + ' requests');
+  
+  let html = '';
+  
+  requests.forEach(function(request) {
+    const timestamp = request.timestamp || new Date();
+    const userEmail = String(request.userEmail || '');
+    const name = String(request.name || '');
+    const requestedApps = String(request.requestedApps || '');
+    const note = String(request.note || '');
+    const status = String(request.status || 'รออนุมัติ');
+    
+    const statusClass = status.includes('อนุมัติแล้ว') ? 'done' : 
+                       status.includes('ปฏิเสธ') ? 'rejected' : 'pending';
+    const itemClass = status.includes('อนุมัติแล้ว') ? 'status-done' : 
+                     status.includes('ปฏิเสธ') ? 'status-rejected' : 'status-pending';
+    
+    const safeNote = note.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeApps = requestedApps.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    const escapedUserEmail = userEmail.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    const escapedApps = safeApps.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    
+    html += `
+      <div class="report-item ${itemClass}">
+        <div class="report-header">
+          <div>
+            <span class="report-user">👤 ${userEmail}</span>
+            <span class="report-status ${statusClass}">${status}</span>
+          </div>
+          <span class="report-time">⏰ ${new Date(timestamp).toLocaleString('th-TH')}</span>
+        </div>
+        
+        ${name ? `<div style="font-size: 14px; color: #666; margin: 8px 0;"><strong>ชื่อ:</strong> ${name}</div>` : ''}
+        
+        <div class="report-message">
+          <strong>📱 แอปที่ขอใช้งาน:</strong><br>
+          ${safeApps.split(', ').map(app => {
+            const cleanApp = app.trim();
+            return cleanApp ? `<span style="display: inline-block; background: #667eea; color: white; padding: 4px 12px; border-radius: 15px; margin: 4px 4px 4px 0; font-size: 13px;">✓ ${cleanApp}</span>` : '';
+          }).join('')}
+        </div>
+        
+        ${safeNote ? `
+          <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 10px; border-left: 3px solid #667eea;">
+            <div style="font-size: 12px; color: #667eea; font-weight: 600; margin-bottom: 5px;">📝 หมายเหตุ:</div>
+            <div style="color: #333; white-space: pre-wrap;">${safeNote}</div>
+          </div>
+        ` : ''}
+        
+        ${status === 'รออนุมัติ' ? `
+          <div class="report-actions">
+            <button class="btn-reply" onclick="approveRequest(${request.rowIndex}, '${escapedUserEmail}', '${escapedApps}')">
+              ✅ อนุมัติและเพิ่มสิทธิ์
+            </button>
+            <button class="btn-delete-report" style="background: #f59e0b;" onclick="openRejectRequestModal(${request.rowIndex}, '${escapedUserEmail}')">
+              ❌ ปฏิเสธ
+            </button>
+            <button class="btn-delete-report" onclick="deleteRequestItem(${request.rowIndex})">
+              🗑️ ลบ
+            </button>
+          </div>
+        ` : `
+          <div class="report-actions">
+            <button class="btn-delete-report" onclick="deleteRequestItem(${request.rowIndex})">
+              🗑️ ลบ
+            </button>
+          </div>
+        `}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  console.log('Display completed');
+}
+
+function approveRequest(rowIndex, userEmail, requestedApps) {
+  if (!confirm('ต้องการอนุมัติคำขอและเพิ่มสิทธิ์ให้ผู้ใช้นี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  showMessage('กำลังอนุมัติและเพิ่มสิทธิ์... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('อนุมัติและเพิ่มสิทธิ์สำเร็จ! ✅', 'success');
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .approveAppRequest(rowIndex, userEmail, requestedApps);
+}
+
+function openRejectRequestModal(rowIndex, userEmail) {
+  document.getElementById('rejectRowIndex').value = rowIndex;
+  document.getElementById('rejectUserEmail').value = userEmail;
+  document.getElementById('rejectRequestModal').classList.add('show');
+}
+
+function closeRejectRequestModal() {
+  document.getElementById('rejectRequestModal').classList.remove('show');
+  document.getElementById('rejectRequestForm').reset();
+}
+
+document.getElementById('rejectRequestForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const rowIndex = parseInt(document.getElementById('rejectRowIndex').value);
+  const userEmail = document.getElementById('rejectUserEmail').value;
+  const reason = document.getElementById('rejectReason').value;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ปฏิเสธคำขอสำเร็จ! ✅', 'success');
+        closeRejectRequestModal();
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .rejectAppRequest(rowIndex, userEmail, reason);
+});
+
+function deleteRequestItem(rowIndex) {
+  if (!confirm('ต้องการลบคำขอนี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบคำขอสำเร็จ! ✅', 'success');
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .deleteAppRequest(rowIndex);
+}
+
+// ลบคำขอ
+function deleteRequestItem(rowIndex) {
+  if (!confirm('ต้องการลบคำขอนี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบคำขอสำเร็จ! ✅', 'success');
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .deleteAppRequest(rowIndex);
+}
+
+function handleRequestSubmit(event) {
+  event.preventDefault();
+  
+  console.log('=== Request Form Submit ===');
+  
+  const name = document.getElementById('requestName').value.trim();
+  const note = document.getElementById('requestNote').value.trim();
+  
+  // รวบรวมแอปที่เลือก
+  const selectedApps = [];
+  const checkboxes = document.querySelectorAll('#requestAppsCheckboxes input[type="checkbox"]:checked');
+  checkboxes.forEach(cb => selectedApps.push(cb.value));
+  
+  console.log('Name:', name);
+  console.log('Note:', note);
+  console.log('Selected Apps:', selectedApps);
+  
+  if (selectedApps.length === 0) {
+    showMessage('กรุณาเลือกแอปอย่างน้อย 1 รายการ', 'error');
+    return;
+  }
+  
+  console.log('Calling requestAccess...');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      console.log('✅ Success:', result);
+      if (result.success) {
+        showMessage(result.message || 'ส่งคำขอสำเร็จ! รอการอนุมัติจาก Admin ✅', 'success');
+        closeRequestModal();
+        setTimeout(function() {
+          loadApps();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Failure:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .requestAccess(name, note, selectedApps);
+}
   </script>
 
   
