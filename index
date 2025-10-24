@@ -517,6 +517,38 @@
   font-size: 18px;
   opacity: 0.8;
 }
+.manual-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+}
+
+.manual-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.manual-link-btn .icon {
+  font-size: 20px;
+}
+
+.manual-link-btn .external-icon {
+  font-size: 18px;
+  opacity: 0.8;
+}
     }
   </style>
 </head>
@@ -538,6 +570,7 @@
     
     <div class="info-box">
       <strong>📌 ข้อกำหนด:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
+      <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
       <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
       <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
@@ -548,6 +581,16 @@
    class="calendar-link-btn">
   <span class="icon">📅</span>
   <span>ดูปฏิทินการจอง</span>
+  <span class="external-icon">↗</span>
+</a>
+
+<a href="#" 
+   id="manualLinkBtn"
+   target="_blank" 
+   class="manual-link-btn"
+   style="display: none;">
+  <span class="icon">📖</span>
+  <span>คู่มือการใช้งาน</span>
   <span class="external-icon">↗</span>
 </a>
     
@@ -689,8 +732,50 @@
       initTeamCategoryButtons();
       initCheckboxes();
       loadUserEmailAndName();
+      loadManualLink(); // ⭐ เพิ่มบรรทัดนี้
       showMessage('กรุณาเลือกประเภทงานก่อน ระบบจะแนะนำทีมงานที่เหมาะสมให้', 'info');
     };
+
+    function loadManualLink() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url) {
+        var manualBtn = document.getElementById('manualLinkBtn');
+        manualBtn.href = url + '?page=manual';
+        manualBtn.style.display = 'flex';
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading manual link:', error);
+    })
+    .getManualUrl();
+}
+
+function getManualUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const linkSheet = ss.getSheetByName('Link_URL');
+    
+    if (!linkSheet) {
+      Logger.log('❌ ไม่พบ Sheet "Link_URL"');
+      return null;
+    }
+    
+    const url = linkSheet.getRange('B2').getValue();
+    
+    if (!url) {
+      Logger.log('❌ ไม่พบ URL ใน B2');
+      return null;
+    }
+    
+    Logger.log('✅ Manual URL: ' + url);
+    return url.toString().trim();
+    
+  } catch (error) {
+    Logger.log('❌ Error in getManualUrl: ' + error.toString());
+    return null;
+  }
+}
     
     function initTeamCategoryButtons() {
       var teamButtons = document.querySelectorAll('.team-btn');
