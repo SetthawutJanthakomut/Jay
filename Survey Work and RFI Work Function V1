@@ -25,6 +25,13 @@ function doGet(e) {
     return HtmlService.createHtmlOutputFromFile('survey')
       .setTitle('Survey Work Requirement System')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      }else if (page === 'manual') {
+  return HtmlService.createHtmlOutputFromFile('manual')
+    .setTitle('คู่มือการใช้งาน RFI System');
+    }else if (page === 'survey_manual') {
+  return HtmlService.createHtmlOutputFromFile('survey_manual')
+    .setTitle('คู่มือการใช้งาน RFI System');
+
   } else {
     return HtmlService.createHtmlOutputFromFile('index')
       .setTitle('RFI Requirement System')
@@ -76,32 +83,6 @@ function getWorkloadFromCache(resourceId, date) {
   return WORKLOAD_CACHE[key] || 0;
 }
 
-function doGet(e) {
-  const page = e.parameter.page;
-  
-  if (page === 'qc') {
-    return HtmlService.createHtmlOutputFromFile('qc')
-      .setTitle('QC RFI System')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  } else if (page === 'qc_edit') {
-    return HtmlService.createHtmlOutputFromFile('qc_edit')
-      .setTitle('QC - แก้ไข RFI')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  } else if (page === 'qc_postpone') {
-    return HtmlService.createHtmlOutputFromFile('qc_postpone')
-      .setTitle('QC - เลื่อนตรวจ RFI')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  } else if (page === 'survey') {
-    // ⭐ เพิ่มเส้นทางสำหรับ Survey Work
-    return HtmlService.createHtmlOutputFromFile('survey')
-      .setTitle('Survey Work Requirement System')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  } else {
-    return HtmlService.createHtmlOutputFromFile('index')
-      .setTitle('RFI Requirement System')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-}
 
 /**
  * ✅ UPDATED: เพิ่มเมนู Test Logging
@@ -7631,4 +7612,35 @@ function testSurveyTeamAvailabilityFixed() {
     (passCount === testCases.length ? '✅ All tests passed!' : '⚠️ Some tests failed'),
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+function getManualUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const linkSheet = ss.getSheetByName('Link_URL');
+    
+    if (!linkSheet) {
+      Logger.log('❌ ไม่พบ Sheet "Link_URL"');
+      return null;
+    }
+    
+    const url = linkSheet.getRange('B2').getValue();
+    
+    if (!url || url.toString().trim() === '') {
+      Logger.log('❌ Cell B2 ว่างเปล่า');
+      return null;
+    }
+    
+    Logger.log('✅ Manual URL loaded: ' + url);
+    return url.toString().trim();
+    
+  } catch (error) {
+    Logger.log('❌ Error in getManualUrl: ' + error.toString());
+    return null;
+  }
+}
+
+function testGetManualUrl() {
+  const url = getManualUrl();
+  console.log('URL Result:', url);
 }
