@@ -1,7 +1,15 @@
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('ศูนย์รวมระบบงาน')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+function doGet(e) {
+  const page = e.parameter.page;
+  
+  if (page === 'manual') {
+    return HtmlService.createHtmlOutputFromFile('manual')
+      .setTitle('คู่มือศูนย์รวมระบบงาน')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('ศูนย์รวมระบบงาน')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
 }
 
 function getApps() {
@@ -1580,5 +1588,41 @@ function updateLinkAndNotifyUsers(newUrl) {
   } catch (error) {
     Logger.log('❌ Error: ' + error);
     return { success: false, message: error.toString() };
+  }
+}
+
+// ============================================
+// ✨ เพิ่มฟังก์ชันนี้ใน MenuAPP.gs
+// ============================================
+
+// วางไว้หลัง function getVersion()
+function getManualUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      Logger.log('⚠️ ไม่พบ Sheet "Link"');
+      return null;
+    }
+    
+    const data = linkSheet.getDataRange().getValues();
+    
+    // หา URL ที่ column A = "ศูนย์รวมระบบงาน"
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === 'ศูนย์รวมระบบงาน' && data[i][1]) {
+        const baseUrl = data[i][1];
+        const manualUrl = baseUrl + '?page=manual';
+        Logger.log('✅ Manual URL: ' + manualUrl);
+        return manualUrl;
+      }
+    }
+    
+    Logger.log('⚠️ ไม่พบ URL ในระบบ');
+    return null;
+    
+  } catch (e) {
+    Logger.log('❌ Error: ' + e);
+    return null;
   }
 }
