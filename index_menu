@@ -1180,6 +1180,10 @@ select:focus {
     <span>👥</span>
     <span>จัดการสิทธิ์</span>
   </button>
+    <button class="btn-manage" onclick="openManageAdminsModal()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+    <span>👑</span>
+    <span>จัดการ Admin</span>
+  </button>
 <button class="btn-manage" onclick="openViewRequestsModal()">
   <span>📝</span>
   <span>คำขอเข้าใช้</span>
@@ -1466,6 +1470,51 @@ select:focus {
   </div>
 </div>
 
+<!-- Manage Admins Modal -->
+<div class="modal" id="manageAdminsModal">
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2>👑 จัดการผู้ดูแลระบบ</h2>
+      <p>เพิ่มหรือลบสิทธิ์ Admin</p>
+    </div>
+    
+    <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+      <div style="font-size: 14px; color: #856404;">
+        <strong>⚠️ คำเตือน:</strong> Admin มีสิทธิ์เต็มในการจัดการระบบ รวมถึงการเพิ่ม/ลบ Admin คนอื่น กรุณาพิจารณาอย่างรอบคอบ
+      </div>
+    </div>
+    
+    <button class="btn btn-submit btn-add-user" onclick="toggleAddAdminForm()">
+      ➕ เพิ่ม Admin ใหม่
+    </button>
+    
+    <div class="new-user-form" id="newAdminForm">
+      <div class="form-group">
+        <label>อีเมล Admin</label>
+        <input type="email" id="newAdminEmail" placeholder="admin@example.com" required>
+      </div>
+      <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #1565c0;">
+        💡 <strong>สิทธิ์ที่จะได้รับ:</strong> เพิ่ม/แก้ไข/ลบระบบงาน, จัดการสิทธิ์ผู้ใช้, ดูรายงาน, จัดการคำขอ, จัดการ Admin
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="toggleAddAdminForm()">ยกเลิก</button>
+        <button type="button" class="btn btn-submit" onclick="addNewAdmin()">เพิ่ม Admin</button>
+      </div>
+    </div>
+    
+    <div class="users-list" id="adminsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดรายชื่อ Admin...</p>
+      </div>
+    </div>
+    
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-cancel" onclick="closeManageAdminsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
 
   
 <script>
@@ -1643,7 +1692,6 @@ function handleLogout() {
   }  
     // แสดงปุ่มดูรายงานสำหรับ Admin
 function loadApps() {
-  // ✅ ตรวจสอบว่า element มีอยู่หรือไม่ก่อน
   const loadingText = document.getElementById('loadingText');
   if (loadingText) {
     loadingText.textContent = 'กำลังตรวจสอบสิทธิ์...';
@@ -1651,7 +1699,6 @@ function loadApps() {
   
   google.script.run
     .withSuccessHandler(function(result) {
-      // ✅ ตรวจสอบอีกครั้ง
       const loadingText2 = document.getElementById('loadingText');
       if (loadingText2) {
         loadingText2.textContent = 'กำลังโหลดระบบงาน...';
@@ -1667,11 +1714,19 @@ function loadApps() {
       document.getElementById('adminButtons').style.display = 'none';
       
       if (isAdmin) {
-        // แสดง badge และปุ่มสำหรับ Admin
-        document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👑 ADMIN</span>';
+        // ✅ ตรวจสอบว่าเป็น Super Admin หรือไม่
+        google.script.run
+          .withSuccessHandler(function(isSuperAdminUser) {
+            if (isSuperAdminUser) {
+              document.getElementById('adminBadge').innerHTML = '<span class="admin-badge" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">👑 SUPER ADMIN</span>';
+            } else {
+              document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👤 ADMIN</span>';
+            }
+          })
+          .isSuperAdmin(currentUserEmail);
+        
         document.getElementById('adminButtons').style.display = 'flex';
       } else {
-        // แสดงปุ่มสำหรับ User ทั่วไป
         document.getElementById('adminBadge').innerHTML = '';
         document.getElementById('userButtons').style.display = 'flex';
       }
@@ -2740,6 +2795,188 @@ function handleRequestSubmit(event) {
       showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
     })
     .requestAccess(name, note, selectedApps);
+}
+
+// ================================
+// 👑 จัดการ Admin
+// ================================
+
+function openManageAdminsModal() {
+  console.log('Opening manage admins modal...');
+  document.getElementById('manageAdminsModal').classList.add('show');
+  loadAdmins();
+}
+
+function closeManageAdminsModal() {
+  document.getElementById('manageAdminsModal').classList.remove('show');
+  document.getElementById('newAdminForm').classList.remove('show');
+  document.getElementById('newAdminEmail').value = '';
+}
+
+function toggleAddAdminForm() {
+  const form = document.getElementById('newAdminForm');
+  form.classList.toggle('show');
+  if (!form.classList.contains('show')) {
+    document.getElementById('newAdminEmail').value = '';
+  }
+}
+
+function loadAdmins() {
+  console.log('Loading admins...');
+  
+  const loadingHtml = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดรายชื่อ Admin...</p>
+    </div>
+  `;
+  document.getElementById('adminsList').innerHTML = loadingHtml;
+  
+  google.script.run
+    .withSuccessHandler(function(admins) {
+      console.log('Admins loaded:', admins);
+      displayAdmins(admins);
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading admins:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+      document.getElementById('adminsList').innerHTML = `
+        <div class="empty-state">
+          <h3>❌ เกิดข้อผิดพลาด</h3>
+          <p>${error}</p>
+        </div>
+      `;
+    })
+    .getAllAdmins();
+}
+
+function displayAdmins(admins) {
+  const container = document.getElementById('adminsList');
+  
+  if (!Array.isArray(admins)) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>⚠️ ข้อมูลไม่ถูกต้อง</h3>
+      </div>
+    `;
+    return;
+  }
+  
+  if (admins.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>👑 ยังไม่มี Admin</h3>
+        <p>เพิ่ม Admin เพื่อจัดการระบบ</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = '';
+  
+  admins.forEach(function(admin) {
+    // ✅ กำหนดสีตาม Role
+    const borderColor = admin.role.includes('Super Admin') ? '#dc2626' : '#f59e0b';
+    const badgeColor = admin.role.includes('Super Admin') ? 
+      'background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);' : 
+      'background: #f59e0b;';
+    
+    html += `
+      <div class="user-item" style="border-left: 4px solid ${borderColor};">
+        <div class="user-email-display">
+          ${admin.role.includes('Super Admin') ? '👑' : '👤'} ${admin.email}
+          <span style="display: inline-block; ${badgeColor} color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 10px;">
+            ${admin.role}
+          </span>
+        </div>
+        
+        ${admin.addedDate !== '-' ? `
+          <div class="user-detail">
+            <strong>📅 เพิ่มเมื่อ:</strong> ${admin.addedDate}
+          </div>
+        ` : ''}
+        
+        ${admin.addedBy !== '-' ? `
+          <div class="user-detail">
+            <strong>👤 เพิ่มโดย:</strong> ${admin.addedBy}
+          </div>
+        ` : ''}
+        
+        ${admin.canDelete ? `
+          <div class="user-actions-btn">
+            <button class="btn-delete-user" onclick="removeAdminUser('${admin.email}')">
+              🗑️ ลบสิทธิ์ Admin
+            </button>
+          </div>
+        ` : `
+          <div style="color: #999; font-size: 14px; margin-top: 10px; padding: 10px; background: #f5f6f7; border-radius: 8px;">
+            ${admin.role.includes('Super Admin') ? 
+              '🔒 Super Admin ไม่สามารถถูกลบได้' : 
+              '🔒 เฉพาะ Super Admin เท่านั้นที่สามารถจัดการ Admin ได้'}
+          </div>
+        `}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+function addNewAdmin() {
+  const email = document.getElementById('newAdminEmail').value.trim();
+  
+  if (!email) {
+    showMessage('กรุณากรอกอีเมล', 'error');
+    return;
+  }
+  
+  if (!email.includes('@')) {
+    showMessage('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+    return;
+  }
+  
+  if (!confirm(`ต้องการเพิ่ม "${email}" เป็น Admin ใช่หรือไม่?\n\nAdmin จะมีสิทธิ์เต็มในการจัดการระบบ`)) {
+    return;
+  }
+  
+  showMessage('กำลังเพิ่ม Admin... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('เพิ่ม Admin สำเร็จ! ✅', 'success');
+        toggleAddAdminForm();
+        loadAdmins();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .addAdmin(email);
+}
+
+function removeAdminUser(email) {
+  if (!confirm(`⚠️ ต้องการลบสิทธิ์ Admin ของ "${email}" ใช่หรือไม่?\n\nผู้ใช้คนนี้จะไม่สามารถจัดการระบบได้อีกต่อไป`)) {
+    return;
+  }
+  
+  showMessage('กำลังลบสิทธิ์ Admin... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบสิทธิ์ Admin สำเร็จ! ✅', 'success');
+        loadAdmins();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .removeAdmin(email);
 }
   </script>
 
