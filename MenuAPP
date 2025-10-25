@@ -73,7 +73,19 @@ function getCurrentUser() {
   const effectiveUser = Session.getEffectiveUser().getEmail();
   return currentUser || effectiveUser || 'ไม่ทราบผู้ใช้';
 }
+// ตรวจสอบว่าเป็น Super Admin หรือไม่ (เมลหลัก)
+function isSuperAdmin(email) {
+  if (!email) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    email = currentUser || effectiveUser;
+  }
+  
+  const superAdminEmail = 'setthawut.se11@gmail.com';
+  return email && email.toLowerCase() === superAdminEmail.toLowerCase();
+}
 
+// ตรวจสอบว่าเป็น Admin หรือไม่ (รวม Super Admin)
 function isAdmin(email) {
   if (!email) {
     const currentUser = Session.getActiveUser().getEmail();
@@ -81,8 +93,41 @@ function isAdmin(email) {
     email = currentUser || effectiveUser;
   }
   
-  const adminEmail = 'setthawut.se11@gmail.com';
-  return email && email.toLowerCase() === adminEmail.toLowerCase();
+  // Super Admin เป็น Admin โดยอัตโนมัติ
+  if (isSuperAdmin(email)) {
+    return true;
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    adminSheet = ss.insertSheet('Admins');
+    adminSheet.appendRow(['AdminEmail', 'AddedDate', 'AddedBy', 'Role']);
+    adminSheet.appendRow(['setthawut.se11@gmail.com', new Date(), 'System', 'Super Admin']);
+    
+    const headerRange = adminSheet.getRange('A1:D1');
+    headerRange.setBackground('#667eea');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    headerRange.setHorizontalAlignment('center');
+    
+    adminSheet.setColumnWidth(1, 250);
+    adminSheet.setColumnWidth(2, 150);
+    adminSheet.setColumnWidth(3, 200);
+    adminSheet.setColumnWidth(4, 120);
+    
+    Logger.log('✅ สร้าง Sheet Admins สำเร็จ');
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 function getUserPermissions(email) {
@@ -771,6 +816,18 @@ function getWebAppUrl() {
       linkSheet = ss.insertSheet('Link');
       linkSheet.appendRow(['ชื่อระบบ', 'URL']);
       linkSheet.appendRow(['ศูนย์รวมระบบงาน', 'https://script.google.com/macros/s/YOUR_URL/exec']);
+      
+      // ตั้งค่าสี Header
+      const headerRange = linkSheet.getRange('A1:B1');
+      headerRange.setBackground('#667eea');
+      headerRange.setFontColor('#FFFFFF');
+      headerRange.setFontWeight('bold');
+      headerRange.setHorizontalAlignment('center');
+      
+      // ตั้งค่าความกว้างคอลัมน์
+      linkSheet.setColumnWidth(1, 200);
+      linkSheet.setColumnWidth(2, 500);
+      
       Logger.log('✅ สร้าง Sheet "Link" แล้ว - กรุณาใส่ URL ที่ถูกต้อง');
       return null;
     }
@@ -1965,5 +2022,318 @@ function deleteUser(email) {
     Logger.log('❌ Error: ' + error);
     return { success: false, message: error.toString() };
   }
+}
+
+// ================================
+// 👑 ระบบจัดการ Admin
+// ================================
+
+function addAdmin(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== addAdmin START ===');
+  Logger.log('Requester: ' + userEmail);
+  Logger.log('New Admin: ' + email);
+  
+  if (!isSuperAdmin(userEmail)) {
+    Logger.log('❌ Not Super Admin');
+    return { success: false, message: 'เฉพาะ Super Admin เท่านั้นที่สามารถเพิ่ม Admin ได้' };
+  }
+  
+  if (!email || !email.includes('@')) {
+    Logger.log('❌ Invalid email');
+    return { success: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' };
+  }
+  
+  if (isSuperAdmin(email)) {
+    Logger.log('❌ Cannot add Super Admin');
+    return { success: false, message: 'ไม่สามารถเพิ่ม Super Admin ได้' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return { success: false, message: 'ไม่พบ Sheet Admins' };
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      Logger.log('⚠️ Already admin');
+      return { success: false, message: 'อีเมลนี้เป็น Admin อยู่แล้ว' };
+    }
+  }
+  
+  const timestamp = new Date();
+  adminSheet.appendRow([email, timestamp, userEmail, 'Admin']);
+  
+  Logger.log('✅ Admin added successfully');
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  // ส่งอีเมลแจ้งผู้ที่ได้รับสิทธิ์
+  try {
+    const subject = '👑 คุณได้รับสิทธิ์ Admin ในศูนย์รวมระบบงาน';
+    const body = `เรียน ${email}\n\n` +
+                 `คุณได้รับสิทธิ์ผู้ดูแลระบบ (Admin) ในศูนย์รวมระบบงาน\n\n` +
+                 `สิทธิ์ของ Admin:\n` +
+                 `✅ เพิ่ม/แก้ไข/ลบระบบงาน\n` +
+                 `✅ จัดการสิทธิ์ผู้ใช้\n` +
+                 `✅ ดูและตอบรายงานปัญหา\n` +
+                 `✅ จัดการคำขอเข้าใช้งาน\n\n` +
+                 `⚠️ หมายเหตุ: คุณไม่สามารถเพิ่ม/ลบ Admin คนอื่นได้\n` +
+                 `เฉพาะ Super Admin (${userEmail}) เท่านั้น\n\n` +
+                 `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Super Admin เพื่อขอลิงก์'}\n\n` +
+                 `ผู้มอบสิทธิ์: ${userEmail}\n` +
+                 `วันที่: ${timestamp.toLocaleString('th-TH')}\n\n` +
+                 `กรุณาใช้สิทธิ์อย่างรับผิดชอบ\n\n` +
+                 `ขอบคุณครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    // สร้าง HTML Email สวยงาม
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">👑 ยินดีต้อนรับ Admin</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">คุณได้รับสิทธิ์ผู้ดูแลระบบ</h2>
+          
+          <div style="background: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0;">
+              <strong>🎉 ยินดีด้วย!</strong> คุณได้รับสิทธิ์ Admin ในศูนย์รวมระบบงาน
+            </p>
+          </div>
+          
+          <h3 style="color: #333; margin-top: 20px;">📋 สิทธิ์ที่คุณได้รับ:</h3>
+          <ul style="color: #666; line-height: 2;">
+            <li>✅ เพิ่ม/แก้ไข/ลบระบบงาน</li>
+            <li>✅ จัดการสิทธิ์ผู้ใช้</li>
+            <li>✅ ดูและตอบรายงานปัญหา</li>
+            <li>✅ จัดการคำขอเข้าใช้งาน</li>
+          </ul>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ หมายเหตุ:</strong> คุณไม่สามารถเพิ่ม/ลบ Admin คนอื่นได้<br>
+              เฉพาะ Super Admin เท่านั้น
+            </p>
+          </div>
+          
+          ${webAppUrl ? `
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                🚀 เข้าสู่ระบบ
+              </a>
+            </div>
+            
+            <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+              หรือคัดลอกลิงก์นี้:<br>
+              <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+            </p>
+          ` : ''}
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px;">
+            <strong>ผู้มอบสิทธิ์:</strong> ${userEmail}<br>
+            <strong>วันที่:</strong> ${timestamp.toLocaleString('th-TH')}
+          </p>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            กรุณาใช้สิทธิ์อย่างรับผิดชอบ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('📧 Email sent to new admin');
+  } catch (e) {
+    Logger.log('⚠️ Cannot send email: ' + e);
+  }
+  
+  Logger.log('=== addAdmin END ===');
+  return { success: true, message: 'เพิ่ม Admin สำเร็จ' };
+}
+
+// ลบ Admin
+function removeAdmin(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== removeAdmin START ===');
+  Logger.log('Requester: ' + userEmail);
+  Logger.log('Remove: ' + email);
+  
+  if (!isSuperAdmin(userEmail)) {
+    Logger.log('❌ Not Super Admin');
+    return { success: false, message: 'เฉพาะ Super Admin เท่านั้นที่สามารถลบ Admin ได้' };
+  }
+  
+  if (isSuperAdmin(email)) {
+    Logger.log('❌ Cannot remove Super Admin');
+    return { success: false, message: 'ไม่สามารถลบ Super Admin ได้' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return { success: false, message: 'ไม่พบ Sheet Admins' };
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      adminSheet.deleteRow(i + 1);
+      
+      // ส่งอีเมลแจ้ง
+      try {
+        const subject = '🔔 สิทธิ์ Admin ของคุณถูกเพิกถอน';
+        const body = `เรียน ${email}\n\n` +
+                     `สิทธิ์ผู้ดูแลระบบ (Admin) ของคุณถูกเพิกถอนโดย Super Admin: ${userEmail}\n` +
+                     `วันที่: ${new Date().toLocaleString('th-TH')}\n\n` +
+                     `คุณยังคงสามารถใช้งานระบบในฐานะผู้ใช้ทั่วไปได้\n\n` +
+                     `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Super Admin'}\n\n` +
+                     `หากมีข้อสงสัย กรุณาติดต่อ Super Admin\n\n` +
+                     `ขอบคุณครับ/ค่ะ`;
+        
+        const htmlBody = `
+          <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสิทธิ์</h1>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+              <h2 style="color: #ef4444; margin-top: 0;">สิทธิ์ Admin ของคุณถูกเพิกถอน</h2>
+              
+              <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b;">
+                  สิทธิ์ผู้ดูแลระบบของคุณถูกเพิกถอนโดย Super Admin
+                </p>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">
+                <strong>Super Admin:</strong> ${userEmail}<br>
+                <strong>วันที่:</strong> ${new Date().toLocaleString('th-TH')}
+              </p>
+              
+              <div style="background: #f0f7ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #1e40af;">
+                  <strong>ℹ️ หมายเหตุ:</strong> คุณยังคงสามารถใช้งานระบบในฐานะผู้ใช้ทั่วไปได้ตามปกติ
+                </p>
+              </div>
+              
+              ${webAppUrl ? `
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                    🔗 เข้าสู่ระบบ
+                  </a>
+                </div>
+                
+                <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+                  หรือคัดลอกลิงก์นี้:<br>
+                  <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+                </p>
+              ` : ''}
+              
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              
+              <p style="color: #999; font-size: 14px; text-align: center; margin: 0;">
+                หากมีข้อสงสัย กรุณาติดต่อ Super Admin<br>
+                <strong>ทีมงานระบบ</strong>
+              </p>
+            </div>
+          </div>
+        `;
+        
+        MailApp.sendEmail({
+          to: email,
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+      } catch (e) {
+        Logger.log('⚠️ Cannot send email: ' + e);
+      }
+      
+      Logger.log('✅ Admin removed successfully');
+      return { success: true, message: 'ลบ Admin สำเร็จ' };
+    }
+  }
+  
+  Logger.log('❌ Admin not found');
+  return { success: false, message: 'ไม่พบ Admin นี้' };
+}
+
+// ดูรายชื่อ Admin ทั้งหมด
+function getAllAdmins() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== getAllAdmins START ===');
+  Logger.log('Requester: ' + userEmail);
+  
+  if (!isAdmin(userEmail)) {
+    Logger.log('❌ Not authorized');
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return [];
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  const admins = [];
+  const isSuperAdminUser = isSuperAdmin(userEmail);
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      const role = data[i][3] || 'Admin';
+      const isSuperAdminRow = isSuperAdmin(data[i][0]);
+      
+      admins.push({
+        email: data[i][0],
+        addedDate: data[i][1] ? new Date(data[i][1]).toLocaleString('th-TH') : '-',
+        addedBy: data[i][2] || '-',
+        role: isSuperAdminRow ? '👑 Super Admin' : '👤 Admin',
+        // ✅ เฉพาะ Super Admin เท่านั้นที่ลบ Admin คนอื่นได้
+        // และไม่สามารถลบตัวเอง หรือ Super Admin ได้
+        canDelete: isSuperAdminUser && 
+                   !isSuperAdminRow && 
+                   data[i][0].toLowerCase() !== userEmail.toLowerCase()
+      });
+    }
+  }
+  
+  Logger.log('Found ' + admins.length + ' admins');
+  Logger.log('=== getAllAdmins END ===');
+  
+  return admins;
 }
 
