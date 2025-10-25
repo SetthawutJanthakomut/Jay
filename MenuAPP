@@ -2530,14 +2530,10 @@ function getPendingRequestsCount() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let requestSheet = ss.getSheetByName('AppRequest');
     
-    if (!requestSheet) {
-      return 0;
-    }
+    if (!requestSheet) return 0;
     
     const lastRow = requestSheet.getLastRow();
-    if (lastRow <= 1) {
-      return 0;
-    }
+    if (lastRow <= 1) return 0;
     
     const data = requestSheet.getRange(1, 1, lastRow, 6).getValues();
     let count = 0;
@@ -2549,12 +2545,12 @@ function getPendingRequestsCount() {
     }
     
     return count;
-    
   } catch (error) {
-    Logger.log('❌ Error getPendingRequestsCount: ' + error);
+    Logger.log('Error getPendingRequestsCount: ' + error);
     return 0;
   }
 }
+
 
 // นับรายงานที่รอดำเนินการ
 function getPendingReportsCount() {
@@ -2562,14 +2558,10 @@ function getPendingReportsCount() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let reportSheet = ss.getSheetByName('Report');
     
-    if (!reportSheet) {
-      return 0;
-    }
+    if (!reportSheet) return 0;
     
     const lastRow = reportSheet.getLastRow();
-    if (lastRow <= 1) {
-      return 0;
-    }
+    if (lastRow <= 1) return 0;
     
     const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
     let count = 0;
@@ -2581,9 +2573,8 @@ function getPendingReportsCount() {
     }
     
     return count;
-    
   } catch (error) {
-    Logger.log('❌ Error getPendingReportsCount: ' + error);
+    Logger.log('Error getPendingReportsCount: ' + error);
     return 0;
   }
 }
