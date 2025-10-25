@@ -587,9 +587,19 @@ function requestAccess(name, note, selectedApps) {
   }
 }
 
-// ฟังก์ชันส่งอีเมลแจ้ง Admin
+// ฟังก์ชันส่งอีเมลแจ้ง Admin เมื่อมีคนขอสิทธิ์
 function sendRequestEmail(userEmail, name, apps, note, type) {
-  const adminEmail = 'setthawut.se11@gmail.com';
+  // ✅ ดึงอีเมล Admin ทั้งหมด
+  const adminEmails = getAllAdminEmails();
+  
+  if (!adminEmails || adminEmails.length === 0) {
+    Logger.log('⚠️ ไม่พบ Admin ในระบบ');
+    return;
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
   const subject = type === 'ใหม่' ? 
     '🔔 มีผู้ใช้ใหม่ขอเข้าใช้ระบบ' : 
     '🔔 ผู้ใช้ขอสิทธิ์เพิ่มเติม';
@@ -599,40 +609,95 @@ function sendRequestEmail(userEmail, name, apps, note, type) {
                `ชื่อ: ${name}\n` +
                `แอปที่ขอ: ${apps.join(', ')}\n` +
                `หมายเหตุ: ${note || '-'}\n\n` +
-               `กรุณาเข้าไปจัดการสิทธิ์ในระบบ:\n` +
-               `1. เปิดเมนู "🚀 ระบบจัดการ" > "👥 จัดการสิทธิ์"\n` +
-               `2. หรือเข้า Web App > ปุ่ม "👥 จัดการสิทธิ์"`;
+               `🔗 เข้าจัดการสิทธิ์:\n${webAppUrl || 'กรุณาเข้าระบบเพื่อจัดการ'}\n\n` +
+               `วิธีอนุมัติสิทธิ์:\n` +
+               `1. เข้าระบบ\n` +
+               `2. คลิกปุ่ม "👥 จัดการสิทธิ์" หรือ "📝 คำขอเข้าใช้"\n` +
+               `3. อนุมัติสิทธิ์ให้ผู้ใช้`;
   
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือน Admin</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">
+          ${type === 'ใหม่' ? 'มีผู้ใช้ใหม่ขอเข้าใช้ระบบ' : 'ผู้ใช้ขอสิทธิ์เพิ่มเติม'}
+        </h2>
+        
+        <div style="background: #fff3cd; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #856404;">
+            <strong>⚠️ ต้องการการอนุมัติ:</strong> มีคำขอ${type === 'ใหม่' ? 'เข้าใช้ระบบใหม่' : 'สิทธิ์เพิ่มเติม'}รออนุมัติ
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">📋 รายละเอียดคำขอ:</h3>
+          <p style="color: #666; margin: 5px 0;"><strong>👤 อีเมล:</strong> ${userEmail}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>📝 ชื่อ:</strong> ${name}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>📱 แอปที่ขอ:</strong></p>
+          <div style="margin-top: 10px;">
+            ${apps.map(app => `
+              <span style="display: inline-block; background: #667eea; color: white; padding: 6px 14px; border-radius: 20px; margin: 4px 4px 4px 0; font-size: 14px;">
+                ✓ ${app}
+              </span>
+            `).join('')}
+          </div>
+          ${note ? `
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+              <p style="color: #666; margin: 5px 0;"><strong>💬 หมายเหตุ:</strong></p>
+              <p style="color: #666; margin: 10px 0; white-space: pre-wrap; background: white; padding: 10px; border-radius: 5px;">${note}</p>
+            </div>
+          ` : ''}
+        </div>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าระบบเพื่ออนุมัติ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #1565c0; font-size: 14px;">
+            <strong>💡 วิธีอนุมัติสิทธิ์:</strong><br>
+            1️⃣ เข้าระบบ<br>
+            2️⃣ คลิกปุ่ม "👥 จัดการสิทธิ์" หรือ "📝 คำขอเข้าใช้"<br>
+            3️⃣ อนุมัติสิทธิ์ให้ผู้ใช้
+          </p>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          อีเมลนี้ส่งถึง Admin ทุกคนในระบบ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // ✅ ส่งอีเมลให้ Admin ทุกคน
   try {
-    MailApp.sendEmail(adminEmail, subject, body);
-    Logger.log('✅ ส่งอีเมลแจ้ง Admin สำเร็จ');
+    MailApp.sendEmail({
+      to: adminEmails[0], // Admin คนแรก (Super Admin)
+      bcc: adminEmails.slice(1).join(','), // Admin ที่เหลือ (ใช้ BCC)
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('✅ ส่งอีเมลแจ้ง Admin สำเร็จ: ' + adminEmails.length + ' คน');
   } catch (e) {
     Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
-  }
-}
-
-// ฟังก์ชันสำหรับรายงานปัญหา
-function sendReport(message) {
-  const currentUser = Session.getActiveUser().getEmail();
-  const effectiveUser = Session.getEffectiveUser().getEmail();
-  const userEmail = currentUser || effectiveUser;
-  
-  if (!message) {
-    return { success: false, message: 'กรุณากรอกข้อความ' };
-  }
-  
-  const adminEmail = 'setthawut.se11@gmail.com';
-  const subject = '📢 รายงานปัญหา/ข้อเสนอแนะระบบงาน';
-  const body = `มีรายงานปัญหาจากผู้ใช้\n\n` +
-               `จาก: ${userEmail}\n` +
-               `ข้อความ:\n${message}\n\n` +
-               `เวลา: ${new Date().toLocaleString('th-TH')}`;
-  
-  try {
-    MailApp.sendEmail(adminEmail, subject, body);
-    return { success: true };
-  } catch (e) {
-    return { success: false, message: 'ไม่สามารถส่งอีเมลได้: ' + e };
   }
 }
 
@@ -1004,7 +1069,7 @@ function createReportSheet() {
   Logger.log('✅ สร้าง Sheet Report สำเร็จ!');
 }
 
-// แก้ไขฟังก์ชัน sendReport ให้บันทึกลง Sheet
+// ฟังก์ชันสำหรับรายงานปัญหา - ส่งให้ Admin ทุกคน
 function sendReport(message) {
   const currentUser = Session.getActiveUser().getEmail();
   const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -1033,22 +1098,106 @@ function sendReport(message) {
     ''
   ]);
   
-  // ส่งอีเมลแจ้ง Admin
-  const adminEmail = 'setthawut.se11@gmail.com';
+  // ✅ ดึงอีเมล Admin ทั้งหมด
+  const adminEmails = getAllAdminEmails();
+  
+  if (!adminEmails || adminEmails.length === 0) {
+    Logger.log('⚠️ ไม่พบ Admin ในระบบ');
+    return { success: true, message: 'บันทึกรายงานสำเร็จ แต่ไม่มี Admin ในระบบ' };
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
   const subject = '📢 รายงานปัญหา/ข้อเสนอแนะระบบงาน';
   const body = `มีรายงานปัญหาจากผู้ใช้\n\n` +
                `จาก: ${userEmail}\n` +
                `ข้อความ:\n${message}\n\n` +
                `เวลา: ${timestamp.toLocaleString('th-TH')}\n\n` +
-               `กรุณาเข้าระบบเพื่อตอบกลับผู้ใช้`;
+               `🔗 เข้าระบบเพื่อตอบกลับ:\n${webAppUrl || 'กรุณาเข้าระบบเพื่อตอบกลับ'}\n\n` +
+               `วิธีตอบกลับ:\n` +
+               `1. เข้าระบบ\n` +
+               `2. คลิกปุ่ม "📋 ดูรายงาน"\n` +
+               `3. ตอบกลับผู้ใช้`;
   
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">📢 รายงานปัญหา</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #f59e0b; margin-top: 0;">มีรายงานปัญหาใหม่จากผู้ใช้</h2>
+        
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #92400e;">
+            <strong>⚠️ ต้องการการดำเนินการ:</strong> มีรายงานปัญหาหรือข้อเสนอแนะใหม่
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">📋 รายละเอียด:</h3>
+          <p style="color: #666; margin: 5px 0;"><strong>👤 จาก:</strong> ${userEmail}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>⏰ เวลา:</strong> ${timestamp.toLocaleString('th-TH')}</p>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+            <p style="color: #666; margin: 5px 0 10px 0;"><strong>💬 ข้อความ:</strong></p>
+            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+              <p style="color: #333; margin: 0; white-space: pre-wrap; line-height: 1.6;">${message}</p>
+            </div>
+          </div>
+        </div>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าระบบเพื่อตอบกลับ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #1565c0; font-size: 14px;">
+            <strong>💡 วิธีตอบกลับ:</strong><br>
+            1️⃣ เข้าระบบ<br>
+            2️⃣ คลิกปุ่ม "📋 ดูรายงาน"<br>
+            3️⃣ ตอบกลับและอัปเดตสถานะ
+          </p>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          อีเมลนี้ส่งถึง Admin ทุกคนในระบบ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // ✅ ส่งอีเมลให้ Admin ทุกคน
   try {
-    MailApp.sendEmail(adminEmail, subject, body);
+    MailApp.sendEmail({
+      to: adminEmails[0], // Admin คนแรก (Super Admin)
+      bcc: adminEmails.slice(1).join(','), // Admin ที่เหลือ (ใช้ BCC)
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('✅ ส่งอีเมลแจ้ง Admin สำเร็จ: ' + adminEmails.length + ' คน');
     return { success: true };
   } catch (e) {
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
     return { success: true, message: 'บันทึกสำเร็จ แต่ไม่สามารถส่งอีเมลได้: ' + e };
   }
 }
+
 
 // ฟังก์ชันดึงรายงานทั้งหมด (สำหรับ Admin)
 function getAllReports() {
@@ -2335,5 +2484,39 @@ function getAllAdmins() {
   Logger.log('=== getAllAdmins END ===');
   
   return admins;
+}
+
+// ฟังก์ชันดึงอีเมล Admin ทั้งหมด (รวม Super Admin)
+function getAllAdminEmails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  const adminEmails = [];
+  
+  // เพิ่ม Super Admin เป็นคนแรกเสมอ
+  adminEmails.push('setthawut.se11@gmail.com');
+  
+  if (!adminSheet) {
+    Logger.log('⚠️ ไม่พบ Sheet Admins - ส่งให้ Super Admin เท่านั้น');
+    return adminEmails;
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].includes('@')) {
+      const email = data[i][0].toLowerCase();
+      // ป้องกันการเพิ่ม Super Admin ซ้ำ
+      if (email !== 'setthawut.se11@gmail.com'.toLowerCase() && 
+          !adminEmails.includes(email)) {
+        adminEmails.push(data[i][0]);
+      }
+    }
+  }
+  
+  Logger.log('📧 พบ Admin ทั้งหมด: ' + adminEmails.length + ' คน');
+  Logger.log('Admin Emails: ' + adminEmails.join(', '));
+  
+  return adminEmails;
 }
 
