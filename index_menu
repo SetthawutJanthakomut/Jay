@@ -1119,8 +1119,8 @@ select:focus {
   background: #fee2e2;
   color: #dc2626;
 }
-/* ========== iOS Native Badge Style ========== */
-.badge-counter {
+/* iOS Native Badge Style */
+.ios-badge-counter {
   position: absolute;
   top: -8px;
   right: -8px;
@@ -1138,46 +1138,27 @@ select:focus {
   justify-content: center;
   box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.3);
   line-height: 1;
-  z-index: 10;
   letter-spacing: -0.2px;
+  z-index: 10;
+  transition: all 0.2s ease;
 }
 
-/* Badge ตัวเลข 2-3 หลัก (ยาวขึ้น) */
-.badge-counter[data-count="10"],
-.badge-counter[data-count="11"],
-.badge-counter[data-count="12"],
-.badge-counter[data-count="13"],
-.badge-counter[data-count="14"],
-.badge-counter[data-count="15"],
-.badge-counter[data-count="16"],
-.badge-counter[data-count="17"],
-.badge-counter[data-count="18"],
-.badge-counter[data-count="19"],
-.badge-counter:not([data-count="1"]):not([data-count="2"]):not([data-count="3"]):not([data-count="4"]):not([data-count="5"]):not([data-count="6"]):not([data-count="7"]):not([data-count="8"]):not([data-count="9"]) {
+.ios-badge-counter.large {
   min-width: 24px;
   padding: 2px 6px;
-  border-radius: 10px;
 }
 
-/* ซ่อน Badge เมื่อจำนวน = 0 */
-.badge-counter.hidden {
+.ios-badge-counter.hidden {
   display: none !important;
 }
 
-.btn-manage {
-  position: relative;
+.ios-badge-counter.pulse {
+  animation: badgePulse 0.3s ease;
 }
 
-/* ========== Responsive ========== */
-@media (max-width: 768px) {
-  .badge-counter {
-    top: -6px;
-    right: -6px;
-    font-size: 12px;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 9px;
-  }
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
     }
   </style>
@@ -1247,17 +1228,17 @@ select:focus {
     <span>จัดการ Admin</span>
   </button>
 
-<button class="btn-manage" onclick="openViewRequestsModal()" style="position: relative;">
-  <span>📝</span>
-  <span>คำขอเข้าใช้</span>
-  <span class="badge-counter hidden" id="badgeRequests">0</span>
-</button>
+  <button class="btn-manage" onclick="openViewRequestsModal()" style="position: relative;">
+    <span>📝</span>
+    <span>คำขอเข้าใช้</span>
+    <span class="ios-badge-counter hidden" id="badgeRequests">0</span>
+  </button>
 
-<button class="btn-manage" onclick="openViewReportsModal()" style="position: relative;">
-  <span>📋</span>
-  <span>ดูรายงาน</span>
-  <span class="badge-counter hidden" id="badgeReports">0</span>
-</button>
+  <button class="btn-manage" onclick="openViewReportsModal()" style="position: relative;">
+    <span>📋</span>
+    <span>ดูรายงาน</span>
+    <span class="ios-badge-counter hidden" id="badgeReports">0</span>
+  </button>
 
   <button class="btn-manage" onclick="openNewLinkModal()">
     <span>🔗</span>
@@ -1730,8 +1711,8 @@ function handleLogout() {
     localStorage.removeItem('cacheTime');
     
     // หยุด Auto-refresh
-    stopAutoRefresh();
-    
+    stopBadgeAutoRefresh();
+
     showLoginScreen();
     showMessage('ออกจากระบบเรียบร้อย', 'success');
   }
@@ -1798,7 +1779,7 @@ function loadApps() {
   document.getElementById('adminButtons').style.display = 'flex';
   
   // ✅ เริ่ม Auto-refresh สำหรับ Admin
-  startAutoRefresh();
+  startBadgeAutoRefresh();
 } else {
         document.getElementById('adminBadge').innerHTML = '';
         document.getElementById('userButtons').style.display = 'flex';
@@ -3062,6 +3043,43 @@ let refreshInterval = null;
 
 // โหลดจำนวนคำขอและรายงานใหม่
 
+// ================================
+// 📊 Badge Counter System
+// ================================
+
+// Badge Counter Helper
+const badgeCounter = {
+  update: function(badgeId, count) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+
+    const safeCount = Math.max(0, parseInt(count) || 0);
+
+    if (safeCount > 99) {
+      badge.textContent = '99+';
+      badge.classList.add('large');
+    } else {
+      badge.textContent = safeCount;
+      badge.classList.remove('large');
+    }
+
+    badge.setAttribute('data-count', safeCount);
+
+    if (safeCount === 0) {
+      badge.classList.add('hidden');
+    } else {
+      badge.classList.remove('hidden');
+    }
+
+    badge.classList.add('pulse');
+    setTimeout(() => badge.classList.remove('pulse'), 300);
+  }
+};
+
+// ตัวแปร Auto-refresh (ประกาศครั้งเดียว)
+let badgeRefreshInterval = null;
+
+// โหลดจำนวนคำขอและรายงานใหม่
 function loadPendingCounts() {
   if (!isAdmin) {
     return;
@@ -3069,24 +3087,50 @@ function loadPendingCounts() {
   
   google.script.run
     .withSuccessHandler(function(counts) {
-      console.log('Pending counts:', counts);
+      console.log('📊 Pending counts:', counts);
       
       // อัปเดต Badge คำขอ
       const badgeRequests = document.getElementById('badgeRequests');
       if (badgeRequests) {
-        updateBadge(badgeRequests, counts.requests);
+        badgeCounter.update('badgeRequests', counts.requests);
       }
       
       // อัปเดต Badge รายงาน
       const badgeReports = document.getElementById('badgeReports');
       if (badgeReports) {
-        updateBadge(badgeReports, counts.reports);
+        badgeCounter.update('badgeReports', counts.reports);
       }
     })
     .withFailureHandler(function(error) {
-      console.error('Error loading pending counts:', error);
+      console.error('❌ Error loading pending counts:', error);
     })
     .getAllPendingCounts();
+}
+
+// เริ่ม Auto-refresh ทุก 30 วินาที
+function startBadgeAutoRefresh() {
+  if (!isAdmin || badgeRefreshInterval) {
+    return;
+  }
+  
+  // โหลดครั้งแรกทันที
+  loadPendingCounts();
+  
+  // Auto-refresh ทุก 30 วินาที
+  badgeRefreshInterval = setInterval(function() {
+    loadPendingCounts();
+  }, 30000);
+  
+  console.log('✅ Badge auto-refresh started (every 30 seconds)');
+}
+
+// หยุด Auto-refresh
+function stopBadgeAutoRefresh() {
+  if (badgeRefreshInterval) {
+    clearInterval(badgeRefreshInterval);
+    badgeRefreshInterval = null;
+    console.log('⏹️ Badge auto-refresh stopped');
+  }
 }
 
 // ฟังก์ชันอัปเดต Badge (iOS Native Style)
@@ -3126,14 +3170,7 @@ function startAutoRefresh() {
   console.log('✅ Auto-refresh started (every 30 seconds)');
 }
 
-// หยุด Auto-refresh
-function stopAutoRefresh() {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-    refreshInterval = null;
-    console.log('⏹️ Auto-refresh stopped');
-  }
-}
+
   </script>
 
   
