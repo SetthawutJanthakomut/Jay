@@ -212,6 +212,8 @@
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+    position: relative; /* ✅ เพิ่มบรรทัดนี้ */
+  overflow: visible; /* ✅ เพิ่มบรรทัดนี้ */
 }
 
 .btn-manage {
@@ -1117,6 +1119,66 @@ select:focus {
   background: #fee2e2;
   color: #dc2626;
 }
+/* ========== iOS Native Badge Style ========== */
+.badge-counter {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #FF3B30;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  padding: 2px 6px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+  z-index: 10;
+  letter-spacing: -0.2px;
+}
+
+/* Badge ตัวเลข 2-3 หลัก (ยาวขึ้น) */
+.badge-counter[data-count="10"],
+.badge-counter[data-count="11"],
+.badge-counter[data-count="12"],
+.badge-counter[data-count="13"],
+.badge-counter[data-count="14"],
+.badge-counter[data-count="15"],
+.badge-counter[data-count="16"],
+.badge-counter[data-count="17"],
+.badge-counter[data-count="18"],
+.badge-counter[data-count="19"],
+.badge-counter:not([data-count="1"]):not([data-count="2"]):not([data-count="3"]):not([data-count="4"]):not([data-count="5"]):not([data-count="6"]):not([data-count="7"]):not([data-count="8"]):not([data-count="9"]) {
+  min-width: 24px;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* ซ่อน Badge เมื่อจำนวน = 0 */
+.badge-counter.hidden {
+  display: none !important;
+}
+
+.btn-manage {
+  position: relative;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  .badge-counter {
+    top: -6px;
+    right: -6px;
+    font-size: 12px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+  }
+}
     }
   </style>
 </head>
@@ -1184,14 +1246,19 @@ select:focus {
     <span>👑</span>
     <span>จัดการ Admin</span>
   </button>
-<button class="btn-manage" onclick="openViewRequestsModal()">
+
+<button class="btn-manage" onclick="openViewRequestsModal()" style="position: relative;">
   <span>📝</span>
   <span>คำขอเข้าใช้</span>
+  <span class="badge-counter hidden" id="badgeRequests">0</span>
 </button>
-  <button class="btn-manage" onclick="openViewReportsModal()">
-    <span>📋</span>
-    <span>ดูรายงาน</span>
-  </button>
+
+<button class="btn-manage" onclick="openViewReportsModal()" style="position: relative;">
+  <span>📋</span>
+  <span>ดูรายงาน</span>
+  <span class="badge-counter hidden" id="badgeReports">0</span>
+</button>
+
   <button class="btn-manage" onclick="openNewLinkModal()">
     <span>🔗</span>
     <span>New Link</span>
@@ -1662,6 +1729,9 @@ function handleLogout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('cacheTime');
     
+    // หยุด Auto-refresh
+    stopAutoRefresh();
+    
     showLoginScreen();
     showMessage('ออกจากระบบเรียบร้อย', 'success');
   }
@@ -1714,19 +1784,22 @@ function loadApps() {
       document.getElementById('adminButtons').style.display = 'none';
       
       if (isAdmin) {
-        // ✅ ตรวจสอบว่าเป็น Super Admin หรือไม่
-        google.script.run
-          .withSuccessHandler(function(isSuperAdminUser) {
-            if (isSuperAdminUser) {
-              document.getElementById('adminBadge').innerHTML = '<span class="admin-badge" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">👑 SUPER ADMIN</span>';
-            } else {
-              document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👤 ADMIN</span>';
-            }
-          })
-          .isSuperAdmin(currentUserEmail);
-        
-        document.getElementById('adminButtons').style.display = 'flex';
+  // ✅ ตรวจสอบว่าเป็น Super Admin หรือไม่
+  google.script.run
+    .withSuccessHandler(function(isSuperAdminUser) {
+      if (isSuperAdminUser) {
+        document.getElementById('adminBadge').innerHTML = '<span class="admin-badge" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">👑 SUPER ADMIN</span>';
       } else {
+        document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👤 ADMIN</span>';
+      }
+    })
+    .isSuperAdmin(currentUserEmail);
+  
+  document.getElementById('adminButtons').style.display = 'flex';
+  
+  // ✅ เริ่ม Auto-refresh สำหรับ Admin
+  startAutoRefresh();
+} else {
         document.getElementById('adminBadge').innerHTML = '';
         document.getElementById('userButtons').style.display = 'flex';
       }
@@ -1905,6 +1978,7 @@ function closeReplyReportModal() {
 }
 
 // ส่งคำตอบ
+// ส่งคำตอบ
 document.getElementById('replyReportForm').addEventListener('submit', function(e) {
   e.preventDefault();
   
@@ -1918,6 +1992,7 @@ document.getElementById('replyReportForm').addEventListener('submit', function(e
         showMessage('ส่งคำตอบสำเร็จ! ✅', 'success');
         closeReplyReportModal();
         loadReports();
+        loadPendingCounts(); // ✅ เพิ่มบรรทัดนี้
       } else {
         showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
       }
@@ -2668,6 +2743,7 @@ function approveRequest(rowIndex, userEmail, requestedApps) {
       if (result.success) {
         showMessage('อนุมัติและเพิ่มสิทธิ์สำเร็จ! ✅', 'success');
         loadAppRequests();
+        loadPendingCounts(); // ✅ เพิ่มบรรทัดนี้
       } else {
         showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
       }
@@ -2977,6 +3053,86 @@ function removeAdminUser(email) {
       showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
     })
     .removeAdmin(email);
+}
+// ================================
+// 📊 นับจำนวนคำขอและรายงานใหม่
+// ================================
+
+let refreshInterval = null;
+
+// โหลดจำนวนคำขอและรายงานใหม่
+
+function loadPendingCounts() {
+  if (!isAdmin) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(counts) {
+      console.log('Pending counts:', counts);
+      
+      // อัปเดต Badge คำขอ
+      const badgeRequests = document.getElementById('badgeRequests');
+      if (badgeRequests) {
+        updateBadge(badgeRequests, counts.requests);
+      }
+      
+      // อัปเดต Badge รายงาน
+      const badgeReports = document.getElementById('badgeReports');
+      if (badgeReports) {
+        updateBadge(badgeReports, counts.reports);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading pending counts:', error);
+    })
+    .getAllPendingCounts();
+}
+
+// ฟังก์ชันอัปเดต Badge (iOS Native Style)
+function updateBadge(element, count) {
+  if (!element) return;
+  
+  // เซ็ต data-count attribute
+  element.setAttribute('data-count', count);
+  
+  if (count > 0) {
+    // แสดงตัวเลข (ถ้าเกิน 99 แสดง 99+)
+    if (count > 99) {
+      element.textContent = '99+';
+    } else {
+      element.textContent = count;
+    }
+    
+    element.classList.remove('hidden');
+  } else {
+    element.classList.add('hidden');
+  }
+}
+// เริ่ม Auto-refresh ทุก 30 วินาที
+function startAutoRefresh() {
+  if (!isAdmin || refreshInterval) {
+    return;
+  }
+  
+  // โหลดครั้งแรกทันที
+  loadPendingCounts();
+  
+  // Auto-refresh ทุก 30 วินาที
+  refreshInterval = setInterval(function() {
+    loadPendingCounts();
+  }, 30000);
+  
+  console.log('✅ Auto-refresh started (every 30 seconds)');
+}
+
+// หยุด Auto-refresh
+function stopAutoRefresh() {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+    console.log('⏹️ Auto-refresh stopped');
+  }
 }
   </script>
 
