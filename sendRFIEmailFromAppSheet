@@ -1,5 +1,5 @@
-// Version 1 16/102025 20:00
-// ===== ฟังก์ชันหลักส่งอีเมล =====
+// Version 2 - Fixed - 17/10/2025 10:30
+// ===== ฟังก์ชันหลักส่งอีเมล (แก้ไขแล้ว) =====
 function sendRFIEmailFromAppSheet(params) {
   const { 
     email, 
@@ -22,7 +22,7 @@ function sendRFIEmailFromAppSheet(params) {
   
   if (!email || !rfiNumber || !description || !status) {
     Logger.log("❌ Missing required field(s)");
-    return false;
+    return { success: false, error: 'Missing required fields' };
   }
   
   try {
@@ -31,7 +31,7 @@ function sendRFIEmailFromAppSheet(params) {
     
     if (quota <= 0) {
       Logger.log('❌ Email quota exceeded');
-      return false;
+      return { success: false, error: 'Email quota exceeded' };
     }
     
     let statusColor = getStatusColor(status);
@@ -77,21 +77,24 @@ function sendRFIEmailFromAppSheet(params) {
     
     if (!sent) {
       Logger.log('❌ Failed to send email');
-      return false;
+      return { success: false, error: 'Failed to send email' };
     }
     
     Logger.log("=====================");
     Logger.log(`✅ RFI Email sent successfully to: ${email}`);
-    return true;
+    return { success: true, message: 'Email sent successfully' };
     
   } catch (error) {
     Logger.log(`❌ Error: ${error.toString()}`);
-    return false;
+    Logger.log(`❌ Stack: ${error.stack}`);
+    return { success: false, error: error.toString() };
   }
 }
 
-// ===== ฟังก์ชันส่งหลายคน (Batch Email) =====
+// ===== ✅ ฟังก์ชันส่งหลายคน (แก้ไขแล้ว) =====
 function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, status, remarks, requestDate, documentType = '', surveyReport = '', surveyReportNumber = '', surveyReportRemarks = '', labReport = '', labReportNumber = '', labReportRemarks = '', qcReport = '', qcReportNumber = '', qcReportRemarks = '') {
+  Logger.log('========== sendRFIEmailToMultipleRecipients START ==========');
+  
   let emails = [];
   
   if (typeof emailList === 'string') {
@@ -100,12 +103,48 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
     emails = emailList.filter(e => e && e.includes('@'));
   } else {
     Logger.log("❌ Invalid email format");
-    return false;
+    return { success: false, error: 'Invalid email format' };
   }
   
   if (emails.length === 0) {
     Logger.log("❌ No valid email addresses found");
-    return false;
+    return { success: false, error: 'No valid email addresses' };
+  }
+  
+  // ⚠️ แก้ไข: กรอง invalid/test emails
+  const validEmails = emails.filter(email => {
+    const emailLower = email.toLowerCase();
+    
+    // กรอง test emails
+    if (emailLower.includes('@company.com') && !emailLower.includes('@gmail.com')) {
+      Logger.log('⚠️ Filtered test email:', email);
+      return false;
+    }
+    
+    // เช็ครูปแบบ email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Logger.log('⚠️ Invalid email format:', email);
+      return false;
+    }
+    
+    return true;
+  });
+  
+  if (validEmails.length === 0) {
+    Logger.log('❌ No valid real emails after filtering');
+    return { success: false, error: 'No valid real emails' };
+  }
+  
+  Logger.log(`📧 Valid emails: ${validEmails.length}/${emails.length}`);
+  Logger.log('Recipients:', validEmails.join(', '));
+  
+  // ⚠️ แก้ไข: จำกัดจำนวนผู้รับไม่เกิน 10 คนต่อครั้ง
+  const MAX_RECIPIENTS = 10;
+  
+  if (validEmails.length > MAX_RECIPIENTS) {
+    Logger.log(`⚠️ Too many recipients (${validEmails.length}), splitting into batches...`);
+    return sendBatchEmails(validEmails, rfiNumber, description, status, remarks, requestDate, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks);
   }
   
   try {
@@ -114,13 +153,13 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
     
     if (quota <= 0) {
       Logger.log('❌ Email quota exceeded');
-      return false;
+      return { success: false, error: 'Email quota exceeded' };
     }
     
-    Logger.log(`📧 Sending batch email to ${emails.length} recipient(s): ${emails.join(', ')}`);
     const statusColor = getStatusColor(status);
     const statusIcon = getStatusIcon(status);
     const subject = `RFI #${rfiNumber} - ${description}`;
+    
     const htmlMessage = createRFIEmailHTML(
       rfiNumber, 
       description, 
@@ -141,7 +180,7 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       qcReportRemarks
     );
     
-    const recipientList = emails.join(',');
+    const recipientList = validEmails.join(',');
     
     const emailOptions = {
       to: recipientList,
@@ -150,48 +189,253 @@ function sendRFIEmailToMultipleRecipients(emailList, rfiNumber, description, sta
       name: 'RFI System - Notification'
     };
     
+    Logger.log('🚀 Sending email...');
     const sent = safeSendEmail(emailOptions);
     
     if (!sent) {
       Logger.log('❌ Failed to send batch email');
-      return { success: 0, failed: emails.length };
+      return { success: false, failed: validEmails.length, error: 'Failed to send' };
     }
     
-    Logger.log(`✅ Batch email sent successfully to ${emails.length} recipients`);
-    Logger.log(`📊 Email quota used: 1 (saved ${emails.length - 1} quota)`);
+    Logger.log(`✅ Batch email sent successfully to ${validEmails.length} recipients`);
+    Logger.log(`📊 Email quota used: 1 (saved ${validEmails.length - 1} quota)`);
+    Logger.log('========== sendRFIEmailToMultipleRecipients END ==========');
     
-    return { success: emails.length, failed: 0 };
+    return { success: true, count: validEmails.length, failed: 0 };
     
   } catch (error) {
     Logger.log(`❌ Error: ${error.toString()}`);
-    return { success: 0, failed: emails.length };
+    Logger.log(`❌ Stack: ${error.stack}`);
+    return { success: false, failed: validEmails.length, error: error.toString() };
   }
 }
 
-// ===== ฟังก์ชันตรวจสอบสถานะเอกสาร =====
-function getDocumentStatusIcon(status) {
-  if (!status) return '';
-  const statusLower = status.toLowerCase().trim();
-  if (statusLower.includes('approve')) return '✅';
-  if (statusLower.includes('reject')) return '❌';
-  return '📄';
+// ⭐ ใหม่: ส่งแบบ batch (แยกส่ง)
+// Mode 1: ส่งเป็น group (เร็ว แต่เมลปลอม 1 ตัว ทำให้ทั้ง batch ล้มเหลว)
+// Mode 2: ส่งทีละคน (ช้า แต่แม่นยำ - เมลปลอมไม่กระทบคนอื่น)
+function sendBatchEmails(emailList, rfiNumber, description, status, remarks, requestDate, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks) {
+  Logger.log('========== Batch Email Sending ==========');
+  
+  // ⚙️ เลือก MODE:
+  // false = ส่งเป็น group (เร็ว, ประหยัด quota) ⭐ ใช้ Mode นี้
+  // true = ส่งทีละคน (ช้า, แม่นยำ, ใช้ quota มาก)
+  const SEND_INDIVIDUALLY = false; // ⭐ Mode 1: ส่งเป็น Group (เร็ว)
+  
+  if (SEND_INDIVIDUALLY) {
+    Logger.log('📧 Mode: Send Individually (แม่นยำสูง)');
+    return sendEmailsIndividually(
+      emailList,
+      rfiNumber,
+      description,
+      status,
+      remarks,
+      requestDate,
+      documentType,
+      surveyReport,
+      surveyReportNumber,
+      surveyReportRemarks,
+      labReport,
+      labReportNumber,
+      labReportRemarks,
+      qcReport,
+      qcReportNumber,
+      qcReportRemarks
+    );
+  } else {
+    Logger.log('📧 Mode: Send as Groups (เร็ว)');
+    return sendEmailsAsGroups(
+      emailList,
+      rfiNumber,
+      description,
+      status,
+      remarks,
+      requestDate,
+      documentType,
+      surveyReport,
+      surveyReportNumber,
+      surveyReportRemarks,
+      labReport,
+      labReportNumber,
+      labReportRemarks,
+      qcReport,
+      qcReportNumber,
+      qcReportRemarks
+    );
+  }
 }
 
-function getDocumentStatusColor(status) {
-  if (!status) return '';
-  const statusLower = status.toLowerCase().trim();
-  if (statusLower.includes('approve')) return '#2ed573';
-  if (statusLower.includes('reject')) return '#ff4757';
-  return '#57606f';
+// 📨 Mode 1: ส่งเป็น Group (เร็ว แต่เมลปลอมกระทบทั้ง batch)
+function sendEmailsAsGroups(emailList, rfiNumber, description, status, remarks, requestDate, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks) {
+  const MAX_RECIPIENTS = 10;
+  let successCount = 0;
+  let failCount = 0;
+  
+  for (let i = 0; i < emailList.length; i += MAX_RECIPIENTS) {
+    const batch = emailList.slice(i, i + MAX_RECIPIENTS);
+    Logger.log(`\n📨 Batch ${Math.floor(i / MAX_RECIPIENTS) + 1}: ${batch.length} recipients`);
+    
+    const batchEmailList = batch.join(',');
+    
+    const result = sendRFIEmailToMultipleRecipients(
+      batchEmailList,
+      rfiNumber,
+      description,
+      status,
+      remarks,
+      requestDate,
+      documentType,
+      surveyReport,
+      surveyReportNumber,
+      surveyReportRemarks,
+      labReport,
+      labReportNumber,
+      labReportRemarks,
+      qcReport,
+      qcReportNumber,
+      qcReportRemarks
+    );
+    
+    if (result.success) {
+      successCount += batch.length;
+      Logger.log('✅ Batch sent successfully');
+    } else {
+      failCount += batch.length;
+      Logger.log('❌ Batch failed:', result.error);
+    }
+    
+    // รอ 2 วินาที ระหว่าง batch
+    if (i + MAX_RECIPIENTS < emailList.length) {
+      Logger.log('⏳ Waiting 2 seconds before next batch...');
+      Utilities.sleep(2000);
+    }
+  }
+  
+  Logger.log(`\n========== Batch Summary ==========`);
+  Logger.log(`✅ Success: ${successCount}`);
+  Logger.log(`❌ Failed: ${failCount}`);
+  Logger.log(`Total: ${emailList.length}`);
+  Logger.log('===================================');
+  
+  return {
+    success: successCount > 0,
+    successCount: successCount,
+    failCount: failCount,
+    total: emailList.length
+  };
 }
 
-function hasAnyDocumentStatus(surveyReport, labReport, qcReport) {
-  return (surveyReport && surveyReport.trim() !== '') || 
-         (labReport && labReport.trim() !== '') || 
-         (qcReport && qcReport.trim() !== '');
+// 📧 Mode 2: ส่งทีละคน (ช้า แต่แม่นยำ - เมลปลอมไม่กระทบคนอื่น)
+function sendEmailsIndividually(emailList, rfiNumber, description, status, remarks, requestDate, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks) {
+  Logger.log('📧 Sending individually to ensure accuracy...');
+  
+  let successCount = 0;
+  let failCount = 0;
+  const failedEmails = [];
+  
+  for (let i = 0; i < emailList.length; i++) {
+    const email = emailList[i];
+    Logger.log(`\n📨 Sending ${i + 1}/${emailList.length} to: ${email}`);
+    
+    const result = sendRFIEmailFromAppSheet({
+      email: email,
+      rfiNumber: rfiNumber,
+      description: description,
+      status: status,
+      remarks: remarks,
+      requestDate: requestDate,
+      documentType: documentType,
+      surveyReport: surveyReport,
+      surveyReportNumber: surveyReportNumber,
+      surveyReportRemarks: surveyReportRemarks,
+      labReport: labReport,
+      labReportNumber: labReportNumber,
+      labReportRemarks: labReportRemarks,
+      qcReport: qcReport,
+      qcReportNumber: qcReportNumber,
+      qcReportRemarks: qcReportRemarks
+    });
+    
+    if (result.success) {
+      successCount++;
+      Logger.log('✅ Sent successfully');
+    } else {
+      failCount++;
+      failedEmails.push(email);
+      Logger.log('❌ Failed:', result.error);
+    }
+    
+    // รอ 1 วินาที ระหว่างส่ง (ป้องกัน rate limit)
+    if (i < emailList.length - 1) {
+      Utilities.sleep(1000);
+    }
+  }
+  
+  Logger.log(`\n========== Individual Send Summary ==========`);
+  Logger.log(`✅ Success: ${successCount}/${emailList.length}`);
+  Logger.log(`❌ Failed: ${failCount}/${emailList.length}`);
+  if (failedEmails.length > 0) {
+    Logger.log(`Failed emails: ${failedEmails.join(', ')}`);
+  }
+  Logger.log(`📊 Quota used: ${successCount} (1 per email)`);
+  Logger.log('============================================');
+  
+  return {
+    success: successCount > 0,
+    successCount: successCount,
+    failCount: failCount,
+    failedEmails: failedEmails,
+    total: emailList.length
+  };
 }
 
-// ===== ฟังก์ชัน Status และ Icon =====
+// ===== ฟังก์ชัน Helper (แก้ไขแล้ว) =====
+function safeSendEmail(emailParams) {
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded in safeSendEmail');
+      return false;
+    }
+    
+    Logger.log('📤 Attempting to send email...');
+    Logger.log('To:', emailParams.to);
+    Logger.log('Subject:', emailParams.subject);
+    Logger.log('HTML Body Size:', emailParams.htmlBody.length, 'characters');
+    
+    // ⚠️ แก้ไข: เช็คขนาด HTML
+    if (emailParams.htmlBody.length > 100000) { // 100KB
+      Logger.log('⚠️ WARNING: Email HTML is large (', emailParams.htmlBody.length, 'chars)');
+      Logger.log('Consider reducing content size');
+    }
+    
+    MailApp.sendEmail(emailParams);
+    Logger.log('✅ Email sent successfully via MailApp');
+    return true;
+    
+  } catch (error) {
+    Logger.log('❌ Error in safeSendEmail:', error.toString());
+    Logger.log('Error stack:', error.stack);
+    Logger.log('Email params:', JSON.stringify({
+      to: emailParams.to,
+      subject: emailParams.subject,
+      htmlBodyLength: emailParams.htmlBody ? emailParams.htmlBody.length : 0
+    }));
+    return false;
+  }
+}
+
+function checkEmailQuota() {
+  try {
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+    Logger.log('📊 Remaining email quota:', remainingQuota);
+    return remainingQuota;
+  } catch (error) {
+    Logger.log('❌ Error checking email quota:', error.toString());
+    return 0;
+  }
+}
+
+// ===== ฟังก์ชัน Status และ Icon (เดิม - ไม่ต้องแก้) =====
 function getStatusColor(status) {
   const statusLower = status.toLowerCase();
   
@@ -240,7 +484,7 @@ function getStatusIcon(status) {
   return '📄';
 }
 
-// ===== ฟังก์ชันสร้าง HTML =====
+// ===== ฟังก์ชันสร้าง HTML (ย่อขนาดลง) =====
 function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate, statusColor, statusIcon, documentType, surveyReport, surveyReportNumber, surveyReportRemarks, labReport, labReportNumber, labReportRemarks, qcReport, qcReportNumber, qcReportRemarks) {
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
@@ -264,92 +508,68 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
     }
   }
   
+  // ⚠️ ย่อ HTML ลง - ลบ styles ที่ไม่จำเป็น
   let documentTypeHTML = '';
   if (documentType && documentType.trim() !== '') {
     const typeColor = documentType.toLowerCase().includes('close') ? '#2ed573' : '#3742fa';
     const typeIcon = documentType.toLowerCase().includes('close') ? '📁' : '📂';
     documentTypeHTML = `
-      <div style="text-align: center; margin-bottom: 15px;">
-        <span style="display: inline-block; background-color: ${typeColor}; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+      <div style="text-align:center;margin-bottom:15px;">
+        <span style="background:${typeColor};color:#fff;padding:8px 20px;border-radius:20px;font-size:14px;font-weight:bold;">
           ${typeIcon} ${documentType}
         </span>
       </div>
     `;
   }
   
-  const hasDocStatus = hasAnyDocumentStatus(surveyReport, labReport, qcReport);
+  const hasDocStatus = (surveyReport && surveyReport.trim() !== '') || 
+                       (labReport && labReport.trim() !== '') || 
+                       (qcReport && qcReport.trim() !== '');
   
   let documentStatusHTML = '';
   if (hasDocStatus) {
-    documentStatusHTML = '<div class="document-status-section">';
-    documentStatusHTML += '<h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">📑 สถานะเอกสาร</h3>';
-    documentStatusHTML += '<div class="document-status-grid">';
+    documentStatusHTML = '<div style="margin-top:25px;padding-top:20px;border-top:2px solid #e0e0e0;">';
+    documentStatusHTML += '<h3 style="color:#333;margin-bottom:15px;font-size:18px;">📑 สถานะเอกสาร</h3>';
+    documentStatusHTML += '<div>';
     
     if (surveyReport && surveyReport.trim() !== '') {
-      const surveyIcon = getDocumentStatusIcon(surveyReport);
-      const surveyColor = getDocumentStatusColor(surveyReport);
+      const surveyColor = surveyReport.toLowerCase().includes('approve') ? '#2ed573' : '#ff4757';
       documentStatusHTML += `
-        <div class="doc-status-item" style="border-left-color: ${surveyColor};">
-          <div class="doc-label">📊 Survey Report</div>
-          ${surveyReportNumber && surveyReportNumber.trim() !== '' ? `
-          <div class="doc-number">
-            📋 เลขที่: ${surveyReportNumber}
+        <div style="background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid ${surveyColor};margin-bottom:10px;">
+          <div style="font-weight:bold;color:#555;font-size:14px;">📊 Survey Report</div>
+          ${surveyReportNumber ? `<div style="font-size:13px;color:#666;">📋 เลขที่: ${surveyReportNumber}</div>` : ''}
+          <div style="color:#fff;background:${surveyColor};padding:6px 12px;border-radius:15px;font-size:13px;font-weight:bold;display:inline-block;margin-top:5px;">
+            ${surveyReport}
           </div>
-          ` : ''}
-          <div class="doc-status" style="background-color: ${surveyColor};">
-            ${surveyIcon} ${surveyReport}
-          </div>
-          ${surveyReportRemarks && surveyReportRemarks.trim() !== '' ? `
-          <div class="doc-remarks">
-            💬 ${surveyReportRemarks}
-          </div>
-          ` : ''}
+          ${surveyReportRemarks ? `<div style="margin-top:10px;padding:10px;background:#fff3cd;border-radius:5px;font-size:13px;">💬 ${surveyReportRemarks}</div>` : ''}
         </div>
       `;
     }
     
     if (labReport && labReport.trim() !== '') {
-      const labIcon = getDocumentStatusIcon(labReport);
-      const labColor = getDocumentStatusColor(labReport);
+      const labColor = labReport.toLowerCase().includes('approve') ? '#2ed573' : '#ff4757';
       documentStatusHTML += `
-        <div class="doc-status-item" style="border-left-color: ${labColor};">
-          <div class="doc-label">🧪 LAB Report</div>
-          ${labReportNumber && labReportNumber.trim() !== '' ? `
-          <div class="doc-number">
-            📋 เลขที่: ${labReportNumber}
+        <div style="background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid ${labColor};margin-bottom:10px;">
+          <div style="font-weight:bold;color:#555;font-size:14px;">🧪 LAB Report</div>
+          ${labReportNumber ? `<div style="font-size:13px;color:#666;">📋 เลขที่: ${labReportNumber}</div>` : ''}
+          <div style="color:#fff;background:${labColor};padding:6px 12px;border-radius:15px;font-size:13px;font-weight:bold;display:inline-block;margin-top:5px;">
+            ${labReport}
           </div>
-          ` : ''}
-          <div class="doc-status" style="background-color: ${labColor};">
-            ${labIcon} ${labReport}
-          </div>
-          ${labReportRemarks && labReportRemarks.trim() !== '' ? `
-          <div class="doc-remarks">
-            💬 ${labReportRemarks}
-          </div>
-          ` : ''}
+          ${labReportRemarks ? `<div style="margin-top:10px;padding:10px;background:#fff3cd;border-radius:5px;font-size:13px;">💬 ${labReportRemarks}</div>` : ''}
         </div>
       `;
     }
     
     if (qcReport && qcReport.trim() !== '') {
-      const qcIcon = getDocumentStatusIcon(qcReport);
-      const qcColor = getDocumentStatusColor(qcReport);
+      const qcColor = qcReport.toLowerCase().includes('approve') ? '#2ed573' : '#ff4757';
       documentStatusHTML += `
-        <div class="doc-status-item" style="border-left-color: ${qcColor};">
-          <div class="doc-label">✔️ QC Report</div>
-          ${qcReportNumber && qcReportNumber.trim() !== '' ? `
-          <div class="doc-number">
-            📋 เลขที่: ${qcReportNumber}
+        <div style="background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid ${qcColor};margin-bottom:10px;">
+          <div style="font-weight:bold;color:#555;font-size:14px;">✔️ QC Report</div>
+          ${qcReportNumber ? `<div style="font-size:13px;color:#666;">📋 เลขที่: ${qcReportNumber}</div>` : ''}
+          <div style="color:#fff;background:${qcColor};padding:6px 12px;border-radius:15px;font-size:13px;font-weight:bold;display:inline-block;margin-top:5px;">
+            ${qcReport}
           </div>
-          ` : ''}
-          <div class="doc-status" style="background-color: ${qcColor};">
-            ${qcIcon} ${qcReport}
-          </div>
-          ${qcReportRemarks && qcReportRemarks.trim() !== '' ? `
-          <div class="doc-remarks">
-            💬 ${qcReportRemarks}
-          </div>
-          ` : ''}
+          ${qcReportRemarks ? `<div style="margin-top:10px;padding:10px;background:#fff3cd;border-radius:5px;font-size:13px;">💬 ${qcReportRemarks}</div>` : ''}
         </div>
       `;
     }
@@ -357,252 +577,245 @@ function createRFIEmailHTML(rfiNumber, description, status, remarks, requestDate
     documentStatusHTML += '</div></div>';
   }
   
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          margin: 0;
-          padding: 20px;
-          background-color: #f4f4f4;
-        }
-        .email-container {
-          max-width: 600px;
-          margin: 0 auto;
-          background-color: white;
-          border-radius: 10px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
-        }
-        .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 30px 20px;
-          text-align: center;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 28px;
-          font-weight: 300;
-        }
-        .content {
-          padding: 30px;
-        }
-        .rfi-card {
-          background-color: #f8f9ff;
-          border-left: 5px solid ${statusColor};
-          padding: 20px;
-          margin: 20px 0;
-          border-radius: 5px;
-        }
-        .rfi-number {
-          font-size: 24px;
-          font-weight: bold;
-          color: #333;
-          margin-bottom: 10px;
-        }
-        .status-badge {
-          display: inline-block;
-          background-color: ${statusColor};
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: bold;
-          margin: 10px 0;
-        }
-        .info-row {
-          margin: 15px 0;
-          padding: 10px 0;
-          border-bottom: 1px solid #eee;
-        }
-        .info-row:last-child {
-          border-bottom: none;
-        }
-        .label {
-          font-weight: bold;
-          color: #555;
-          display: inline-block;
-          width: 120px;
-        }
-        .value {
-          color: #333;
-        }
-        .description {
-          background-color: white;
-          padding: 15px;
-          border-radius: 5px;
-          border: 1px solid #ddd;
-          margin-top: 10px;
-        }
-        .remarks {
-          background-color: #fff3cd;
-          border: 1px solid #ffeaa7;
-          padding: 15px;
-          border-radius: 5px;
-          margin-top: 10px;
-        }
-        .document-status-section {
-          margin-top: 25px;
-          padding-top: 20px;
-          border-top: 2px solid #e0e0e0;
-        }
-        .document-status-grid {
-          display: grid;
-          gap: 15px;
-          margin-top: 15px;
-        }
-        .doc-status-item {
-          background-color: #f8f9fa;
-          padding: 15px;
-          border-radius: 8px;
-          border-left: 4px solid #ccc;
-          transition: transform 0.2s;
-        }
-        .doc-label {
-          font-weight: bold;
-          color: #555;
-          font-size: 14px;
-          margin-bottom: 8px;
-        }
-        .doc-number {
-          font-size: 13px;
-          color: #666;
-          margin-bottom: 8px;
-          padding: 5px 10px;
-          background-color: #e8f4f8;
-          border-radius: 4px;
-          display: inline-block;
-        }
-        .doc-status {
-          display: inline-block;
-          color: white;
-          padding: 6px 12px;
-          border-radius: 15px;
-          font-size: 13px;
-          font-weight: bold;
-        }
-        .doc-remarks {
-          margin-top: 10px;
-          padding: 10px;
-          background-color: #fff3cd;
-          border: 1px solid #ffeaa7;
-          border-radius: 5px;
-          font-size: 13px;
-          color: #333;
-          line-height: 1.5;
-        }
-        .footer {
-          background-color: #f8f9fa;
-          padding: 20px;
-          text-align: center;
-          color: #666;
-          font-size: 12px;
-        }
-        .divider {
-          height: 2px;
-          background: linear-gradient(90deg, transparent, ${statusColor}, transparent);
-          margin: 20px 0;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="email-container">
-        <div class="header">
-          <h1>📋 RFI Notification</h1>
-          <p style="margin: 5px 0 0 0; opacity: 0.9;">Request for Information</p>
+  // ⚠️ ย่อ HTML - ใช้ inline styles แทน <style> tag
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:'Segoe UI',Arial,sans-serif;line-height:1.6;margin:0;padding:20px;background:#f4f4f4;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:30px 20px;text-align:center;">
+      <h1 style="margin:0;font-size:28px;font-weight:300;">📋 RFI Notification</h1>
+      <p style="margin:5px 0 0 0;opacity:0.9;">Request for Information</p>
+    </div>
+    <div style="padding:30px;">
+      <div style="background:#f8f9ff;border-left:5px solid ${statusColor};padding:20px;margin:20px 0;border-radius:5px;">
+        <div style="font-size:24px;font-weight:bold;color:#333;margin-bottom:10px;">
+          ${statusIcon} RFI #${rfiNumber}
         </div>
-        
-        <div class="content">
-          <div class="rfi-card">
-            <div class="rfi-number">
-              ${statusIcon} RFI #${rfiNumber}
-            </div>
-            
-            ${documentTypeHTML}
-            
-            <div class="status-badge">
-              Status: ${status}
-            </div>
-            
-            <div class="divider"></div>
-            
-            <div class="info-row">
-              <span class="label">รายละเอียด:</span>
-              <div class="description">
-                ${description}
-              </div>
-            </div>
-            
-            ${remarks ? `
-            <div class="info-row">
-              <span class="label">หมายเหตุ:</span>
-              <div class="remarks">
-                <strong>📝 หมายเหตุ:</strong><br>
-                ${remarks}
-              </div>
-            </div>
-            ` : ''}
-            
-            ${requestDate ? `
-            <div class="info-row">
-              <span class="label">วันที่นัดหมายตรวจสอบ:</span>
-              <span class="value">📅 ${formattedRequestDate}</span>
-            </div>
-            ` : ''}
-            
-            <div class="info-row">
-              <span class="label">วันที่ส่งอัปเดต:</span>
-              <span class="value">${currentDate}</span>
-            </div>
-            
-            ${documentStatusHTML}
+        ${documentTypeHTML}
+        <div style="background:${statusColor};color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;font-weight:bold;margin:10px 0;display:inline-block;">
+          Status: ${status}
+        </div>
+        <div style="height:2px;background:linear-gradient(90deg,transparent,${statusColor},transparent);margin:20px 0;"></div>
+        <div style="margin:15px 0;padding:10px 0;">
+          <span style="font-weight:bold;color:#555;">รายละเอียด:</span>
+          <div style="background:#fff;padding:15px;border-radius:5px;border:1px solid #ddd;margin-top:10px;">
+            ${description}
           </div>
-          
-          <p style="text-align: center; color: #666; margin-top: 30px;">
-            💡 <em>กรุณาติดตาม RFI นี้และดำเนินการตามความเหมาะสม</em>
-          </p>
         </div>
-        
-        <div class="footer">
-          <p>🏢 ระบบจัดการ RFI | สร้างโดย AppSheet</p>
-          <p>อีเมลนี้ถูกส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+        ${remarks ? `<div style="margin:15px 0;padding:10px 0;">
+          <span style="font-weight:bold;color:#555;">หมายเหตุ:</span>
+          <div style="background:#fff3cd;border:1px solid #ffeaa7;padding:15px;border-radius:5px;margin-top:10px;">
+            <strong>📝 หมายเหตุ:</strong><br>${remarks}
+          </div>
+        </div>` : ''}
+        ${requestDate ? `<div style="margin:15px 0;padding:10px 0;">
+          <span style="font-weight:bold;color:#555;">วันที่นัดหมายตรวจสอบ:</span>
+          <span style="color:#333;">📅 ${formattedRequestDate}</span>
+        </div>` : ''}
+        <div style="margin:15px 0;padding:10px 0;">
+          <span style="font-weight:bold;color:#555;">วันที่ส่งอัปเดต:</span>
+          <span style="color:#333;">${currentDate}</span>
         </div>
+        ${documentStatusHTML}
       </div>
-    </body>
-    </html>
-  `;
+      <p style="text-align:center;color:#666;margin-top:30px;">
+        💡 <em>กรุณาติดตาม RFI นี้และดำเนินการตามความเหมาะสม</em>
+      </p>
+    </div>
+    <div style="background:#f8f9fa;padding:20px;text-align:center;color:#666;font-size:12px;">
+      <p>🏢 ระบบจัดการ RFI | สร้างโดย AppSheet</p>
+      <p>อีเมลนี้ถูกส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
-// ===== ฟังก์ชัน Helper =====
-function checkEmailQuota() {
-  try {
-    const remainingQuota = MailApp.getRemainingDailyQuota();
-    Logger.log('Remaining email quota:', remainingQuota);
-    return remainingQuota;
-  } catch (error) {
-    Logger.log('Error checking email quota:', error);
-    return 0;
+// ===== ✅ ฟังก์ชันเสริม: ตรวจสอบสถานะเอกสาร =====
+function getDocumentStatusIcon(status) {
+  if (!status) return '';
+  const statusLower = status.toLowerCase().trim();
+  if (statusLower.includes('approve')) return '✅';
+  if (statusLower.includes('reject')) return '❌';
+  return '📄';
+}
+
+function getDocumentStatusColor(status) {
+  if (!status) return '';
+  const statusLower = status.toLowerCase().trim();
+  if (statusLower.includes('approve')) return '#2ed573';
+  if (statusLower.includes('reject')) return '#ff4757';
+  return '#57606f';
+}
+
+function hasAnyDocumentStatus(surveyReport, labReport, qcReport) {
+  return (surveyReport && surveyReport.trim() !== '') || 
+         (labReport && labReport.trim() !== '') || 
+         (qcReport && qcReport.trim() !== '');
+}
+
+// ===== 🧪 ฟังก์ชันทดสอบ =====
+
+// ⭐ Test 1: ส่งเมลเดี่ยว (ทดสอบ HTML + การตั้งค่าพื้นฐาน)
+function testSendRFIEmail() {
+  Logger.log('========== Test 1: Send Single Email ==========');
+  
+  const testParams = {
+    email: 'setthawut.itd@gmail.com', // ⚠️ เปลี่ยนเป็นเมลของคุณ
+    rfiNumber: 'TEST-001',
+    description: 'Test RFI Description',
+    status: 'Pending QC Review',
+    remarks: 'This is a test email',
+    requestDate: '2025-10-18',
+    documentType: 'Open RFI',
+    surveyReport: 'Approved',
+    surveyReportNumber: 'SR-001',
+    surveyReportRemarks: 'All good'
+  };
+  
+  Logger.log('📧 Sending test email to:', testParams.email);
+  const result = sendRFIEmailFromAppSheet(testParams);
+  
+  Logger.log('\n========== Result ==========');
+  Logger.log('Success:', result.success);
+  Logger.log('Message:', result.message || result.error);
+  Logger.log('============================');
+}
+
+// ⭐ Test 2: ส่งหลายคน (Mode 1 - Group)
+function testBatchEmailMode1() {
+  Logger.log('========== Test 2: Batch Email (Mode 1 - Group) ==========');
+  
+  // ⚠️ ใช้เฉพาะเมลจริงที่แน่ใจว่าใช้งานได้
+  const testEmails = [
+    'setthawut.itd@gmail.com',
+    'itd.developer.app@gmail.com',
+    'reservations144@gmail.com'
+    // ❌ อย่าใส่: survey.a@company.com, lab.a@company.com
+  ];
+  
+  Logger.log('📧 Recipients:', testEmails.length, 'emails');
+  Logger.log('Emails:', testEmails.join(', '));
+  
+  const result = sendRFIEmailToMultipleRecipients(
+    testEmails,
+    'TEST-002',
+    'Test Batch Email (Mode 1)',
+    'Pending Review',
+    'Testing Group Send Mode - ควรได้รับเมลทุกคน',
+    '2025-10-18'
+  );
+  
+  Logger.log('\n========== Result ==========');
+  Logger.log('Success:', result.success);
+  Logger.log('Success Count:', result.successCount || result.count);
+  Logger.log('Failed Count:', result.failCount);
+  Logger.log('============================');
+}
+
+// ⭐ Test 3: ทดสอบกับเมลเยอะ ๆ (13 คน)
+function testLargeBatchMode1() {
+  Logger.log('========== Test 3: Large Batch (13 emails) ==========');
+  
+  // สร้างเมลปลอม (สำหรับทดสอบ - ไม่ส่งจริง!)
+  const testEmails = [];
+  
+  // เพิ่มเมลจริง 3 ตัว
+  testEmails.push('setthawut.itd@gmail.com');
+  testEmails.push('itd.developer.app@gmail.com');
+  testEmails.push('reservations144@gmail.com');
+  
+  // เพิ่มเมลจำลอง 10 ตัว (แทนที่ด้วยเมลจริงของทีม)
+  for (let i = 4; i <= 13; i++) {
+    // ⚠️ เปลี่ยนเป็นเมลจริงของทีมคุณ!
+    testEmails.push('team' + i + '@yourdomain.com');
   }
+  
+  Logger.log('📧 Total Recipients:', testEmails.length);
+  Logger.log('Expected Batches:', Math.ceil(testEmails.length / 10));
+  Logger.log('Expected Quota:', Math.ceil(testEmails.length / 10), 'emails');
+  
+  Logger.log('\n⚠️ WARNING: ส่งจริง ' + testEmails.length + ' คน!');
+  Logger.log('กรุณาตรวจสอบรายชื่ออีกครั้ง แล้วรันต่อ...\n');
+  
+  // Uncomment เพื่อส่งจริง:
+  /*
+  const result = sendRFIEmailToMultipleRecipients(
+    testEmails,
+    'TEST-003',
+    'Test Large Batch',
+    'Testing',
+    'ทดสอบส่ง 13 คน (แยกเป็น 2 batches)',
+    '2025-10-18'
+  );
+  
+  Logger.log('\n========== Result ==========');
+  Logger.log('Success:', result.success);
+  Logger.log('Success Count:', result.successCount);
+  Logger.log('Failed Count:', result.failCount);
+  Logger.log('Total:', result.total);
+  Logger.log('============================');
+  */
 }
 
-function safeSendEmail(emailParams) {
-  try {
-    const quota = checkEmailQuota();
-    if (quota <= 0) {
-      Logger.log('Email quota exceeded, skipping email');
-      return false;
-    }
+// ⭐ Test 4: ตรวจสอบ Email Quota
+function checkQuotaAndRecommend() {
+  Logger.log('========== Email Quota Check ==========');
+  
+  const quota = checkEmailQuota();
+  
+  Logger.log('📊 Remaining Quota:', quota);
+  
+  if (quota === 0) {
+    Logger.log('❌ ไม่สามารถส่งเมลได้! (Quota หมด)');
+    Logger.log('💡 รอจนถึงวันถัดไป หรือ Upgrade account');
+  } else if (quota < 10) {
+    Logger.log('⚠️ Quota เหลือน้อย! (น้อยกว่า 10)');
+    Logger.log('💡 ควรรอวันถัดไป หรือส่งเฉพาะที่จำเป็น');
+  } else if (quota < 50) {
+    Logger.log('✅ Quota พอใช้งานได้');
+    Logger.log('💡 Mode 1 (Group) เหมาะสม - ส่งได้ ~' + (quota * 10) + ' คน');
+  } else {
+    Logger.log('✅ Quota เยอะมาก!');
+    Logger.log('💡 Mode 1 (Group) แนะนำ - ส่งได้ ~' + (quota * 10) + ' คน');
+  }
+  
+  Logger.log('\n💡 คำแนะนำ:');
+  Logger.log('• Mode 1 (Group): ใช้ quota = Recipients / 10');
+  Logger.log('• ส่ง 100 คน = ใช้ quota 10 ครั้ง');
+  Logger.log('• ส่ง 13 คน = ใช้ quota 2 ครั้ง');
+  Logger.log('=======================================');
+}
+
+// ⭐ Test 5: ทดสอบ Email Validation
+function testEmailValidation() {
+  Logger.log('========== Test Email Validation ==========');
+  
+  const testEmails = [
+    'valid@gmail.com',              // ✅ ถูก
+    'test.user@company.co.th',      // ✅ ถูก
+    'survey.a@company.com',         // ⚠️ ถ้าเป็น test email = ผิด
+    'invalid-email',                // ❌ ผิด
+    'no-at-sign.com',               // ❌ ผิด
+    '@nodomain.com',                // ❌ ผิด
+    'spaces in@email.com',          // ❌ ผิด
+    ''                               // ❌ ผิด (empty)
+  ];
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  testEmails.forEach(function(email) {
+    const isValid = emailRegex.test(email);
+    const icon = isValid ? '✅' : '❌';
     
-    MailApp.sendEmail(emailParams);
-    return true;
-  } catch (error) {
-    Logger.log('Error sending email:', error);
-    return false;
-  }
+    // เช็คว่าเป็น test email หรือไม่
+    const isTestEmail = email.includes('@company.com') && 
+                        !email.includes('@gmail.com');
+    const warning = isTestEmail ? ' ⚠️ (Test Email)' : '';
+    
+    Logger.log(icon + ' "' + email + '"' + warning);
+  });
+  
+  Logger.log('===========================================');
 }
