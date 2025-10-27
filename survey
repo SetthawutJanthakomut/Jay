@@ -326,6 +326,38 @@
   font-size: 18px;
   opacity: 0.8;
 }
+.manual-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+}
+
+.manual-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.manual-link-btn .icon {
+  font-size: 20px;
+}
+
+.manual-link-btn .external-icon {
+  font-size: 18px;
+  opacity: 0.8;
+}
     
     }
   </style>
@@ -361,7 +393,15 @@
   <span>ดูปฏิทินการจอง</span>
   <span class="external-icon">↗</span>
 </a>
-    
+    <a href="#" 
+   id="manualLinkBtn"
+   target="_blank" 
+   class="manual-link-btn"
+   style="display: none;">
+  <span class="icon">📖</span>
+  <span>คู่มือการใช้งาน Survey</span>
+  <span class="external-icon">↗</span>
+</a>
     <form id="surveyWorkForm">
       <div class="form-group">
         <label for="requestDate">วันที่ต้องการ <span>*</span></label>
@@ -440,11 +480,36 @@
     window.onload = function() {
   setMinDate();
   loadWorkTypes();
-  loadUserEmailAndName(); 
+  loadUserEmailAndName();
+  loadManualLink(); 
   showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
 };
 
-
+function loadManualLink() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url && url.trim() !== '') {
+        var manualBtn = document.getElementById('manualLinkBtn');
+        var fullUrl = url + '?page=survey_manual'; // หรือ '?page=survey_manual' สำหรับ survey
+        
+        // ตรวจสอบว่า URL ถูกต้อง
+        if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
+          manualBtn.href = fullUrl;
+          manualBtn.style.display = 'flex';
+          console.log('✅ Manual link loaded:', fullUrl);
+        } else {
+          console.warn('⚠️ Invalid URL format:', fullUrl);
+        }
+      } else {
+        console.warn('⚠️ Manual URL is empty');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading manual link:', error);
+      // ไม่แสดงปุ่มถ้าเกิด error
+    })
+    .getManualUrl();
+}
     
     function setMinDate() {
       const today = new Date();
