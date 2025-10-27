@@ -511,16 +511,15 @@ function loadManualLink() {
     .getManualUrl();
 }
     
-    function setMinDate() {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const dateString = tomorrow.getFullYear() + '-' + 
-                        String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(tomorrow.getDate()).padStart(2, '0');
-      document.getElementById('requestDate').setAttribute('min', dateString);
-    }
+function setMinDate() {
+  const today = new Date();
+  
+  // ✅ ใช้วันนี้แทนวันพรุ่งนี้
+  const dateString = today.getFullYear() + '-' + 
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(today.getDate()).padStart(2, '0');
+  document.getElementById('requestDate').setAttribute('min', dateString);
+}
     
     function loadWorkTypes() {
   const workTypeSelect = document.getElementById('workType');
@@ -687,13 +686,13 @@ function loadUserEmailAndName() {
         const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         
-        if (selectedDateOnly <= todayDateOnly) {
-          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-          startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
-          startTimeSelect.disabled = true;
-          showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
-          return;
-        }
+if (selectedDateOnly < todayDateOnly) {
+  startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+  startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
+  startTimeSelect.disabled = true;
+  showMessage('ไม่สามารถเลือกวันที่ผ่านไปแล้ว', 'warning');
+  return;
+}
         
         google.script.run
           .withSuccessHandler(function(availableSlots) {            
