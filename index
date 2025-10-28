@@ -688,6 +688,38 @@
           placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
         <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
       </div>
+
+      <!-- เพิ่มหลังจาก location field -->
+<div class="form-group">
+  <label for="locationLayout">
+    แนบไฟล์ Location Layout
+    <span style="color: #f59e0b;">⭐</span>
+    <span style="font-size: 12px; color: #666; font-weight: 300;">(แนะนำ)</span>
+  </label>
+  <input type="file" 
+         id="locationLayout" 
+         name="locationLayout" 
+         accept=".pdf,.jpg,.jpeg,.png"
+         style="padding: 10px; border: 2px dashed #e4e6eb; background: #f8f9fa; cursor: pointer;">
+  <div class="time-info" id="fileInfo">
+    📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br>
+    <span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>
+  </div>
+  <div id="filePreview" style="display: none; margin-top: 10px; padding: 10px; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 24px;">📄</span>
+      <div style="flex: 1;">
+        <div id="fileName" style="font-weight: 500; color: #047857;"></div>
+        <div id="fileSize" style="font-size: 12px; color: #065f46;"></div>
+      </div>
+      <button type="button" 
+              onclick="clearFile()" 
+              style="width: auto; padding: 6px 12px; background: #ef4444; font-size: 13px; margin: 0;">
+        ✕ ลบ
+      </button>
+    </div>
+  </div>
+</div>
       
       <div class="form-group">
         <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
@@ -1265,70 +1297,200 @@ function updateAvailableSlots() {
       endTimeSelect.disabled = true;
     }
     
-    function handleSubmit(event) {
-      event.preventDefault();
-      
-      if (!selectedTeamCategory) {
-        showMessage('กรุณาเลือกทีมงานก่อน', 'error');
-        return;
-      }
-      
-      var email = document.getElementById('requesterEmail').value;
-      if (!email || email === 'กำลังโหลด...') {
-        showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
-        return;
-      }
-      
-      var submitBtn = document.getElementById('submitBtn');
-      var loading = document.querySelector('.loading');
-      
-      var formData = {
-        teamCategory: selectedTeamCategory,
-        requestDate: document.getElementById('requestDate').value,
-        workType: document.getElementById('workType').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value,
-        description: document.getElementById('description').value.trim(),
-        location: document.getElementById('location').value.trim(),
-        requesterName: document.getElementById('requesterName').value.trim(),
-        requesterEmail: email
-      };
-      
-      var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-      var missingFields = requiredFields.filter(function(field) {
-        return !formData[field];
-      });
-      
-      if (missingFields.length > 0) {
-        showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-        return;
-      }
-      
-      submitBtn.disabled = true;
-      loading.style.display = 'block';
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
+    // เพิ่มใน <script> section
+
+// ฟังก์ชันตรวจสอบไฟล์
+document.getElementById('locationLayout').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  var fileInfo = document.getElementById('fileInfo');
+  var filePreview = document.getElementById('filePreview');
+  
+  if (!file) {
+    filePreview.style.display = 'none';
+    fileInfo.innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>';
+    return;
+  }
+  
+  // ตรวจสอบประเภทไฟล์
+  var validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  if (validTypes.indexOf(file.type) === -1) {
+    showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง กรุณาอัปโหลด PDF, JPG หรือ PNG เท่านั้น', 'error');
+    e.target.value = '';
+    filePreview.style.display = 'none';
+    return;
+  }
+  
+  // ตรวจสอบขนาดไฟล์ (10MB = 10 * 1024 * 1024 bytes)
+  var maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    showMessage('❌ ไฟล์มีขนาดเกิน 10MB กรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
+    e.target.value = '';
+    filePreview.style.display = 'none';
+    return;
+  }
+  
+  // แสดง Preview
+  var fileName = file.name;
+  var fileSize = (file.size / 1024).toFixed(2) + ' KB';
+  if (file.size > 1024 * 1024) {
+    fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+  
+  document.getElementById('fileName').textContent = fileName;
+  document.getElementById('fileSize').textContent = '📊 ขนาด: ' + fileSize;
+  filePreview.style.display = 'block';
+  
+  fileInfo.innerHTML = '✅ ไฟล์พร้อมอัปโหลด';
+  fileInfo.style.color = '#16a34a';
+});
+
+// ฟังก์ชันลบไฟล์
+function clearFile() {
+  document.getElementById('locationLayout').value = '';
+  document.getElementById('filePreview').style.display = 'none';
+  document.getElementById('fileInfo').innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>';
+  document.getElementById('fileInfo').style.color = '#1c4587';
+}
+
+// แก้ไข handleSubmit เดิม
+function handleSubmit(event) {
+  event.preventDefault();
+  
+  if (!selectedTeamCategory) {
+    showMessage('กรุณาเลือกทีมงานก่อน', 'error');
+    return;
+  }
+  
+  var email = document.getElementById('requesterEmail').value;
+  if (!email || email === 'กำลังโหลด...') {
+    showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+    return;
+  }
+  
+  var submitBtn = document.getElementById('submitBtn');
+  var loading = document.querySelector('.loading');
+  
+  // เตรียมข้อมูลฟอร์ม
+  var formData = {
+    teamCategory: selectedTeamCategory,
+    requestDate: document.getElementById('requestDate').value,
+    workType: document.getElementById('workType').value,
+    startTime: document.getElementById('startTime').value,
+    endTime: document.getElementById('endTime').value,
+    description: document.getElementById('description').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    requesterName: document.getElementById('requesterName').value.trim(),
+    requesterEmail: email
+  };
+  
+  // ตรวจสอบฟิลด์ที่จำเป็น
+  var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+  var missingFields = requiredFields.filter(function(field) {
+    return !formData[field];
+  });
+  
+  if (missingFields.length > 0) {
+    showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  loading.style.display = 'block';
+  
+  // ⭐ เช็คว่ามีไฟล์หรือไม่
+  var fileInput = document.getElementById('locationLayout');
+  var file = fileInput.files[0];
+  
+  if (file) {
+    // มีไฟล์ → อัปโหลดไฟล์ก่อน แล้วค่อยบันทึก RFI
+    uploadFileAndSaveRFI(formData, file, submitBtn, loading);
+  } else {
+    // ไม่มีไฟล์ → บันทึก RFI ตามปกติ
+    saveRFIWithoutFile(formData, submitBtn, loading);
+  }
+}
+
+// ฟังก์ชันอัปโหลดไฟล์และบันทึก RFI
+function uploadFileAndSaveRFI(formData, file, submitBtn, loading) {
+  var reader = new FileReader();
+  
+  reader.onload = function(e) {
+    // ⭐ สร้าง Temporary RFI ID ก่อน (8 ตัวอักษร)
+    var tempRfiId = generateTempRFIId();
+    
+    var fileData = {
+      name: file.name,
+      mimeType: file.type,
+      content: e.target.result.split(',')[1] // Base64 content
+    };
+    
+    // เรียก Backend เพื่ออัปโหลดไฟล์พร้อม RFI ID
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          // อัปโหลดสำเร็จ → เพิ่ม fileUrl เข้า formData
+          formData.locationLayoutUrl = result.fileUrl;
+          formData.tempRfiId = tempRfiId; // ⭐ ส่ง temp ID ไปด้วย
+          
+          // บันทึก RFI
+          saveRFIWithoutFile(formData, submitBtn, loading);
+        } else {
           loading.style.display = 'none';
           submitBtn.disabled = false;
-          
-          if (result && result.success) {
-            showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
-            resetForm();
-          } else {
-            var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-            showMessage(errorMessage, 'error');
-          }
-        })
-        .withFailureHandler(function(error) {
-          loading.style.display = 'none';
-          submitBtn.disabled = false;
-          
-          var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
-          showMessage(errorMessage, 'error');
-        })
-        .saveRFIRequirement(formData);
-    }
+          showMessage('❌ อัปโหลดไฟล์ล้มเหลว: ' + (result.message || 'Unknown error'), 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
+        showMessage('❌ เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.message, 'error');
+      })
+      .uploadLocationLayout(fileData, tempRfiId); // ⭐ ส่ง temp ID
+  };
+  
+  reader.onerror = function() {
+    loading.style.display = 'none';
+    submitBtn.disabled = false;
+    showMessage('❌ ไม่สามารถอ่านไฟล์ได้', 'error');
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// ⭐ ฟังก์ชันสร้าง Temporary RFI ID
+function generateTempRFIId() {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var id = '';
+  for (var i = 0; i < 8; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+// ฟังก์ชันบันทึก RFI (แยกออกมาเพื่อ reuse)
+function saveRFIWithoutFile(formData, submitBtn, loading) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
+      
+      if (result && result.success) {
+        showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
+        resetForm();
+      } else {
+        var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+        showMessage(errorMessage, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
+      
+      var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
+      showMessage(errorMessage, 'error');
+    })
+    .saveRFIRequirement(formData);
+}
     
     function resetForm() {
       document.getElementById('rfiForm').reset();
