@@ -689,21 +689,21 @@
         <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
       </div>
 
-      <!-- เพิ่มหลังจาก location field -->
+<!-- เพิ่มหลังจาก location field -->
 <div class="form-group">
   <label for="locationLayout">
     แนบไฟล์ Location Layout
-    <span style="color: #f59e0b;">⭐</span>
-    <span style="font-size: 12px; color: #666; font-weight: 300;">(แนะนำ)</span>
+    <span>*</span>
   </label>
   <input type="file" 
          id="locationLayout" 
          name="locationLayout" 
          accept=".pdf,.jpg,.jpeg,.png"
+         required
          style="padding: 10px; border: 2px dashed #e4e6eb; background: #f8f9fa; cursor: pointer;">
   <div class="time-info" id="fileInfo">
     📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br>
-    <span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>
+    <span style="color: #dc2626;">⚠️ จำเป็นต้องแนบไฟล์</span>
   </div>
   <div id="filePreview" style="display: none; margin-top: 10px; padding: 10px; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1348,7 +1348,7 @@ document.getElementById('locationLayout').addEventListener('change', function(e)
 function clearFile() {
   document.getElementById('locationLayout').value = '';
   document.getElementById('filePreview').style.display = 'none';
-  document.getElementById('fileInfo').innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>';
+  document.getElementById('fileInfo').innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #dc2626;">⚠️ จำเป็นต้องแนบไฟล์</span>';
   document.getElementById('fileInfo').style.color = '#1c4587';
 }
 
@@ -1364,6 +1364,16 @@ function handleSubmit(event) {
   var email = document.getElementById('requesterEmail').value;
   if (!email || email === 'กำลังโหลด...') {
     showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+    return;
+  }
+  
+  // ⭐ เพิ่ม Validation สำหรับไฟล์บังคับ
+  var fileInput = document.getElementById('locationLayout');
+  var file = fileInput.files[0];
+  
+  if (!file) {
+    showMessage('❌ กรุณาแนบไฟล์ Location Layout (บังคับ)', 'error');
+    fileInput.focus();
     return;
   }
   
@@ -1397,17 +1407,8 @@ function handleSubmit(event) {
   submitBtn.disabled = true;
   loading.style.display = 'block';
   
-  // ⭐ เช็คว่ามีไฟล์หรือไม่
-  var fileInput = document.getElementById('locationLayout');
-  var file = fileInput.files[0];
-  
-  if (file) {
-    // มีไฟล์ → อัปโหลดไฟล์ก่อน แล้วค่อยบันทึก RFI
-    uploadFileAndSaveRFI(formData, file, submitBtn, loading);
-  } else {
-    // ไม่มีไฟล์ → บันทึก RFI ตามปกติ
-    saveRFIWithoutFile(formData, submitBtn, loading);
-  }
+  // มีไฟล์แน่นอน (เพราะเช็คแล้ว) → อัปโหลดไฟล์และบันทึก RFI
+  uploadFileAndSaveRFI(formData, file, submitBtn, loading);
 }
 
 // ฟังก์ชันอัปโหลดไฟล์และบันทึก RFI
@@ -1415,25 +1416,39 @@ function uploadFileAndSaveRFI(formData, file, submitBtn, loading) {
   var reader = new FileReader();
   
   reader.onload = function(e) {
-    // ⭐ สร้าง Temporary RFI ID ก่อน (8 ตัวอักษร)
     var tempRfiId = generateTempRFIId();
     
     var fileData = {
       name: file.name,
       mimeType: file.type,
-      content: e.target.result.split(',')[1] // Base64 content
+      content: e.target.result.split(',')[1]
     };
     
-    // เรียก Backend เพื่ออัปโหลดไฟล์พร้อม RFI ID
     google.script.run
       .withSuccessHandler(function(result) {
         if (result && result.success) {
-          // อัปโหลดสำเร็จ → เพิ่ม fileUrl เข้า formData
           formData.locationLayoutUrl = result.fileUrl;
-          formData.tempRfiId = tempRfiId; // ⭐ ส่ง temp ID ไปด้วย
+          formData.tempRfiId = tempRfiId;
           
-          // บันทึก RFI
-          saveRFIWithoutFile(formData, submitBtn, loading);
+          // ⭐ บันทึก RFI ทันที
+          google.script.run
+            .withSuccessHandler(function(saveResult) {
+              loading.style.display = 'none';
+              submitBtn.disabled = false;
+              
+              if (saveResult && saveResult.success) {
+                showMessage(saveResult.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
+                resetForm();
+              } else {
+                showMessage(saveResult.message || 'เกิดข้อผิดพลาด', 'error');
+              }
+            })
+            .withFailureHandler(function(error) {
+              loading.style.display = 'none';
+              submitBtn.disabled = false;
+              showMessage('เกิดข้อผิดพลาดในการบันทึก: ' + error.message, 'error');
+            })
+            .saveRFIRequirement(formData);
         } else {
           loading.style.display = 'none';
           submitBtn.disabled = false;
@@ -1445,7 +1460,7 @@ function uploadFileAndSaveRFI(formData, file, submitBtn, loading) {
         submitBtn.disabled = false;
         showMessage('❌ เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.message, 'error');
       })
-      .uploadLocationLayout(fileData, tempRfiId); // ⭐ ส่ง temp ID
+      .uploadLocationLayout(fileData, tempRfiId);
   };
   
   reader.onerror = function() {
@@ -1467,30 +1482,7 @@ function generateTempRFIId() {
   return id;
 }
 
-// ฟังก์ชันบันทึก RFI (แยกออกมาเพื่อ reuse)
-function saveRFIWithoutFile(formData, submitBtn, loading) {
-  google.script.run
-    .withSuccessHandler(function(result) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      
-      if (result && result.success) {
-        showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
-        resetForm();
-      } else {
-        var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-        showMessage(errorMessage, 'error');
-      }
-    })
-    .withFailureHandler(function(error) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      
-      var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
-      showMessage(errorMessage, 'error');
-    })
-    .saveRFIRequirement(formData);
-}
+
     
     function resetForm() {
       document.getElementById('rfiForm').reset();
