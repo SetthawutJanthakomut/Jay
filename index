@@ -568,13 +568,27 @@
       <p class="subtitle">ระบบบันทึก Request for Information</p>
     </div>
     
-    <div class="info-box">
-      <strong>📌 ข้อกำหนด:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
-      <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
-      <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-      <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
-      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
-    </div>
+   <div class="info-box">
+  <strong>📌 ข้อกำหนด:</strong><br>
+  
+  <!-- ⭐ Joint Inspection Info (แสดงเมื่อเลือก Joint) -->
+  <div id="jointInfo" style="display: block;">
+    • <strong>Joint Inspection:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
+    • มี Buffer Time ±30 นาที ระหว่าง RFI<br>
+    • ต้องรอ Consultant Approval<br>
+  </div>
+  
+  <!-- ⭐ Internal Inspection Info (แสดงเมื่อเลือก Internal) -->
+  <div id="internalInfo" style="display: none;">
+    • <strong>Internal Inspection:</strong> จองล่วงหน้า 30 นาที<br>
+    • ไม่มี Buffer Time (ตรวจต่อเนื่องได้)<br>
+    • ไม่ต้องรอ Consultant Approval<br>
+    • ✅ สร้าง Calendar Event ทันที<br>
+  </div>
+  
+  <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
+  <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
+</div>
 
     <a href="https://calendar.google.com/calendar/u/0/embed?src=developeritd75@gmail.com&ctz=Asia/Bangkok" 
    target="_blank" 
@@ -593,6 +607,39 @@
   <span>คู่มือการใช้งาน</span>
   <span class="external-icon">↗</span>
 </a>
+
+<!-- เพิ่มหลัง info-box -->
+<div class="inspection-type-section">
+  <label>ประเภทการตรวจสอบ <span>*</span></label>
+  
+  <div class="inspection-type-buttons">
+    <button type="button" class="inspection-btn active" data-type="joint">
+      <span class="icon">🤝</span>
+      <div>
+        <div class="type-title">Joint Inspection</div>
+        <div class="type-desc">ตรวจร่วมกับ Consultant</div>
+      </div>
+    </button>
+    
+    <button type="button" class="inspection-btn" data-type="internal">
+      <span class="icon">🏭</span>
+      <div>
+        <div class="type-title">Internal Inspection</div>
+        <div class="type-desc">ตรวจภายในเท่านั้น</div>
+      </div>
+    </button>
+  </div>
+  
+  <input type="hidden" id="inspectionType" value="joint">
+  
+  <!-- แสดงข้อมูลที่แตกต่าง -->
+  <div class="type-info-box" id="typeInfoBox">
+    <strong>🤝 Joint Inspection:</strong><br>
+    • มี Buffer Time ±30 นาที<br>
+    • ต้องได้รับอนุมัติจาก Consultant<br>
+    • จองล่วงหน้าอย่างน้อย 1 วัน (ปิดรับ 13:00 น.)
+  </div>
+</div>
     
     <form id="rfiForm">
       <div class="form-group">
@@ -763,6 +810,7 @@
       loadWorkTypes();
       initTeamCategoryButtons();
       initCheckboxes();
+      initInspectionTypeButtons();
       loadUserEmailAndName();
       loadManualLink(); // ⭐ เพิ่มบรรทัดนี้
       showMessage('กรุณาเลือกประเภทงานก่อน ระบบจะแนะนำทีมงานที่เหมาะสมให้', 'info');
@@ -1147,8 +1195,11 @@ function getManualUrl() {
     document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
+// ⭐ แก้ไข updateAvailableSlots() ให้รองรับ Internal Inspection
+
 function updateAvailableSlots() {
   var date = document.getElementById('requestDate').value;
+  var inspectionType = document.getElementById('inspectionType').value;
   var startTimeSelect = document.getElementById('startTime');
   var endTimeSelect = document.getElementById('endTime');
   
@@ -1161,38 +1212,61 @@ function updateAvailableSlots() {
     var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     
-    // ตรวจสอบว่าเลือกวันในอดีตหรือไม่
-    if (selectedDateOnly <= todayDateOnly) {
-      startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-      startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
-      startTimeSelect.disabled = true;
-      showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
-      return;
-    }
-    
-    // ตรวจสอบว่าถ้าจองวันพรุ่งนี้ ต้องจองก่อน 13:00 น.
-    var tomorrow = new Date(todayDateOnly);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
-    
-    if (isTomorrow) {
-      var currentHour = today.getHours();
-      
-      if (currentHour >= 13) {
+    // ⭐ Internal Inspection - เช็คแค่ไม่เลือกอดีต
+    if (inspectionType === 'internal') {
+      if (selectedDateOnly < todayDateOnly) {
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
+        startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
         startTimeSelect.disabled = true;
-        showMessage('❌ ไม่สามารถจองวันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)\nกรุณาเลือกวันถัดไปเพื่อให้ทีมมีเวลาเตรียมเอกสารขอ Consult อนุมัติ', 'error');
+        showMessage('❌ กรุณาเลือกวันนี้หรือวันถัดไป', 'error');
         return;
       }
       
-      // เตือนล่วงหน้าถ้าเหลือเวลาไม่มาก
-      if (currentHour >= 11 && currentHour < 13) {
-        var timeLeft = 13 - currentHour;
-        showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
+      // ⭐ ถ้าเลือกวันนี้ → กรอง Time Slots ที่ผ่านไปแล้ว + 30 นาที
+      if (selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+        var minTime = new Date(today.getTime() + (30 * 60 * 1000)); // +30 นาที
+        var minHour = minTime.getHours();
+        var minMinute = minTime.getMinutes();
+        
+        console.log('Internal Inspection - Today selected');
+        console.log('Min time allowed:', minTime.toLocaleTimeString('th-TH'));
+        console.log('Current time + 30min:', minHour + ':' + minMinute);
+      }
+    } 
+    // ⭐ Joint Inspection - เช็คตามเดิม (ปิดรับวันพรุ่งนี้ที่ 13:00 น.)
+    else if (inspectionType === 'joint') {
+      if (selectedDateOnly <= todayDateOnly) {
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
+        startTimeSelect.disabled = true;
+        showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
+        return;
+      }
+      
+      // เช็ควันพรุ่งนี้ต้องจองก่อน 13:00 น.
+      var tomorrow = new Date(todayDateOnly);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
+      
+      if (isTomorrow) {
+        var currentHour = today.getHours();
+        
+        if (currentHour >= 13) {
+          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+          startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
+          startTimeSelect.disabled = true;
+          showMessage('❌ ไม่สามารถจอง Joint Inspection วันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)', 'error');
+          return;
+        }
+        
+        if (currentHour >= 11 && currentHour < 13) {
+          var timeLeft = 13 - currentHour;
+          showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
+        }
       }
     }
     
+    // ⭐ เรียก Backend โดยส่ง inspectionType ไปด้วย
     google.script.run
       .withSuccessHandler(function(availableSlots) {
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
@@ -1205,6 +1279,27 @@ function updateAvailableSlots() {
         } else {
           startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
           
+          // ⭐ ถ้าเป็น Internal + วันนี้ → กรอง Time Slots ที่ผ่านไปแล้ว + 30 นาที
+          if (inspectionType === 'internal' && selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+            var minTime = new Date(today.getTime() + (30 * 60 * 1000));
+            var minMinutes = minTime.getHours() * 60 + minTime.getMinutes();
+            
+            availableSlots = availableSlots.filter(function(slot) {
+              var slotParts = slot.split(':');
+              var slotMinutes = parseInt(slotParts[0]) * 60 + parseInt(slotParts[1]);
+              return slotMinutes >= minMinutes;
+            });
+            
+            console.log('Filtered slots (30min lead time):', availableSlots.length);
+            
+            if (availableSlots.length === 0) {
+              startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่างที่เหลือวันนี้ --</option>';
+              startTimeSelect.disabled = true;
+              showMessage('⚠️ ไม่มีเวลาว่างที่เหลือวันนี้ (ต้องจองล่วงหน้า 30 นาที)\nกรุณาเลือกวันถัดไป', 'warning');
+              return;
+            }
+          }
+          
           availableSlots.forEach(function(slot) {
             var option = document.createElement('option');
             option.value = slot;
@@ -1213,6 +1308,11 @@ function updateAvailableSlots() {
           });
           
           startTimeSelect.disabled = false;
+          
+          // ⭐ แสดงข้อความแตกต่างตามประเภท
+          if (inspectionType === 'internal') {
+            showMessage('✅ Internal Inspection: จองล่วงหน้า 30 นาที', 'info', 3000);
+          }
         }
       })
       .withFailureHandler(function(error) {
@@ -1221,10 +1321,7 @@ function updateAvailableSlots() {
         startTimeSelect.disabled = true;
         showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
       })
-      .getAvailableTimeSlots(date);
-  } else {
-    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-    startTimeSelect.disabled = true;
+      .getAvailableTimeSlots(date, selectedTeamCategory, inspectionType);  // ⭐ ส่ง inspectionType
   }
 }
     
@@ -1507,6 +1604,67 @@ function generateTempRFIId() {
       loadUserEmailAndName();
       setMinDate();
     }
+
+    function initInspectionTypeButtons() {
+  var inspectionButtons = document.querySelectorAll('.inspection-btn');
+  var typeInfoBox = document.getElementById('typeInfoBox');
+  var jointInfo = document.getElementById('jointInfo');
+  var internalInfo = document.getElementById('internalInfo');
+  
+  inspectionButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      // Remove active class
+      inspectionButtons.forEach(function(b) {
+        b.classList.remove('active');
+      });
+      
+      // Add active class
+      this.classList.add('active');
+      
+      // Get type
+      var type = this.getAttribute('data-type');
+      document.getElementById('inspectionType').value = type;
+      
+      // ⭐ Update info box
+      if (type === 'internal') {
+        jointInfo.style.display = 'none';
+        internalInfo.style.display = 'block';
+        
+        typeInfoBox.innerHTML = 
+          '<strong>🏭 Internal Inspection:</strong><br>' +
+          '• จองล่วงหน้า 30 นาที<br>' +
+          '• ไม่มี Buffer Time<br>' +
+          '• ไม่ต้องรอ Consultant<br>' +
+          '• สร้าง Calendar Event ทันที';
+        typeInfoBox.style.background = 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)';
+        typeInfoBox.style.borderColor = '#f59e0b';
+        
+        showMessage('✅ เลือก Internal Inspection - จองล่วงหน้า 30 นาที', 'success', 3000);
+      } else {
+        jointInfo.style.display = 'block';
+        internalInfo.style.display = 'none';
+        
+        typeInfoBox.innerHTML = 
+          '<strong>🤝 Joint Inspection:</strong><br>' +
+          '• มี Buffer Time ±30 นาที<br>' +
+          '• ต้องได้รับอนุมัติจาก Consultant<br>' +
+          '• จองล่วงหน้าอย่างน้อย 1 วัน (ปิดรับ 13:00 น.)';
+        typeInfoBox.style.background = 'linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%)';
+        typeInfoBox.style.borderColor = '#1877f2';
+        
+        showMessage('✅ เลือก Joint Inspection - จองก่อน 13:00 น. (วันพรุ่งนี้)', 'info', 3000);
+      }
+      
+      // Reset date/time ถ้ามีการเลือกไว้แล้ว
+      var dateInput = document.getElementById('requestDate');
+      if (dateInput.value) {
+        updateAvailableSlots();  // Reload time slots
+      }
+    });
+  });
+}
+
+    
   </script>
 </body>
 </html>
