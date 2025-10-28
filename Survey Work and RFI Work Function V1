@@ -1622,73 +1622,290 @@ function sendRFINotificationEmail(data, rfiId) {
   }
 }
 
-
-
+/**
+ * ⭐ สร้าง HTML สำหรับอีเมล RFI (รองรับ Location Layout File)
+ */
 function createRFIEmailHTML(data, rfiId) {
-  const categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
-  const teamInfo = data.assignedTeam ? 
+  var categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
+  var teamInfo = data.assignedTeam ? 
     '<tr><th>ทีมที่จัดให้</th><td><strong>' + data.assignedTeam + '</strong> (' + categoryDisplay + ')</td></tr>' : '';
   
-  const emailBody = `<!DOCTYPE html>
+  // ⭐ เพิ่มส่วนแสดง Location Layout File
+  var fileInfo = '';
+  if (data.locationLayoutUrl) {
+    fileInfo = '<tr><th>📎 Location Layout</th><td><a href="' + data.locationLayoutUrl + '" target="_blank" style="color: #1877f2; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #e7f3ff; border-radius: 6px; border: 1px solid #1877f2;">📄 ดูไฟล์ Location Layout ↗</a></td></tr>';
+  }
+  
+  var emailBody = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-h2 { color: #1877f2; }
+body { 
+  font-family: Arial, sans-serif; 
+  margin: 0;
+  padding: 0;
+  background-color: #f5f6f7;
+}
+.email-container {
+  max-width: 650px;
+  margin: 20px auto;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+.email-header {
+  background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+  padding: 30px 25px;
+  text-align: center;
+}
+.email-header h2 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+.email-header .icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
 .id-badge { 
   display: inline-block;
-  background: #1877f2;
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 5px 12px;
-  border-radius: 5px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 15px;
+  font-size: 18px;
+  margin-top: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
-table { border-collapse: collapse; width: 100%; }
-td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
-th { background-color: #f0f2f5; }
+.email-body {
+  padding: 30px 25px;
+}
+.greeting {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 10px;
+}
+.intro-text {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1877f2;
+  margin: 25px 0 15px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e7f3ff;
+}
+table { 
+  border-collapse: collapse; 
+  width: 100%;
+  margin-bottom: 20px;
+  border: 1px solid #e4e6eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+td, th { 
+  border: 1px solid #e4e6eb;
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 15px;
+}
+th { 
+  background-color: #f0f2f5;
+  font-weight: 600;
+  color: #333;
+  width: 35%;
+}
+td {
+  color: #444;
+  line-height: 1.5;
+}
 .status-badge {
   display: inline-block;
-  background: #ffc107;
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
   color: #000;
-  padding: 3px 8px;
-  border-radius: 3px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+.alert-box {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-left: 4px solid #ffc107;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 20px 0;
+  font-size: 15px;
+  color: #856404;
+}
+.alert-box strong {
+  color: #f59e0b;
+  font-weight: 700;
+}
+.footer {
+  background: #f0f2f5;
+  padding: 20px 25px;
+  text-align: center;
+  border-top: 1px solid #e4e6eb;
+}
+.footer p {
+  margin: 5px 0;
+  font-size: 13px;
+  color: #666;
+}
+.footer .timestamp {
   font-size: 12px;
-  font-weight: bold;
+  color: #999;
+  margin-top: 8px;
+}
+.file-link {
+  color: #1877f2;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%);
+  border-radius: 8px;
+  border: 2px solid #1877f2;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+.file-link:hover {
+  background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+.highlight {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left: 4px solid #10b981;
+  padding: 14px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-size: 14px;
+  color: #065f46;
+}
+.highlight strong {
+  color: #16a34a;
+  font-weight: 700;
+}
+/* Responsive */
+@media only screen and (max-width: 600px) {
+  .email-container {
+    margin: 10px;
+  }
+  .email-header {
+    padding: 20px 15px;
+  }
+  .email-body {
+    padding: 20px 15px;
+  }
+  th, td {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .section-title {
+    font-size: 18px;
+  }
 }
 </style>
 </head>
 <body>
-<h2>📋 แจ้ง RFI Request ใหม่</h2>
-<div class="id-badge">RFI ID: ${rfiId}</div>
-<p>เรียน ทีม QC</p>
-<p>มี RFI Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ</p>
-
-<h3>รายละเอียด RFI</h3>
-<table>
-<tr><th>RFI ID</th><td><strong>${rfiId}</strong></td></tr>
-<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
-<tr><th>สถานที่</th><td>${data.location}</td></tr>
-<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
-<tr><th>เวลา</th><td>${data.startTime} - ${data.endTime} น.</td></tr>
-${teamInfo}
-<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
-${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
-<tr><th>สถานะ</th><td><span class="status-badge">RFI Request Submitted</span></td></tr>
-</table>
-
-<p>⚠️ กรุณาตรวจสอบและดำเนินการ RFI Request นี้ในระบบ</p>
-
-<hr>
-<p><small>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</small></p>
-<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
+<div class="email-container">
+  <!-- Header -->
+  <div class="email-header">
+    <div class="icon">📋</div>
+    <h2>แจ้ง RFI Request ใหม่</h2>
+    <div class="id-badge">RFI ID: ${rfiId}</div>
+  </div>
+  
+  <!-- Body -->
+  <div class="email-body">
+    <p class="greeting"><strong>เรียน ทีม QC</strong></p>
+    <p class="intro-text">
+      มี RFI Request ใหม่ที่ต้องการการตรวจสอบและดำเนินการ 
+      กรุณาตรวจสอบรายละเอียดด้านล่างและดำเนินการตามขั้นตอน
+    </p>
+    
+    <h3 class="section-title">📋 รายละเอียด RFI</h3>
+    <table>
+      <tr>
+        <th>🆔 RFI ID</th>
+        <td><strong style="color: #1877f2; font-size: 16px;">${rfiId}</strong></td>
+      </tr>
+      <tr>
+        <th>📝 รายละเอียด</th>
+        <td>${data.description}</td>
+      </tr>
+      <tr>
+        <th>📍 สถานที่</th>
+        <td><strong>${data.location}</strong></td>
+      </tr>
+      <tr>
+        <th>📅 วันที่ต้องการ</th>
+        <td><strong style="color: #1877f2;">${formatDateThai(data.requestDate)}</strong></td>
+      </tr>
+      <tr>
+        <th>⏰ เวลา</th>
+        <td><strong>${data.startTime} - ${data.endTime} น.</strong></td>
+      </tr>
+      ${teamInfo}
+      ${fileInfo}
+      <tr>
+        <th>👤 ผู้ขอ</th>
+        <td>${data.requesterName}</td>
+      </tr>
+      ${data.requesterEmail ? '<tr><th>📧 อีเมลผู้ขอ</th><td><a href="mailto:' + data.requesterEmail + '" style="color: #1877f2; text-decoration: none;">' + data.requesterEmail + '</a></td></tr>' : ''}
+      <tr>
+        <th>📊 สถานะ</th>
+        <td><span class="status-badge">RFI Request Submitted</span></td>
+      </tr>
+    </table>
+    
+    ${data.locationLayoutUrl ? '<div class="highlight"><strong>📎 Location Layout File แนบมาพร้อมนี้</strong><br>กรุณาตรวจสอบไฟล์แนบเพื่อความชัดเจนในการดำเนินการ</div>' : ''}
+    
+    <div class="alert-box">
+      <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
+      1. ตรวจสอบรายละเอียด RFI และ Location Layout (ถ้ามี)<br>
+      2. ติดต่อผู้ขอเพื่อยืนยันรายละเอียดเพิ่มเติม (ถ้าจำเป็น)<br>
+      3. จัดเตรียมทีมงานและอุปกรณ์ที่จำเป็น<br>
+      4. อัปเดตสถานะใน RFI System<br>
+      5. ดำเนินการตรวจสอบตามกำหนดการ
+    </div>
+  </div>
+  
+  <!-- Footer -->
+  <div class="footer">
+    <p><strong>RFI Requirement System</strong></p>
+    <p>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</p>
+    <p class="timestamp">เวลาที่ส่ง: ${new Date().toLocaleString('th-TH', { 
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })}</p>
+  </div>
+</div>
 </body>
 </html>`;
   
   return emailBody;
 }
+
 
 /**
  * ⚡ UPDATED: ดึง Available Time Slots (Optimized)
@@ -1948,14 +2165,87 @@ function getRFIByDate(date) {
 }
 
 /**
- * ✅ อัปเดต: บันทึก RFI พร้อมกรอง Work Type
+ * ⭐ อัปโหลดไฟล์ Location Layout ไปยัง Google Drive
+ */
+/**
+ * ⭐ อัปเดต: อัปโหลดไฟล์พร้อมตั้งชื่อที่มีความหมาย
+ */
+function uploadLocationLayout(fileData, rfiId) {
+  try {
+    console.log('========== Upload Location Layout START ==========');
+    console.log('RFI ID:', rfiId);
+    console.log('Original file name:', fileData.name);
+    console.log('MIME type:', fileData.mimeType);
+    
+    // Folder ID
+    var LOCATION_LAYOUT_FOLDER_ID = '11xT2Ik1A5yD8S7yPaVEEeVfJGKLY5LRW';
+    
+    // ดึง Folder
+    var folder = DriveApp.getFolderById(LOCATION_LAYOUT_FOLDER_ID);
+    
+    if (!folder) {
+      throw new Error('ไม่พบ Folder Location Layout');
+    }
+    
+    console.log('✅ Folder found:', folder.getName());
+    
+    // ⭐ สร้างชื่อไฟล์ใหม่ตาม Pattern: RFI_[ID]_LocationLayout_[timestamp].[ext]
+    var timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd_HHmmss');
+    var fileExtension = fileData.name.split('.').pop().toLowerCase();
+    var newFileName = 'RFI_' + rfiId + '_LocationLayout_' + timestamp + '.' + fileExtension;
+    
+    console.log('✅ New file name:', newFileName);
+    
+    // Decode Base64
+    var blob = Utilities.newBlob(
+      Utilities.base64Decode(fileData.content),
+      fileData.mimeType,
+      newFileName  // ⭐ ใช้ชื่อไฟล์ใหม่
+    );
+    
+    // สร้างไฟล์ใน Drive
+    var file = folder.createFile(blob);
+    
+    // ตั้งค่า Permission (Anyone with link can view)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    var fileUrl = file.getUrl();
+    var fileId = file.getId();
+    
+    console.log('✅ File uploaded successfully');
+    console.log('File ID:', fileId);
+    console.log('File URL:', fileUrl);
+    console.log('========== Upload Location Layout END ==========');
+    
+    return {
+      success: true,
+      fileUrl: fileUrl,
+      fileId: fileId,
+      fileName: file.getName(),
+      originalFileName: fileData.name
+    };
+    
+  } catch (error) {
+    console.error('========== Upload Location Layout FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ แก้ไข saveRFIRequirement เพื่อรองรับ Location Layout URL
  */
 function saveRFIRequirement(data) {
   try {
     console.log('========== saveRFIRequirement START ==========');
     console.log('Input data:', JSON.stringify(data));
     
-    // Validation
+    // Validation เดิม...
     if (!data.requestDate || !data.startTime || !data.endTime || 
         !data.workType || !data.description || !data.location || 
         !data.requesterName || !data.requesterEmail || !data.teamCategory) {
@@ -1965,8 +2255,8 @@ function saveRFIRequirement(data) {
       };
     }
     
-    // ตรวจสอบและดึงข้อมูลผู้ใช้
-    const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
+    // Validate User
+    var userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
       console.log('User validation failed:', userValidation.message);
@@ -1978,67 +2268,59 @@ function saveRFIRequirement(data) {
     
     console.log('User validation success:', userValidation);
     
-    const validatedEmail = userValidation.email;
-    const validatedName = userValidation.name;
+    var validatedEmail = userValidation.email;
+    var validatedName = userValidation.name;
     
-    // ⭐ จัดทีมอัตโนมัติ (ส่ง workType ไปด้วย)
-    const teamAssignment = assignTeamAutomatically(
+    // จัดทีมอัตโนมัติ
+    var teamAssignment = assignTeamAutomatically(
       data.teamCategory, 
       data.requestDate, 
       data.startTime, 
       data.endTime,
       null,
       false,
-      data.workType  // ⭐ ส่ง work type
+      data.workType
     );
     
-    if (!teamAssignment) {
-      console.error('teamAssignment is undefined!');
+    if (!teamAssignment || !teamAssignment.success) {
+      console.log('Team assignment failed');
       return {
         success: false,
-        message: 'เกิดข้อผิดพลาด: ไม่สามารถจัดทีมได้'
-      };
-    }
-    
-    if (!teamAssignment.success) {
-      console.log('Team assignment failed:', teamAssignment.message);
-      return {
-        success: false,
-        message: teamAssignment.message
+        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้'
       };
     }
     
     console.log('Team assigned:', teamAssignment);
     
     // สร้าง Unique ID
-    const rfiId = generateUniqueId();
+    var rfiId = generateUniqueId();
     console.log('Generated RFI ID:', rfiId);
     
     // ดึง Sheet
-    let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
       console.log('RFI_List sheet not found, creating new one...');
       sheet = createRFIListSheet();
     }
     
-    const lastRow = sheet.getLastRow();
-    const nextRow = lastRow + 1;
-    const currentTime = new Date();
+    var lastRow = sheet.getLastRow();
+    var nextRow = lastRow + 1;
+    var currentTime = new Date();
     
     console.log('Adding data to sheet at row:', nextRow);
     
-    const combinedDescription = data.workType + ' - ' + data.description;
+    var combinedDescription = data.workType + ' - ' + data.description;
     console.log('Combined description:', combinedDescription);
     
-    // เตรียมข้อมูล 40 columns
-    const rowData = [];
-    for (let i = 0; i < 40; i++) {
+    // เตรียมข้อมูล 41 columns (เพิ่ม Column AO = index 40)
+    var rowData = [];
+    for (var i = 0; i < 41; i++) {
       rowData.push('');
     }
     
-    const dateParts = data.requestDate.split('-');
-    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    var dateParts = data.requestDate.split('-');
+    var formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
     rowData[0] = rfiId;
     rowData[2] = combinedDescription;
@@ -2052,18 +2334,22 @@ function saveRFIRequirement(data) {
     rowData[14] = 'RFI Request Submitted';
     rowData[15] = currentTime;
     rowData[39] = 'RFI Work';
+    rowData[40] = data.locationLayoutUrl || ''; // ⭐ Column AO (index 40)
     
     console.log('Row data prepared with Column AN = "RFI Work"');
+    if (data.locationLayoutUrl) {
+      console.log('✅ Location Layout URL:', data.locationLayoutUrl);
+    }
     
-    // บันทึก 40 columns
-    sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
+    // บันทึก 41 columns
+    sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
     // ส่งอีเมล
-    let emailSent = false;
+    var emailSent = false;
     try {
-      const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
-      const emailData = {
+      var categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+      var emailData = {
         requestDate: data.requestDate,
         startTime: data.startTime,
         endTime: data.endTime,
@@ -2072,7 +2358,8 @@ function saveRFIRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
-        teamCategory: categoryDisplay
+        teamCategory: categoryDisplay,
+        locationLayoutUrl: data.locationLayoutUrl // ⭐ เพิ่มใน email
       };
       emailSent = sendRFINotificationEmail(emailData, rfiId);
       console.log('Email sent:', emailSent);
@@ -2080,12 +2367,17 @@ function saveRFIRequirement(data) {
       console.error('Failed to send email:', emailError);
     }
     
-    const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
-    let message = 'บันทึก RFI Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
-    message += '\nงาน: ' + data.workType;  // ⭐ แสดง work type
+    var categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+    var message = 'บันทึก RFI Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
+    message += '\nงาน: ' + data.workType;
     message += '\nหมวดงาน: ' + categoryDisplay;
     message += '\nจัดทีม: ' + teamAssignment.teamNames;
     message += '\nประเภท: RFI Work';
+    
+    if (data.locationLayoutUrl) {
+      message += '\n✅ แนบไฟล์ Location Layout แล้ว';
+    }
+    
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
     }
@@ -2102,7 +2394,8 @@ function saveRFIRequirement(data) {
       emailSent: emailSent,
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamNames,
-      workType: data.workType  // ⭐ ส่ง work type กลับ
+      workType: data.workType,
+      hasFile: !!data.locationLayoutUrl
     };
     
   } catch (error) {
