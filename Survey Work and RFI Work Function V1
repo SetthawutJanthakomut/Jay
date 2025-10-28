@@ -1285,7 +1285,9 @@ function assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId,
   }
 }
 
-// ===== User Management Functions =====
+/**
+ * ✅ FIXED: ให้ทุก Role ที่ Activated ขอ RFI/Survey ได้
+ */
 function validateAndGetUser(email, name) {
   try {
     console.log('Validating user:', email, name);
@@ -1308,29 +1310,53 @@ function validateAndGetUser(email, name) {
     
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
+      const rowIndex = i + 2;
       const userEmail = String(row[1] || '').trim().toLowerCase();
-      const displayName = String(row[2] || '').trim();
+      const existingName = String(row[2] || '').trim();
       const role = String(row[3] || '').trim();
       const status = String(row[4] || '').trim();
       
       if (userEmail === email.toLowerCase()) {
-        if (role === 'Requester' && status === 'Activated') {
-          console.log('Found existing active user:', displayName, userEmail);
+        
+        // ⭐ เช็คแค่ Status = Activated (ไม่สนใจ Role)
+        if (status === 'Activated') {
+          
+          // อัปเดตชื่อถ้าเปลี่ยน
+          if (name && name !== existingName) {
+            console.log('Updating user name from "' + existingName + '" to "' + name + '"');
+            userSheet.getRange(rowIndex, 3).setValue(name);
+            
+            return {
+              success: true,
+              email: userEmail,
+              name: name,
+              role: role,
+              exists: true,
+              nameUpdated: true
+            };
+          }
+          
+          // ชื่อไม่เปลี่ยน
+          console.log('Found existing active user:', existingName, userEmail, '(Role:', role + ')');
           return {
             success: true,
             email: userEmail,
-            name: displayName,
-            exists: true
+            name: existingName,
+            role: role,
+            exists: true,
+            nameUpdated: false
           };
         } else {
+          // ⚠️ Status ไม่ใช่ Activated
           return {
             success: false,
-            message: 'อีเมลนี้ไม่มีสิทธิ์ใช้งานระบบ RFI (Role: ' + role + ', Status: ' + status + ')'
+            message: 'อีเมลนี้ถูกปิดการใช้งาน (Status: ' + status + ')\nกรุณาติดต่อผู้ดูแลระบบ'
           };
         }
       }
     }
     
+    // ไม่เจออีเมล → เพิ่มใหม่
     return addNewUser(email, name);
     
   } catch (error) {
@@ -1354,18 +1380,19 @@ function addNewUser(email, name) {
       userId,
       email,
       name,
-      'Requester',
-      'Activated'
+      'Requester',     // ⭐ Default Role
+      'Activated'      // ⭐ Default Status
     ];
     
     userSheet.getRange(nextRow, 1, 1, 5).setValues([newUserData]);
     
-    console.log('Added new user:', userId, name, email);
+    console.log('Added new user:', userId, name, email, '(Role: Requester)');
     
     return {
       success: true,
       email: email,
       name: name,
+      role: 'Requester',  // ⭐ เพิ่ม role
       exists: false,
       userId: userId
     };
@@ -5532,7 +5559,7 @@ function removeMeetingLinksFromDescription(description) {
 }
 
 /**
- * ⭐ ใหม่: ดึงชื่อผู้ใช้จากอีเมล (ถ้ามีใน User sheet)
+ * ⭐ FIXED: ดึงชื่อผู้ใช้จากอีเมล (ให้ทุก Role ที่ Activated ใช้ได้)
  */
 function getUserNameFromEmail(email) {
   try {
@@ -5578,9 +5605,9 @@ function getUserNameFromEmail(email) {
       const status = String(row[3] || '').trim();
       
       if (userEmail === email.toLowerCase()) {
-        // ✅ เจออีเมลแล้ว
-        if (role === 'Requester' && status === 'Activated') {
-          console.log('Found active requester:', displayName);
+        // ⭐ เช็คแค่ Status = Activated (ไม่สนใจ Role)
+        if (status === 'Activated') {
+          console.log('Found active user:', displayName, '(Role:', role + ')');
           return {
             success: true,
             name: displayName,
@@ -5588,24 +5615,24 @@ function getUserNameFromEmail(email) {
             role: role
           };
         } else {
-          // เจออีเมล แต่ Role/Status ไม่ถูกต้อง
-          console.log('Found email but invalid role/status:', role, status);
+          // Status ไม่ใช่ Activated
+          console.log('Found email but status is:', status);
           return {
             success: false,
             name: '',
             exists: true,
             role: role,
             status: status,
-            message: 'อีเมลนี้ไม่มีสิทธิ์ใช้งานระบบ RFI (Role: ' + role + ', Status: ' + status + ')'
+            message: 'อีเมลนี้ถูกปิดการใช้งาน (Status: ' + status + ')\nกรุณาติดต่อผู้ดูแลระบบ'
           };
         }
       }
     }
     
-    // ไม่เจออีเมลเลย
+    // ไม่เจออีเมลเลย → ให้กรอกชื่อเอง
     console.log('Email not found in User sheet');
     return {
-      success: true, // ⭐ เปลี่ยนเป็น true เพื่อให้ผู้ใช้กรอกชื่อได้
+      success: true, // ⭐ ให้กรอกชื่อได้
       name: '',
       exists: false
     };
@@ -5621,84 +5648,6 @@ function getUserNameFromEmail(email) {
   }
 }
 
-/**
- * ⭐ อัปเดต: validateAndGetUser() เพื่อรองรับการบันทึกชื่อใหม่
- */
-function validateAndGetUser(email, name) {
-  try {
-    console.log('Validating user:', email, name);
-    
-    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
-    
-    if (!userSheet) {
-      console.log('User sheet not found, creating...');
-      createUserSheet();
-      return addNewUser(email, name);
-    }
-    
-    const lastRow = userSheet.getLastRow();
-    
-    if (lastRow <= 1) {
-      return addNewUser(email, name);
-    }
-    
-    const data = userSheet.getRange(2, 1, lastRow - 1, 5).getValues();
-    
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const rowIndex = i + 2; // Row number in sheet
-      const userEmail = String(row[1] || '').trim().toLowerCase();
-      const existingName = String(row[2] || '').trim();
-      const role = String(row[3] || '').trim();
-      const status = String(row[4] || '').trim();
-      
-      if (userEmail === email.toLowerCase()) {
-        if (role === 'Requester' && status === 'Activated') {
-          // ✅ เจอผู้ใช้ที่ Active
-          
-          // ⭐ ถ้าชื่อที่ส่งมาต่างจากชื่อเดิม → อัปเดตชื่อใหม่
-          if (name && name !== existingName) {
-            console.log('Updating user name from "' + existingName + '" to "' + name + '"');
-            userSheet.getRange(rowIndex, 3).setValue(name); // Column C
-            
-            return {
-              success: true,
-              email: userEmail,
-              name: name, // ใช้ชื่อใหม่
-              exists: true,
-              nameUpdated: true
-            };
-          }
-          
-          // ชื่อไม่เปลี่ยน
-          console.log('Found existing active user:', existingName, userEmail);
-          return {
-            success: true,
-            email: userEmail,
-            name: existingName,
-            exists: true,
-            nameUpdated: false
-          };
-        } else {
-          return {
-            success: false,
-            message: 'อีเมลนี้ไม่มีสิทธิ์ใช้งานระบบ RFI (Role: ' + role + ', Status: ' + status + ')'
-          };
-        }
-      }
-    }
-    
-    // ไม่เจออีเมล → เพิ่มใหม่
-    return addNewUser(email, name);
-    
-  } catch (error) {
-    console.error('Error in validateAndGetUser:', error);
-    return {
-      success: false,
-      message: 'เกิดข้อผิดพลาดในการตรวจสอบผู้ใช้: ' + error.toString()
-    };
-  }
-}
 
 
 
