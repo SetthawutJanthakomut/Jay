@@ -1,0 +1,478 @@
+// Version 1.0 Survey Work Email System
+// Created: 20/10/2025
+
+// ===== ฟังก์ชันหลักส่งอีเมล Survey Work =====
+function sendSurveyWorkEmail(params) {
+  const { 
+    email, 
+    surveyNo, 
+    description, 
+    status, 
+    remarks, 
+    requestDate
+  } = params;
+  
+  if (!email || !surveyNo || !description || !status) {
+    Logger.log("❌ Missing required field(s)");
+    return false;
+  }
+  
+  try {
+    const quota = checkEmailQuota();
+    Logger.log(`📊 Current email quota: ${quota}`);
+    
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return false;
+    }
+    
+    let statusColor = getSurveyStatusColor(status);
+    let statusIcon = getSurveyStatusIcon(status);
+    const subject = `Survey #${surveyNo} - ${description}`;
+    
+    Logger.log("=== Survey Work Email Info ===");
+    Logger.log("📧 To: " + email);
+    Logger.log("🔢 Survey No: " + surveyNo);
+    Logger.log("📝 Description: " + description);
+    Logger.log("📊 Status: " + status);
+    Logger.log("✉️ Subject: " + subject);
+    
+    const htmlMessage = createSurveyWorkEmailHTML(
+      surveyNo, 
+      description, 
+      status, 
+      remarks, 
+      requestDate, 
+      statusColor, 
+      statusIcon
+    );
+    
+    const emailOptions = {
+      to: email,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'Survey Work System - Notification'
+    };
+    
+    const sent = safeSendEmail(emailOptions);
+    
+    if (!sent) {
+      Logger.log('❌ Failed to send email');
+      return false;
+    }
+    
+    Logger.log("=====================");
+    Logger.log(`✅ Survey Work Email sent successfully to: ${email}`);
+    return true;
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+    return false;
+  }
+}
+
+// ===== ฟังก์ชันส่งหลายคน (Batch Email) =====
+function sendSurveyWorkEmailToMultipleRecipients(emailList, surveyNo, description, status, remarks, requestDate) {
+  let emails = [];
+  
+  if (typeof emailList === 'string') {
+    emails = emailList.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0 && e.includes('@'));
+  } else if (Array.isArray(emailList)) {
+    emails = emailList.filter(e => e && e.includes('@'));
+  } else {
+    Logger.log("❌ Invalid email format");
+    return false;
+  }
+  
+  if (emails.length === 0) {
+    Logger.log("❌ No valid email addresses found");
+    return false;
+  }
+  
+  try {
+    const quota = checkEmailQuota();
+    Logger.log(`📊 Current email quota: ${quota}`);
+    
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return false;
+    }
+    
+    Logger.log(`📧 Sending batch email to ${emails.length} recipient(s): ${emails.join(', ')}`);
+    const statusColor = getSurveyStatusColor(status);
+    const statusIcon = getSurveyStatusIcon(status);
+    const subject = `Survey #${surveyNo} - ${description}`;
+    const htmlMessage = createSurveyWorkEmailHTML(
+      surveyNo, 
+      description, 
+      status, 
+      remarks, 
+      requestDate, 
+      statusColor, 
+      statusIcon
+    );
+    
+    const recipientList = emails.join(',');
+    
+    const emailOptions = {
+      to: recipientList,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'Survey Work System - Notification'
+    };
+    
+    const sent = safeSendEmail(emailOptions);
+    
+    if (!sent) {
+      Logger.log('❌ Failed to send batch email');
+      return { success: 0, failed: emails.length };
+    }
+    
+    Logger.log(`✅ Batch email sent successfully to ${emails.length} recipients`);
+    Logger.log(`📊 Email quota used: 1 (saved ${emails.length - 1} quota)`);
+    
+    return { success: emails.length, failed: 0 };
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+    return { success: 0, failed: emails.length };
+  }
+}
+
+// ===== ฟังก์ชัน Status และ Icon สำหรับ Survey Work =====
+function getSurveyStatusColor(status) {
+  const statusLower = status.toLowerCase().trim();
+  
+  if (statusLower.includes('กำลังดำเนินการ') || 
+      statusLower.includes('in progress') || 
+      statusLower.includes('working')) {
+    return '#FFA726'; // สีส้ม
+  }
+  
+  if (statusLower.includes('งานเสร็จแล้ว') || 
+      statusLower.includes('completed') || 
+      statusLower.includes('finished') ||
+      statusLower.includes('done')) {
+    return '#2ed573'; // สีเขียว
+  }
+  
+  return '#57606f'; // สีเทา (default)
+}
+
+function getSurveyStatusIcon(status) {
+  const statusLower = status.toLowerCase().trim();
+  
+  if (statusLower.includes('กำลังดำเนินการ') || 
+      statusLower.includes('in progress') || 
+      statusLower.includes('working')) {
+    return '🔄';
+  }
+  
+  if (statusLower.includes('งานเสร็จแล้ว') || 
+      statusLower.includes('completed') || 
+      statusLower.includes('finished') ||
+      statusLower.includes('done')) {
+    return '✅';
+  }
+  
+  return '📋';
+}
+
+// ===== ฟังก์ชันจัดการ Priority =====
+function getPriorityColor(priority) {
+  if (!priority) return '#57606f';
+  const priorityLower = priority.toLowerCase().trim();
+  
+  if (priorityLower.includes('high') || priorityLower.includes('สูง') || priorityLower.includes('ด่วน')) {
+    return '#ff4757'; // สีแดง
+  }
+  if (priorityLower.includes('medium') || priorityLower.includes('ปานกลาง')) {
+    return '#ffa502'; // สีส้ม
+  }
+  if (priorityLower.includes('low') || priorityLower.includes('ต่ำ')) {
+    return '#1dd1a1'; // สีเขียวอ่อน
+  }
+  
+  return '#57606f';
+}
+
+function getPriorityIcon(priority) {
+  if (!priority) return '📌';
+  const priorityLower = priority.toLowerCase().trim();
+  
+  if (priorityLower.includes('high') || priorityLower.includes('สูง') || priorityLower.includes('ด่วน')) {
+    return '🔴';
+  }
+  if (priorityLower.includes('medium') || priorityLower.includes('ปานกลาง')) {
+    return '🟡';
+  }
+  if (priorityLower.includes('low') || priorityLower.includes('ต่ำ')) {
+    return '🟢';
+  }
+  
+  return '📌';
+}
+
+// ===== ฟังก์ชันสร้าง HTML =====
+function createSurveyWorkEmailHTML(surveyNo, description, status, remarks, requestDate, statusColor, statusIcon) {
+  const currentDate = new Date().toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  let formattedRequestDate = '';
+  if (requestDate) {
+    try {
+      const reqDate = new Date(requestDate);
+      formattedRequestDate = reqDate.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      formattedRequestDate = requestDate;
+    }
+  }
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          margin: 0;
+          padding: 20px;
+          background-color: #f4f4f4;
+        }
+        .email-container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: white;
+          border-radius: 10px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%);
+          color: white;
+          padding: 30px 20px;
+          text-align: center;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 300;
+        }
+        .content {
+          padding: 30px;
+        }
+        .work-card {
+          background-color: #f8f9ff;
+          border-left: 5px solid ${statusColor};
+          padding: 20px;
+          margin: 20px 0;
+          border-radius: 5px;
+        }
+        .work-number {
+          font-size: 24px;
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 10px;
+        }
+        .status-badge {
+          display: inline-block;
+          background-color: ${statusColor};
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: bold;
+          margin: 10px 0;
+        }
+        .info-row {
+          margin: 15px 0;
+          padding: 10px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+          border-bottom: none;
+        }
+        .label {
+          font-weight: bold;
+          color: #555;
+          display: inline-block;
+          width: 140px;
+        }
+        .value {
+          color: #333;
+        }
+        .description {
+          background-color: white;
+          padding: 15px;
+          border-radius: 5px;
+          border: 1px solid #ddd;
+          margin-top: 10px;
+        }
+        .remarks {
+          background-color: #fff3cd;
+          border: 1px solid #ffeaa7;
+          padding: 15px;
+          border-radius: 5px;
+          margin-top: 10px;
+        }
+        .location-box {
+          background-color: #e8f5e9;
+          border: 1px solid #4caf50;
+          padding: 12px;
+          border-radius: 5px;
+          margin-top: 10px;
+          font-size: 14px;
+        }
+        .assigned-box {
+          background-color: #e3f2fd;
+          border: 1px solid #2196f3;
+          padding: 12px;
+          border-radius: 5px;
+          margin-top: 10px;
+          font-size: 14px;
+        }
+        .footer {
+          background-color: #f8f9fa;
+          padding: 20px;
+          text-align: center;
+          color: #666;
+          font-size: 12px;
+        }
+        .divider {
+          height: 2px;
+          background: linear-gradient(90deg, transparent, ${statusColor}, transparent);
+          margin: 20px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="header">
+          <h1>📊 Survey Work Notification</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">แจ้งเตือนงานสำรวจ</p>
+        </div>
+        
+        <div class="content">
+          <div class="work-card">
+            <div class="work-number">
+              ${statusIcon} Survey #${surveyNo}
+            </div>
+            
+            <div class="status-badge">
+              สถานะ: ${status}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="info-row">
+              <span class="label">รายละเอียดงาน:</span>
+              <div class="description">
+                ${description}
+              </div>
+            </div>
+            
+            ${requestDate ? `
+            <div class="info-row">
+              <span class="label">📅 วันที่นัดหมาย:</span>
+              <span class="value">${formattedRequestDate}</span>
+            </div>
+            ` : ''}
+            
+            ${remarks && remarks.trim() !== '' ? `
+            <div class="info-row">
+              <span class="label">📝 หมายเหตุ:</span>
+              <div class="remarks">
+                <strong>หมายเหตุ:</strong><br>
+                ${remarks}
+              </div>
+            </div>
+            ` : ''}
+            
+            <div class="info-row">
+              <span class="label">⏰ วันที่ส่งอัปเดต:</span>
+              <span class="value">${currentDate}</span>
+            </div>
+          </div>
+          
+          <p style="text-align: center; color: #666; margin-top: 30px;">
+            💡 <em>กรุณาติดตามงานสำรวจนี้และดำเนินการตามความเหมาะสม</em>
+          </p>
+        </div>
+        
+        <div class="footer">
+          <p>🏢 ระบบจัดการงานสำรวจ | Survey Work Management System</p>
+          <p>สร้างโดย AppSheet | อีเมลนี้ถูกส่งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// ===== ฟังก์ชัน Helper =====
+function checkEmailQuota() {
+  try {
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+    Logger.log('Remaining email quota:', remainingQuota);
+    return remainingQuota;
+  } catch (error) {
+    Logger.log('Error checking email quota:', error);
+    return 0;
+  }
+}
+
+function safeSendEmail(emailParams) {
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      Logger.log('Email quota exceeded, skipping email');
+      return false;
+    }
+    
+    MailApp.sendEmail(emailParams);
+    return true;
+  } catch (error) {
+    Logger.log('Error sending email:', error);
+    return false;
+  }
+}
+
+// ===== ฟังก์ชันทดสอบ =====
+function testSendSurveyWorkEmail() {
+  const testParams = {
+    email: 'test@example.com',
+    surveyNo: 'SV-2025-001',
+    description: 'สำรวจพื้นที่โครงการก่อสร้างอาคาร A',
+    status: 'กำลังดำเนินการ',
+    remarks: 'ต้องการเครื่องมือวัดระยะพิเศษ',
+    requestDate: '2025-10-25'
+  };
+  
+  const result = sendSurveyWorkEmail(testParams);
+  Logger.log('Test result:', result);
+}
+
+function testSendBatchSurveyWorkEmail() {
+  const emails = 'test1@example.com, test2@example.com';
+  const result = sendSurveyWorkEmailToMultipleRecipients(
+    emails,
+    'SV-2025-002',
+    'สำรวจพื้นที่โครงการถนน',
+    'งานเสร็จแล้ว',
+    'งานเสร็จสมบูรณ์ตามเป้าหมาย',
+    '2025-10-20'
+  );
+  Logger.log('Batch test result:', result);
+}
