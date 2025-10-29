@@ -1,4 +1,3 @@
-<version 2 122/10/2025 10:12>
 <!DOCTYPE html>
 <html>
 <head>
@@ -66,6 +65,69 @@
       margin-bottom: 30px;
     }
 
+    /* ⭐ ปุ่ม Inspection Type */
+    .inspection-type-section {
+      margin-bottom: 20px;
+    }
+
+    .inspection-type-label {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .inspection-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .inspection-btn {
+      padding: 14px 20px;
+      border: 2px solid #e4e6eb;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .inspection-btn:hover {
+      border-color: #1877f2;
+      background: rgba(240, 247, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .inspection-btn.active {
+      border-color: #1877f2;
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
+    }
+
+    .inspection-btn.active.internal {
+      border-color: #f59e0b;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+
+    .inspection-btn .icon {
+      font-size: 20px;
+    }
+
+    /* Info Box */
     .info-box {
       background: linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%);
       border-left: 4px solid #1877f2;
@@ -74,10 +136,41 @@
       margin-bottom: 25px;
       font-size: 14px;
       color: #1c4587;
+      display: none;
+    }
+
+    .info-box.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .info-box.internal {
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+      border-left-color: #f59e0b;
+      color: #92400e;
     }
 
     .info-box strong {
       color: #1877f2;
+    }
+
+    .info-box.internal strong {
+      color: #f59e0b;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 300px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+      }
     }
     
     .form-group {
@@ -261,21 +354,6 @@
       border-radius: 10px;
       border: 2px solid #e4e6eb;
       animation: slideDown 0.3s ease-out;
-    }
-    
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        max-height: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-      }
-      to {
-        opacity: 1;
-        max-height: 200px;
-        padding-top: 15px;
-        padding-bottom: 15px;
-      }
     }
     
     .multi-select-container.show {
@@ -467,6 +545,72 @@
       background: linear-gradient(180deg, #1877f2 0%, #2948b1 100%);
       border-radius: 10px;
     }
+
+    .calendar-link-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 25px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+    }
+
+    .calendar-link-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .calendar-link-btn .icon {
+      font-size: 20px;
+    }
+
+    .calendar-link-btn .external-icon {
+      font-size: 18px;
+      opacity: 0.8;
+    }
+
+    .manual-link-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 25px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+    }
+
+    .manual-link-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    }
+
+    .manual-link-btn .icon {
+      font-size: 20px;
+    }
+
+    .manual-link-btn .external-icon {
+      font-size: 18px;
+      opacity: 0.8;
+    }
     
     @media (max-width: 480px) {
       .container {
@@ -484,71 +628,6 @@
       .team-buttons {
         grid-template-columns: 1fr;
       }
-
-      .calendar-link-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border-radius: 12px;
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 25px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
-}
-
-.calendar-link-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-.calendar-link-btn .icon {
-  font-size: 20px;
-}
-
-.calendar-link-btn .external-icon {
-  font-size: 18px;
-  opacity: 0.8;
-}
-.manual-link-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  border-radius: 12px;
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 25px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
-}
-
-.manual-link-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-}
-
-.manual-link-btn .icon {
-  font-size: 20px;
-}
-
-.manual-link-btn .external-icon {
-  font-size: 18px;
-  opacity: 0.8;
-}
     }
   </style>
 </head>
@@ -567,34 +646,66 @@
       </h1>
       <p class="subtitle">ระบบบันทึก Request for Information</p>
     </div>
-    
-    <div class="info-box">
-      <strong>📌 ข้อกำหนด:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
+
+    <!-- ⭐ Inspection Type Buttons -->
+    <div class="inspection-type-section">
+      <label class="inspection-type-label">Request for Inspection</label>
+      <div class="inspection-buttons">
+        <button type="button" class="inspection-btn" data-type="internal">
+          <span class="icon">🏢</span>
+          <span>Internal</span>
+        </button>
+        <button type="button" class="inspection-btn" data-type="external">
+          <span class="icon">🤝</span>
+          <span>External</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ⭐ Info Box - External -->
+    <div class="info-box" id="infoBoxExternal">
+      <strong>📌 ข้อกำหนด (External):</strong><br>
+      <strong>📅 Lead Time:</strong> ≥ 1 วัน (จองพรุ่งนี้ปิดรับ 13:00 น.)<br>
       <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
       <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
-      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
+      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
+      <strong>✅ Approval:</strong> ต้องขออนุมัติ Consultant
+    </div>
+
+    <!-- ⭐ Info Box - Internal -->
+    <div class="info-box internal" id="infoBoxInternal">
+      <strong>📌 ข้อกำหนด (Internal):</strong><br>
+      <strong>⚡ Lead Time:</strong> 30 นาที (จองวันนี้ก็ได้)<br>
+      <strong>📅 วันที่จอง:</strong> วันนี้หรือวันถัดไป<br>
+      <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
+      <strong>🛡️ Buffer:</strong> ±30 นาที ระหว่างการตรวจ<br>
+      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
+      <strong>📅 Calendar:</strong> สร้างทันที + ส่ง invitation<br>
+      <strong>✅ Approval:</strong> ไม่ต้องขออนุมัติ Consultant
     </div>
 
     <a href="https://calendar.google.com/calendar/u/0/embed?src=developeritd75@gmail.com&ctz=Asia/Bangkok" 
-   target="_blank" 
-   class="calendar-link-btn">
-  <span class="icon">📅</span>
-  <span>ดูปฏิทินการจอง</span>
-  <span class="external-icon">↗</span>
-</a>
+       target="_blank" 
+       class="calendar-link-btn">
+      <span class="icon">📅</span>
+      <span>ดูปฏิทินการจอง</span>
+      <span class="external-icon">↗</span>
+    </a>
 
-<a href="#" 
-   id="manualLinkBtn"
-   target="_blank" 
-   class="manual-link-btn"
-   style="display: none;">
-  <span class="icon">📖</span>
-  <span>คู่มือการใช้งาน</span>
-  <span class="external-icon">↗</span>
-</a>
+    <a href="#" 
+       id="manualLinkBtn"
+       target="_blank" 
+       class="manual-link-btn"
+       style="display: none;">
+      <span class="icon">📖</span>
+      <span>คู่มือการใช้งาน</span>
+      <span class="external-icon">↗</span>
+    </a>
     
     <form id="rfiForm">
+      <input type="hidden" id="inspectionType" name="inspectionType" value="">
+
       <div class="form-group">
         <label for="workType">ประเภทงาน <span>*</span></label>
         <select id="workType" name="workType" required>
@@ -725,57 +836,89 @@
     var selectedTeamCategory = null;
     var isMultiWork = false;
     var recommendedCategory = null;
+    var selectedInspectionType = null; // ⭐ ใหม่
     
     window.onload = function() {
       setMinDate();
       loadWorkTypes();
+      initInspectionTypeButtons(); // ⭐ ใหม่
       initTeamCategoryButtons();
       initCheckboxes();
       loadUserEmailAndName();
-      loadManualLink(); // ⭐ เพิ่มบรรทัดนี้
-      showMessage('กรุณาเลือกประเภทงานก่อน ระบบจะแนะนำทีมงานที่เหมาะสมให้', 'info');
+      loadManualLink();
+      showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     };
 
-    function loadManualLink() {
-  google.script.run
-    .withSuccessHandler(function(url) {
-      if (url) {
-        var manualBtn = document.getElementById('manualLinkBtn');
-        manualBtn.href = url + '?page=manual';
-        manualBtn.style.display = 'flex';
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error loading manual link:', error);
-    })
-    .getManualUrl();
-}
+    // ⭐ ฟังก์ชันจัดการปุ่ม Inspection Type
+    function initInspectionTypeButtons() {
+      var inspectionButtons = document.querySelectorAll('.inspection-btn');
+      
+      inspectionButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          inspectionButtons.forEach(function(b) {
+            b.classList.remove('active');
+          });
+          
+          this.classList.add('active');
+          
+          var type = this.getAttribute('data-type');
+          selectedInspectionType = type;
+          document.getElementById('inspectionType').value = type;
+          
+          // แสดง/ซ่อน info-box
+          var externalBox = document.getElementById('infoBoxExternal');
+          var internalBox = document.getElementById('infoBoxInternal');
+          
+          if (type === 'external') {
+            externalBox.classList.add('show');
+            internalBox.classList.remove('show');
+            showMessage('✓ เลือก: External Inspection (ต้องขออนุมัติ Consultant)', 'info', 3000);
+            setMinDateExternal();
+          } else if (type === 'internal') {
+            internalBox.classList.add('show');
+            externalBox.classList.remove('show');
+            showMessage('✓ เลือก: Internal Inspection (ไม่ต้องขออนุมัติ, จองวันนี้ก็ได้)', 'success', 3000);
+            setMinDateInternal();
+          }
+        });
+      });
+    }
 
-function getManualUrl() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const linkSheet = ss.getSheetByName('Link_URL');
-    
-    if (!linkSheet) {
-      Logger.log('❌ ไม่พบ Sheet "Link_URL"');
-      return null;
+    // ⭐ ตั้ง Min Date สำหรับ External (พรุ่งนี้)
+    function setMinDateExternal() {
+      var today = new Date();
+      var tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      var dateString = tomorrow.getFullYear() + '-' + 
+                      String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(tomorrow.getDate()).padStart(2, '0');
+      document.getElementById('requestDate').setAttribute('min', dateString);
     }
-    
-    const url = linkSheet.getRange('B2').getValue();
-    
-    if (!url) {
-      Logger.log('❌ ไม่พบ URL ใน B2');
-      return null;
+
+    // ⭐ ตั้ง Min Date สำหรับ Internal (วันนี้)
+    function setMinDateInternal() {
+      var today = new Date();
+      var dateString = today.getFullYear() + '-' + 
+                      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(today.getDate()).padStart(2, '0');
+      document.getElementById('requestDate').setAttribute('min', dateString);
     }
-    
-    Logger.log('✅ Manual URL: ' + url);
-    return url.toString().trim();
-    
-  } catch (error) {
-    Logger.log('❌ Error in getManualUrl: ' + error.toString());
-    return null;
-  }
-}
+
+    function loadManualLink() {
+      google.script.run
+        .withSuccessHandler(function(url) {
+          if (url) {
+            var manualBtn = document.getElementById('manualLinkBtn');
+            manualBtn.href = url + '?page=manual';
+            manualBtn.style.display = 'flex';
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error loading manual link:', error);
+        })
+        .getManualUrl();
+    }
     
     function initTeamCategoryButtons() {
       var teamButtons = document.querySelectorAll('.team-btn');
@@ -1088,14 +1231,8 @@ function getManualUrl() {
     }
     
     function setMinDate() {
-      var today = new Date();
-      var tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      var dateString = tomorrow.getFullYear() + '-' + 
-                      String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
-                      String(tomorrow.getDate()).padStart(2, '0');
-      document.getElementById('requestDate').setAttribute('min', dateString);
+      // Default: External mode
+      setMinDateExternal();
     }
     
     function showMessage(text, type, duration) {
@@ -1115,86 +1252,109 @@ function getManualUrl() {
     document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
-function updateAvailableSlots() {
-  var date = document.getElementById('requestDate').value;
-  var startTimeSelect = document.getElementById('startTime');
-  var endTimeSelect = document.getElementById('endTime');
-  
-  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
-  resetEndTimeSelect();
-  
-  if (date) {
-    var selectedDate = new Date(date + 'T00:00:00');
-    var today = new Date();
-    var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    
-    // ตรวจสอบว่าเลือกวันในอดีตหรือไม่
-    if (selectedDateOnly <= todayDateOnly) {
-      startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-      startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
-      startTimeSelect.disabled = true;
-      showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
-      return;
-    }
-    
-    // ตรวจสอบว่าถ้าจองวันพรุ่งนี้ ต้องจองก่อน 13:00 น.
-    var tomorrow = new Date(todayDateOnly);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
-    
-    if (isTomorrow) {
-      var currentHour = today.getHours();
+    function updateAvailableSlots() {
+      var date = document.getElementById('requestDate').value;
+      var startTimeSelect = document.getElementById('startTime');
+      var endTimeSelect = document.getElementById('endTime');
       
-      if (currentHour >= 13) {
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
-        startTimeSelect.disabled = true;
-        showMessage('❌ ไม่สามารถจองวันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)\nกรุณาเลือกวันถัดไปเพื่อให้ทีมมีเวลาเตรียมเอกสารขอ Consult อนุมัติ', 'error');
-        return;
-      }
+      setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
+      resetEndTimeSelect();
       
-      // เตือนล่วงหน้าถ้าเหลือเวลาไม่มาก
-      if (currentHour >= 11 && currentHour < 13) {
-        var timeLeft = 13 - currentHour;
-        showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
-      }
-    }
-    
-    google.script.run
-      .withSuccessHandler(function(availableSlots) {
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '';
+      if (date) {
+        var selectedDate = new Date(date + 'T00:00:00');
+        var today = new Date();
+        var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         
-        if (!availableSlots || availableSlots.length === 0) {
-          startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
-          startTimeSelect.disabled = true;
-          showMessage('ไม่มีเวลาว่างสำหรับวันที่ที่เลือก', 'warning');
+        // ⭐ Internal: อนุญาตให้จองวันนี้ได้ (ถ้าเหลือเวลา ≥30 นาที)
+        if (selectedInspectionType === 'internal') {
+          if (selectedDateOnly < todayDateOnly) {
+            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+            startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันนี้หรือวันถัดไป --</option>';
+            startTimeSelect.disabled = true;
+            showMessage('Internal: ไม่สามารถเลือกวันในอดีตได้', 'warning');
+            return;
+          }
         } else {
-          startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+          // External: ต้องเลือกพรุ่งนี้ขึ้นไป
+          if (selectedDateOnly <= todayDateOnly) {
+            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+            startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
+            startTimeSelect.disabled = true;
+            showMessage('External: กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
+            return;
+          }
           
-          availableSlots.forEach(function(slot) {
-            var option = document.createElement('option');
-            option.value = slot;
-            option.textContent = slot + ' น.';
-            startTimeSelect.appendChild(option);
-          });
+          // ตรวจสอบเวลา 13:00 น. สำหรับพรุ่งนี้
+          var tomorrow = new Date(todayDateOnly);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
           
-          startTimeSelect.disabled = false;
+          if (isTomorrow) {
+            var currentHour = today.getHours();
+            
+            if (currentHour >= 13) {
+              startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+              startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
+              startTimeSelect.disabled = true;
+              showMessage('❌ External: ไม่สามารถจองวันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)', 'error');
+              return;
+            }
+            
+            if (currentHour >= 11 && currentHour < 13) {
+              var timeLeft = 13 - currentHour;
+              showMessage('⚠️ External: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง', 'warning', 8000);
+            }
+          }
         }
-      })
-      .withFailureHandler(function(error) {
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        
+        google.script.run
+          .withSuccessHandler(function(availableSlots) {
+            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+            startTimeSelect.innerHTML = '';
+            
+            // ⭐ Internal: กรองเวลาที่เหลือ ≥30 นาที
+            if (selectedInspectionType === 'internal' && selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+              var now = new Date();
+              var minTime = new Date(now.getTime() + (30 * 60 * 1000)); // +30 นาที
+              
+              availableSlots = availableSlots.filter(function(slot) {
+                var slotTime = new Date(selectedDate);
+                var timeParts = slot.split(':');
+                slotTime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+                return slotTime > minTime;
+              });
+            }
+            
+            if (!availableSlots || availableSlots.length === 0) {
+              startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
+              startTimeSelect.disabled = true;
+              showMessage('ไม่มีเวลาว่างสำหรับวันที่ที่เลือก', 'warning');
+            } else {
+              startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+              
+              availableSlots.forEach(function(slot) {
+                var option = document.createElement('option');
+                option.value = slot;
+                option.textContent = slot + ' น.';
+                startTimeSelect.appendChild(option);
+              });
+              
+              startTimeSelect.disabled = false;
+            }
+          })
+          .withFailureHandler(function(error) {
+            startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+            startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+            startTimeSelect.disabled = true;
+            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง', 'error');
+          })
+          .getAvailableTimeSlots(date);
+      } else {
+        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
         startTimeSelect.disabled = true;
-        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
-      })
-      .getAvailableTimeSlots(date);
-  } else {
-    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-    startTimeSelect.disabled = true;
-  }
-}
+      }
+    }
     
     function updateEndTimeSlots() {
       var date = document.getElementById('requestDate').value;
@@ -1239,7 +1399,7 @@ function updateAvailableSlots() {
               endTimeSelect.disabled = false;
               
               if (availableEndTimes.includes(defaultEndTime)) {
-                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
+                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น.', 'info', 3000);
               }
             }
           })
@@ -1247,7 +1407,7 @@ function updateAvailableSlots() {
             endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
             endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
             endTimeSelect.disabled = true;
-            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
+            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด', 'error');
           })
           .getAvailableEndTimes(date, startTime);
       }
@@ -1268,6 +1428,12 @@ function updateAvailableSlots() {
     function handleSubmit(event) {
       event.preventDefault();
       
+      // ⭐ เช็คว่าเลือก Inspection Type แล้วหรือยัง
+      if (!selectedInspectionType) {
+        showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'error');
+        return;
+      }
+      
       if (!selectedTeamCategory) {
         showMessage('กรุณาเลือกทีมงานก่อน', 'error');
         return;
@@ -1283,6 +1449,7 @@ function updateAvailableSlots() {
       var loading = document.querySelector('.loading');
       
       var formData = {
+        inspectionType: selectedInspectionType, // ⭐ ใหม่
         teamCategory: selectedTeamCategory,
         requestDate: document.getElementById('requestDate').value,
         workType: document.getElementById('workType').value,
@@ -1294,7 +1461,7 @@ function updateAvailableSlots() {
         requesterEmail: email
       };
       
-      var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+      var requiredFields = ['inspectionType', 'teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
       var missingFields = requiredFields.filter(function(field) {
         return !formData[field];
       });
@@ -1333,6 +1500,14 @@ function updateAvailableSlots() {
     function resetForm() {
       document.getElementById('rfiForm').reset();
       
+      var inspectionButtons = document.querySelectorAll('.inspection-btn');
+      inspectionButtons.forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      
+      document.getElementById('infoBoxExternal').classList.remove('show');
+      document.getElementById('infoBoxInternal').classList.remove('show');
+      
       var teamButtons = document.querySelectorAll('.team-btn');
       teamButtons.forEach(function(btn) {
         btn.classList.remove('active');
@@ -1341,6 +1516,7 @@ function updateAvailableSlots() {
       document.getElementById('multiSelectContainer').classList.remove('show');
       clearAllCheckboxes();
       
+      selectedInspectionType = null;
       selectedTeamCategory = null;
       isMultiWork = false;
       hideRecommendation();
@@ -1352,6 +1528,8 @@ function updateAvailableSlots() {
       loadWorkTypes();
       loadUserEmailAndName();
       setMinDate();
+      
+      showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     }
   </script>
 </body>
