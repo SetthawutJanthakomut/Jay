@@ -636,6 +636,35 @@
   transform: none;
   background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%) !important;
 }
+
+input[type="file"] {
+  cursor: pointer;
+  font-size: 14px;
+}
+
+input[type="file"]:hover {
+  background: #e7f3ff !important;
+  border-color: #2948b1 !important;
+}
+
+input[type="file"]::file-selector-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Kanit', sans-serif;
+  font-weight: 500;
+  margin-right: 10px;
+  transition: all 0.3s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: linear-gradient(135deg, #2948b1 0%, #3b5bdb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
+}
   </style>
 </head>
 <body>
@@ -800,12 +829,32 @@
         <div class="time-info">💡 ข้อมูลที่ชัดเจนช่วยลดเวลาติดต่อกลับเพื่อแก้ไข</div>
       </div>
 
-      <div class="form-group">
-        <label for="location">สถานที่ <span>*</span></label>
-        <input type="text" id="location" name="location" required 
-          placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
-        <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
-      </div>
+<div class="form-group">
+  <label for="location">สถานที่ <span>*</span></label>
+  <input type="text" id="location" name="location" required 
+    placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
+  <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
+</div>
+
+<!-- ⭐ เพิ่ม: Location Layout File Upload -->
+<div class="form-group">
+  <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout <span>*</span></label>
+  <input type="file" 
+         id="locationLayoutFile" 
+         name="locationLayoutFile" 
+         accept=".pdf,.png,.jpg,.jpeg,.gif" 
+         required
+         style="padding: 10px; border: 2px dashed #1877f2; background: #f0f7ff; cursor: pointer;">
+  <div class="time-info">
+    📎 แนบไฟล์ PDF หรือรูปภาพ (PNG, JPG, GIF)<br>
+    💡 ไฟล์จะถูกบันทึกใน Google Drive อัตโนมัติ<br>
+    ⚠️ ขนาดไฟล์ไม่เกิน 10 MB
+  </div>
+  <div id="fileInfo" style="display: none; margin-top: 10px; padding: 10px; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
+    <strong>✓ ไฟล์ที่เลือก:</strong> <span id="fileName"></span><br>
+    <strong>📏 ขนาด:</strong> <span id="fileSize"></span>
+  </div>
+</div>
       
       <div class="form-group">
         <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
@@ -855,6 +904,46 @@
       loadManualLink();
       showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     };
+
+    // ⭐ เพิ่ม: File Upload Event Listener
+document.getElementById('locationLayoutFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  var fileInfo = document.getElementById('fileInfo');
+  var fileName = document.getElementById('fileName');
+  var fileSize = document.getElementById('fileSize');
+  
+  if (file) {
+    // ⭐ เช็คขนาดไฟล์ (ไม่เกิน 10 MB)
+    var maxSize = 10 * 1024 * 1024; // 10 MB
+    
+    if (file.size > maxSize) {
+      showMessage('❌ ไฟล์ใหญ่เกินไป! ขนาดไฟล์ต้องไม่เกิน 10 MB', 'error');
+      e.target.value = ''; // ล้างไฟล์
+      fileInfo.style.display = 'none';
+      return;
+    }
+    
+    // ⭐ แสดงข้อมูลไฟล์
+    fileName.textContent = file.name;
+    fileSize.textContent = formatFileSize(file.size);
+    fileInfo.style.display = 'block';
+    
+    showMessage('✓ เลือกไฟล์: ' + file.name, 'success', 3000);
+  } else {
+    fileInfo.style.display = 'none';
+  }
+});
+
+// ⭐ ฟังก์ชันแปลงขนาดไฟล์
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  var k = 1024;
+  var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  var i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
 
     function initInspectionTypeButtons() {
   var inspectionButtons = document.querySelectorAll('.inspection-btn');
@@ -1474,7 +1563,7 @@
   var loading = document.querySelector('.loading');
   
   var formData = {
-    inspectionType: finalInspectionType, // ⭐ ใช้ค่าที่แน่นอน
+    inspectionType: finalInspectionType,
     teamCategory: selectedTeamCategory,
     requestDate: document.getElementById('requestDate').value,
     workType: document.getElementById('workType').value,
@@ -1485,6 +1574,15 @@
     requesterName: document.getElementById('requesterName').value.trim(),
     requesterEmail: email
   };
+  
+  // ⭐ เพิ่ม: เช็คว่ามีไฟล์หรือไม่
+  var fileInput = document.getElementById('locationLayoutFile');
+  var file = fileInput.files[0];
+  
+  if (!file) {
+    showMessage('❌ กรุณาแนบไฟล์ Location Layout', 'error');
+    return;
+  }
   
   // ⭐ FIX: เช็คอีกครั้งว่ามี inspectionType หรือไม่
   var requiredFields = ['inspectionType', 'teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
@@ -1529,38 +1627,63 @@
   submitBtn.disabled = true;
   loading.style.display = 'block';
   
-  // ⭐ เพิ่ม console.log เพื่อ debug
-  console.log('📤 Submitting RFI Request:', formData);
+  // ⭐ แปลงไฟล์เป็น Base64
+  var reader = new FileReader();
   
-  google.script.run
-    .withSuccessHandler(function(result) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      
-      console.log('📥 Response:', result);
-      
-      if (result && result.success) {
-        // ⭐ แสดง success message ที่ละเอียดกว่า
-        var successMsg = '✅ บันทึก ' + (finalInspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' สำเร็จ!\n\n';
-        successMsg += result.message || '';
+  reader.onload = function(e) {
+    var base64Content = e.target.result.split(',')[1]; // ตัด "data:image/png;base64," ออก
+    
+    formData.locationLayoutFile = {
+      name: file.name,
+      mimeType: file.type,
+      content: base64Content
+    };
+    
+    console.log('📤 Submitting with file:', file.name, '(' + formatFileSize(file.size) + ')');
+    
+    // ⭐ ส่งข้อมูลไปยัง Backend
+    google.script.run
+      .withSuccessHandler(function(result) {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
         
-        showMessage(successMsg, 'success', 10000);
-        resetForm();
-      } else {
-        var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-        showMessage('❌ ' + errorMessage, 'error');
-      }
-    })
-    .withFailureHandler(function(error) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      
-      console.error('❌ Error:', error);
-      
-      var errorMessage = '❌ เกิดข้อผิดพลาดในการบันทึก:\n' + (error.message || error.toString());
-      showMessage(errorMessage, 'error');
-    })
-    .saveRFIRequirement(formData);
+        console.log('📥 Response:', result);
+        
+        if (result && result.success) {
+          var successMsg = '✅ บันทึก ' + (finalInspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' สำเร็จ!\n\n';
+          successMsg += result.message || '';
+          
+          if (result.fileUrl) {
+            successMsg += '\n\n📎 ไฟล์ Location Layout บันทึกแล้ว';
+          }
+          
+          showMessage(successMsg, 'success', 10000);
+          resetForm();
+        } else {
+          var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+          showMessage('❌ ' + errorMessage, 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
+        
+        console.error('❌ Error:', error);
+        
+        var errorMessage = '❌ เกิดข้อผิดพลาดในการบันทึก:\n' + (error.message || error.toString());
+        showMessage(errorMessage, 'error');
+      })
+      .saveRFIRequirement(formData);
+  };
+  
+  reader.onerror = function(error) {
+    loading.style.display = 'none';
+    submitBtn.disabled = false;
+    showMessage('❌ ไม่สามารถอ่านไฟล์ได้: ' + error.toString(), 'error');
+  };
+  
+  // ⭐ อ่านไฟล์เป็น Base64
+  reader.readAsDataURL(file);
 }
     
     function resetForm() {
