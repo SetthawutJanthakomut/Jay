@@ -629,6 +629,13 @@
         grid-template-columns: 1fr;
       }
     }
+
+    button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%) !important;
+}
   </style>
 </head>
 <body>
@@ -849,40 +856,51 @@
       showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     };
 
-    // ⭐ ฟังก์ชันจัดการปุ่ม Inspection Type
     function initInspectionTypeButtons() {
-      var inspectionButtons = document.querySelectorAll('.inspection-btn');
-      
-      inspectionButtons.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          inspectionButtons.forEach(function(b) {
-            b.classList.remove('active');
-          });
-          
-          this.classList.add('active');
-          
-          var type = this.getAttribute('data-type');
-          selectedInspectionType = type;
-          document.getElementById('inspectionType').value = type;
-          
-          // แสดง/ซ่อน info-box
-          var externalBox = document.getElementById('infoBoxExternal');
-          var internalBox = document.getElementById('infoBoxInternal');
-          
-          if (type === 'external') {
-            externalBox.classList.add('show');
-            internalBox.classList.remove('show');
-            showMessage('✓ เลือก: External Inspection (ต้องขออนุมัติ Consultant)', 'info', 3000);
-            setMinDateExternal();
-          } else if (type === 'internal') {
-            internalBox.classList.add('show');
-            externalBox.classList.remove('show');
-            showMessage('✓ เลือก: Internal Inspection (ไม่ต้องขออนุมัติ, จองวันนี้ก็ได้)', 'success', 3000);
-            setMinDateInternal();
-          }
-        });
+  var inspectionButtons = document.querySelectorAll('.inspection-btn');
+  
+  inspectionButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      // ⭐ ลบ active ออกจากทุกปุ่ม
+      inspectionButtons.forEach(function(b) {
+        b.classList.remove('active');
       });
-    }
+      
+      // ⭐ เพิ่ม active ให้ปุ่มที่กด
+      this.classList.add('active');
+      
+      var type = this.getAttribute('data-type');
+      selectedInspectionType = type;
+      document.getElementById('inspectionType').value = type;
+      
+      // ⭐ แสดง/ซ่อน info-box
+      var externalBox = document.getElementById('infoBoxExternal');
+      var internalBox = document.getElementById('infoBoxInternal');
+      
+      if (type === 'external') {
+        externalBox.classList.add('show');
+        internalBox.classList.remove('show');
+        showMessage('✅ เลือก: External Inspection (ต้องขออนุมัติ Consultant)', 'success', 3000);
+        setMinDateExternal();
+      } else if (type === 'internal') {
+        internalBox.classList.add('show');
+        externalBox.classList.remove('show');
+        showMessage('✅ เลือก: Internal Inspection (ไม่ต้องขออนุมัติ, จองวันนี้ก็ได้)', 'success', 3000);
+        setMinDateInternal();
+      }
+      
+      // ⭐ เพิ่ม: Reset Date เพื่อให้เลือกใหม่
+      document.getElementById('requestDate').value = '';
+      document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+      document.getElementById('startTime').disabled = true;
+      resetEndTimeSelect();
+      
+      // ⭐ Log เพื่อ debug
+      console.log('✅ Selected Inspection Type:', type);
+      console.log('✅ Hidden input value:', document.getElementById('inspectionType').value);
+    });
+  });
+}
 
     // ⭐ ตั้ง Min Date สำหรับ External (พรุ่งนี้)
     function setMinDateExternal() {
@@ -1426,111 +1444,166 @@
     }
     
     function handleSubmit(event) {
-      event.preventDefault();
-      
-      // ⭐ เช็คว่าเลือก Inspection Type แล้วหรือยัง
-      if (!selectedInspectionType) {
-        showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'error');
-        return;
-      }
-      
-      if (!selectedTeamCategory) {
-        showMessage('กรุณาเลือกทีมงานก่อน', 'error');
-        return;
-      }
-      
-      var email = document.getElementById('requesterEmail').value;
-      if (!email || email === 'กำลังโหลด...') {
-        showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
-        return;
-      }
-      
-      var submitBtn = document.getElementById('submitBtn');
-      var loading = document.querySelector('.loading');
-      
-      var formData = {
-        inspectionType: selectedInspectionType, // ⭐ ใหม่
-        teamCategory: selectedTeamCategory,
-        requestDate: document.getElementById('requestDate').value,
-        workType: document.getElementById('workType').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value,
-        description: document.getElementById('description').value.trim(),
-        location: document.getElementById('location').value.trim(),
-        requesterName: document.getElementById('requesterName').value.trim(),
-        requesterEmail: email
+  event.preventDefault();
+  
+  // ⭐ FIX: เช็คจาก hidden input ด้วย
+  var inspectionTypeInput = document.getElementById('inspectionType').value;
+  
+  if (!inspectionTypeInput && !selectedInspectionType) {
+    showMessage('❌ กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'error');
+    // ⭐ เพิ่ม: scroll ขึ้นไปที่ปุ่ม
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  
+  // ⭐ FIX: ใช้ค่าจาก input หรือ variable
+  var finalInspectionType = inspectionTypeInput || selectedInspectionType;
+  
+  if (!selectedTeamCategory) {
+    showMessage('❌ กรุณาเลือกทีมงานก่อน', 'error');
+    return;
+  }
+  
+  var email = document.getElementById('requesterEmail').value;
+  if (!email || email === 'กำลังโหลด...') {
+    showMessage('⚠️ กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+    return;
+  }
+  
+  var submitBtn = document.getElementById('submitBtn');
+  var loading = document.querySelector('.loading');
+  
+  var formData = {
+    inspectionType: finalInspectionType, // ⭐ ใช้ค่าที่แน่นอน
+    teamCategory: selectedTeamCategory,
+    requestDate: document.getElementById('requestDate').value,
+    workType: document.getElementById('workType').value,
+    startTime: document.getElementById('startTime').value,
+    endTime: document.getElementById('endTime').value,
+    description: document.getElementById('description').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    requesterName: document.getElementById('requesterName').value.trim(),
+    requesterEmail: email
+  };
+  
+  // ⭐ FIX: เช็คอีกครั้งว่ามี inspectionType หรือไม่
+  var requiredFields = ['inspectionType', 'teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+  var missingFields = requiredFields.filter(function(field) {
+    return !formData[field];
+  });
+  
+  if (missingFields.length > 0) {
+    var missingFieldNames = missingFields.map(function(field) {
+      var labels = {
+        inspectionType: 'ประเภทการตรวจ',
+        teamCategory: 'ทีมงาน',
+        requestDate: 'วันที่',
+        workType: 'ประเภทงาน',
+        startTime: 'เวลาเริ่ม',
+        endTime: 'เวลาสิ้นสุด',
+        description: 'รายละเอียด',
+        location: 'สถานที่',
+        requesterName: 'ชื่อผู้ขอ',
+        requesterEmail: 'อีเมล'
       };
+      return labels[field] || field;
+    });
+    
+    showMessage('❌ กรุณากรอกข้อมูลให้ครบถ้วน:\n• ' + missingFieldNames.join('\n• '), 'error');
+    return;
+  }
+  
+  // ⭐ แสดง Confirmation Dialog
+  var confirmMsg = '✅ ยืนยันการบันทึก RFI Request?\n\n';
+  confirmMsg += '📋 ประเภท: ' + (finalInspectionType === 'internal' ? 'Internal Inspection' : 'External Inspection') + '\n';
+  confirmMsg += '🏷️ งาน: ' + formData.workType + '\n';
+  confirmMsg += '👥 ทีม: ' + formData.teamCategory + '\n';
+  confirmMsg += '📅 วันที่: ' + formData.requestDate + '\n';
+  confirmMsg += '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime;
+  
+  if (!confirm(confirmMsg)) {
+    showMessage('ยกเลิกการบันทึก', 'info', 2000);
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  loading.style.display = 'block';
+  
+  // ⭐ เพิ่ม console.log เพื่อ debug
+  console.log('📤 Submitting RFI Request:', formData);
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
       
-      var requiredFields = ['inspectionType', 'teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-      var missingFields = requiredFields.filter(function(field) {
-        return !formData[field];
-      });
+      console.log('📥 Response:', result);
       
-      if (missingFields.length > 0) {
-        showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-        return;
+      if (result && result.success) {
+        // ⭐ แสดง success message ที่ละเอียดกว่า
+        var successMsg = '✅ บันทึก ' + (finalInspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' สำเร็จ!\n\n';
+        successMsg += result.message || '';
+        
+        showMessage(successMsg, 'success', 10000);
+        resetForm();
+      } else {
+        var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+        showMessage('❌ ' + errorMessage, 'error');
       }
+    })
+    .withFailureHandler(function(error) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
       
-      submitBtn.disabled = true;
-      loading.style.display = 'block';
+      console.error('❌ Error:', error);
       
-      google.script.run
-        .withSuccessHandler(function(result) {
-          loading.style.display = 'none';
-          submitBtn.disabled = false;
-          
-          if (result && result.success) {
-            showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
-            resetForm();
-          } else {
-            var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-            showMessage(errorMessage, 'error');
-          }
-        })
-        .withFailureHandler(function(error) {
-          loading.style.display = 'none';
-          submitBtn.disabled = false;
-          
-          var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
-          showMessage(errorMessage, 'error');
-        })
-        .saveRFIRequirement(formData);
-    }
+      var errorMessage = '❌ เกิดข้อผิดพลาดในการบันทึก:\n' + (error.message || error.toString());
+      showMessage(errorMessage, 'error');
+    })
+    .saveRFIRequirement(formData);
+}
     
     function resetForm() {
-      document.getElementById('rfiForm').reset();
-      
-      var inspectionButtons = document.querySelectorAll('.inspection-btn');
-      inspectionButtons.forEach(function(btn) {
-        btn.classList.remove('active');
-      });
-      
-      document.getElementById('infoBoxExternal').classList.remove('show');
-      document.getElementById('infoBoxInternal').classList.remove('show');
-      
-      var teamButtons = document.querySelectorAll('.team-btn');
-      teamButtons.forEach(function(btn) {
-        btn.classList.remove('active');
-      });
-      
-      document.getElementById('multiSelectContainer').classList.remove('show');
-      clearAllCheckboxes();
-      
-      selectedInspectionType = null;
-      selectedTeamCategory = null;
-      isMultiWork = false;
-      hideRecommendation();
-      
-      document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-      document.getElementById('startTime').disabled = true;
-      resetEndTimeSelect();
-      
-      loadWorkTypes();
-      loadUserEmailAndName();
-      setMinDate();
-      
-      showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
-    }
+  document.getElementById('rfiForm').reset();
+  
+  // ⭐ Reset Inspection Type
+  var inspectionButtons = document.querySelectorAll('.inspection-btn');
+  inspectionButtons.forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById('infoBoxExternal').classList.remove('show');
+  document.getElementById('infoBoxInternal').classList.remove('show');
+  
+  // ⭐ Reset variables
+  selectedInspectionType = null; // ✅ เพิ่มบรรทัดนี้
+  document.getElementById('inspectionType').value = ''; // ✅ เพิ่มบรรทัดนี้
+  
+  // Reset Team
+  var teamButtons = document.querySelectorAll('.team-btn');
+  teamButtons.forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById('multiSelectContainer').classList.remove('show');
+  clearAllCheckboxes();
+  
+  selectedTeamCategory = null;
+  isMultiWork = false;
+  hideRecommendation();
+  
+  // Reset Time Slots
+  document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+  document.getElementById('startTime').disabled = true;
+  resetEndTimeSelect();
+  
+  // Reload Data
+  loadWorkTypes();
+  loadUserEmailAndName();
+  setMinDate();
+  
+  showMessage('✅ รีเซ็ตฟอร์มเรียบร้อยแล้ว - กรุณาเลือกประเภทการตรวจใหม่', 'info', 3000);
+}
   </script>
 </body>
 </html>
