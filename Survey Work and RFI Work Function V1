@@ -2165,9 +2165,6 @@ function getRFIByDate(date) {
 }
 
 /**
- * ⭐ อัปโหลดไฟล์ Location Layout ไปยัง Google Drive
- */
-/**
  * ⭐ อัปเดต: อัปโหลดไฟล์พร้อมตั้งชื่อที่มีความหมาย
  */
 function uploadLocationLayout(fileData, rfiId) {
@@ -2189,10 +2186,9 @@ function uploadLocationLayout(fileData, rfiId) {
     
     console.log('✅ Folder found:', folder.getName());
     
-    // ⭐ สร้างชื่อไฟล์ใหม่ตาม Pattern: RFI_[ID]_LocationLayout_[timestamp].[ext]
-    var timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd_HHmmss');
+    // ⭐ สร้างชื่อไฟล์ใหม่ตาม Pattern: RFI_[ID]_LocationLayout.[ext]
     var fileExtension = fileData.name.split('.').pop().toLowerCase();
-    var newFileName = 'RFI_' + rfiId + '_LocationLayout_' + timestamp + '.' + fileExtension;
+    var newFileName = 'RFI_' + rfiId + '_LocationLayout.' + fileExtension;
     
     console.log('✅ New file name:', newFileName);
     
@@ -2200,7 +2196,7 @@ function uploadLocationLayout(fileData, rfiId) {
     var blob = Utilities.newBlob(
       Utilities.base64Decode(fileData.content),
       fileData.mimeType,
-      newFileName  // ⭐ ใช้ชื่อไฟล์ใหม่
+      newFileName
     );
     
     // สร้างไฟล์ใน Drive
@@ -2237,14 +2233,11 @@ function uploadLocationLayout(fileData, rfiId) {
   }
 }
 
-/**
- * ⭐ แก้ไข saveRFIRequirement() ให้รองรับ Internal Inspection
- */
 function saveRFIRequirement(data) {
   try {
     console.log('========== saveRFIRequirement START ==========');
-    console.log('Inspection Type:', data.inspectionType); // ⭐ ใหม่
-    console.log('Input data:', JSON.stringify(data));
+    console.log('Inspection Type:', data.inspectionType);
+    console.log('Has file:', !!data.locationLayoutFile);
     
     // Validation
     if (!data.inspectionType || !data.requestDate || !data.startTime || !data.endTime || 
@@ -2253,6 +2246,14 @@ function saveRFIRequirement(data) {
       return {
         success: false,
         message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    // ⭐ เช็คว่ามีไฟล์หรือไม่
+    if (!data.locationLayoutFile) {
+      return {
+        success: false,
+        message: 'กรุณาแนบไฟล์ Location Layout'
       };
     }
     
@@ -2268,11 +2269,10 @@ function saveRFIRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // ⭐ จัดทีมตาม Inspection Type
+    // จัดทีมตาม Inspection Type
     let teamAssignment;
     
     if (data.inspectionType === 'internal') {
-      // Internal: ใช้ logic ของ Survey Work (ไม่มี buffer)
       teamAssignment = assignTeamAutomatically(
         data.teamCategory,
         data.requestDate,
@@ -2283,7 +2283,6 @@ function saveRFIRequirement(data) {
         data.workType
       );
     } else {
-      // External: ใช้ logic เดิม (มี buffer ±30 นาที)
       teamAssignment = assignTeamAutomatically(
         data.teamCategory,
         data.requestDate,
@@ -2305,6 +2304,20 @@ function saveRFIRequirement(data) {
     const rfiId = generateUniqueId();
     console.log('Generated ID:', rfiId);
     
+    // ⭐ อัปโหลดไฟล์ไปยัง Google Drive
+    console.log('Uploading file to Drive...');
+    const uploadResult = uploadLocationLayout(data.locationLayoutFile, rfiId);
+    
+    if (!uploadResult.success) {
+      console.error('File upload failed:', uploadResult.message);
+      return {
+        success: false,
+        message: 'ไม่สามารถอัปโหลดไฟล์ได้: ' + uploadResult.message
+      };
+    }
+    
+    console.log('✅ File uploaded:', uploadResult.fileUrl);
+    
     let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
@@ -2320,6 +2333,7 @@ function saveRFIRequirement(data) {
     const dateParts = data.requestDate.split('-');
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
+    // ⭐ เตรียมข้อมูล 41 columns (เพิ่ม Column AO = index 40)
     const rowData = [];
     for (let i = 0; i < 41; i++) {
       rowData.push('');
@@ -2335,7 +2349,7 @@ function saveRFIRequirement(data) {
     rowData[10] = validatedName;
     rowData[11] = teamAssignment.teamNames;
     
-    // ⭐ ตั้ง Status และ Column AN ตาม Inspection Type
+    // ตั้ง Status และ Column AN ตาม Inspection Type
     if (data.inspectionType === 'internal') {
       rowData[14] = 'Internal Inspection Submitted';
       rowData[39] = 'Internal Inspection';
@@ -2345,16 +2359,16 @@ function saveRFIRequirement(data) {
     }
     
     rowData[15] = currentTime;
+    rowData[40] = uploadResult.fileUrl; // ⭐ Column AO (index 40) - Location Layout URL
     
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // ⭐ ส่งอีเมลและสร้าง Calendar ตาม Inspection Type
+    // ส่งอีเมลและสร้าง Calendar
     let emailSent = false;
     let calendarResult = null;
     
     if (data.inspectionType === 'internal') {
-      // Internal: สร้าง Calendar ทันที + ส่งเมล
       const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
       
       const calendarData = {
@@ -2366,7 +2380,8 @@ function saveRFIRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
-        teamCategory: categoryDisplay
+        teamCategory: categoryDisplay,
+        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
       };
       
       calendarResult = createInternalInspectionCalendarEvent(calendarData, rfiId);
@@ -2380,13 +2395,13 @@ function saveRFIRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
-        teamCategory: categoryDisplay
+        teamCategory: categoryDisplay,
+        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
       };
       
       emailSent = sendInternalInspectionNotificationEmail(emailData, rfiId);
       
     } else {
-      // External: ส่งเมลแจ้ง QC แบบเดิม (ไม่สร้าง Calendar)
       const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
       
       const emailData = {
@@ -2398,18 +2413,19 @@ function saveRFIRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
-        teamCategory: categoryDisplay
+        teamCategory: categoryDisplay,
+        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
       };
       
       emailSent = sendRFINotificationEmail(emailData, rfiId);
     }
     
-    // ⭐ สร้าง message ตาม Inspection Type
     let message = 'บันทึก ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' เรียบร้อยแล้ว (ID: ' + rfiId + ')';
     message += '\nงาน: ' + data.workType;
     message += '\nหมวดงาน: ' + data.teamCategory.replace(/,/g, ', ');
     message += '\nจัดทีม: ' + teamAssignment.teamNames;
     message += '\nประเภท: ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Work');
+    message += '\n📎 ไฟล์: ' + uploadResult.fileName; // ⭐ เพิ่มชื่อไฟล์
     
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
@@ -2438,7 +2454,9 @@ function saveRFIRequirement(data) {
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamNames,
       workType: data.workType,
-      inspectionType: data.inspectionType
+      inspectionType: data.inspectionType,
+      fileUrl: uploadResult.fileUrl, // ⭐ ส่ง URL กลับ
+      fileName: uploadResult.fileName // ⭐ ส่งชื่อไฟล์กลับ
     };
     
   } catch (error) {
