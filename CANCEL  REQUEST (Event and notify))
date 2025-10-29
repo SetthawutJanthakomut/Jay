@@ -1,0 +1,627 @@
+// ====== CANCEL SURVEY REQUEST ======
+
+function cancelSurveyRequest(
+  uniqueId,
+  description = '',
+  cancelReason = '',
+  requesterEmail = '',
+  guestEmails = '',
+  surveyEmail = '',
+  sendEmail = true,
+  searchDays = 60
+) {
+  Logger.log(`🚫 Starting Survey cancellation for: ${uniqueId}`);
+  
+  if (!uniqueId || uniqueId.trim() === '') {
+    return {
+      success: false,
+      error: 'Unique ID is required',
+      uniqueId: uniqueId,
+      eventsFound: 0,
+      eventsDeleted: 0,
+      emailsSent: false
+    };
+  }
+
+  const cleanUniqueId = uniqueId.trim();
+  const cleanDescription = description ? description.trim() : '';
+  
+  let result = {
+    success: false,
+    uniqueId: cleanUniqueId,
+    surveyDescription: cleanDescription,
+    surveyEventsFound: 0,
+    surveyEventsDeleted: 0,
+    emailsSent: false,
+    participants: [],
+    deletedSurveyEvents: [],
+    error: null,
+    message: ''
+  };
+
+  try {
+    Logger.log("👥 Step 1: Preparing participant list...");
+    const allParticipants = new Set();
+    
+    // เพิ่ม Requester Email
+    if (requesterEmail && String(requesterEmail).trim() !== '' && String(requesterEmail).includes('@')) {
+      allParticipants.add(String(requesterEmail).trim());
+    }
+    
+    // เพิ่ม Guest Emails
+    if (guestEmails) {
+      const guestString = String(guestEmails).trim();
+      if (guestString !== '' && guestString.toLowerCase() !== 'null') {
+        const guestList = guestString
+          .split(/[,;\n]/)
+          .map(email => email.trim())
+          .filter(email => email.length > 0 && email.includes('@'));
+        
+        guestList.forEach(email => allParticipants.add(email));
+      }
+    }
+    
+    // เพิ่ม Survey Email
+    if (surveyEmail && String(surveyEmail).trim() !== '' && String(surveyEmail).includes('@')) {
+      allParticipants.add(String(surveyEmail).trim());
+    }
+
+    result.participants = Array.from(allParticipants);
+    Logger.log(`👥 Total participants: ${result.participants.length}`);
+
+    Logger.log("🔍 Step 2: Searching Calendar Events...");
+    const surveySearchResult = searchCalendarEventsByUniqueId(cleanUniqueId, cleanDescription, CALENDAR_ID, searchDays);
+    
+    if (surveySearchResult.success && surveySearchResult.events.length > 0) {
+      result.surveyEventsFound = surveySearchResult.events.length;
+      Logger.log(`✅ Found ${result.surveyEventsFound} calendar events`);
+    } else {
+      result.error = `No calendar events found for Survey: ${cleanUniqueId} / ${cleanDescription}`;
+      result.message = result.error;
+      Logger.log(`⚠️ ${result.error}`);
+      return result;
+    }
+
+    Logger.log("🗑️ Step 3: Deleting Calendar Events...");
+    
+    for (let i = 0; i < surveySearchResult.events.length; i++) {
+      const eventInfo = surveySearchResult.events[i];
+      
+      try {
+        const deleteSuccess = deleteCalendarEvent(eventInfo, CALENDAR_ID);
+        
+        if (deleteSuccess.success) {
+          result.surveyEventsDeleted++;
+          result.deletedSurveyEvents.push({
+            eventId: eventInfo.eventId,
+            title: eventInfo.title,
+            calendarType: 'Survey'
+          });
+          Logger.log(`✅ Event deleted: "${eventInfo.title}"`);
+        }
+        
+      } catch (deleteError) {
+        Logger.log(`❌ Error deleting event: ${deleteError.toString()}`);
+      }
+    }
+
+    // ส่งอีเมลแจ้งการยกเลิก
+    if (sendEmail && result.surveyEventsDeleted > 0 && result.participants.length > 0) {
+      Logger.log("📧 Step 4: Sending cancellation notifications...");
+      
+      const emailResult = sendSurveyCancellationNotification(
+        cleanUniqueId,
+        cleanDescription,
+        cancelReason,
+        result.deletedSurveyEvents,
+        result.participants
+      );
+      
+      result.emailsSent = emailResult.success;
+      Logger.log(`📧 Email: ${emailResult.success ? 'SENT' : 'FAILED'}`);
+      Logger.log(`📧 Total recipients: ${emailResult.totalRecipients || 0}`);
+    }
+
+    result.success = result.surveyEventsDeleted > 0;
+    
+    if (result.success) {
+      result.message = `ยกเลิก Survey ${cleanUniqueId} สำเร็จ: ลบ ${result.surveyEventsDeleted} รายการ`;
+    } else {
+      result.message = `ไม่มีการเปลี่ยนแปลงสำหรับ Survey ${cleanUniqueId}`;
+    }
+
+  } catch (error) {
+    result.error = error.toString();
+    result.message = `เกิดข้อผิดพลาดในการยกเลิก Survey ${cleanUniqueId}: ${result.error}`;
+    Logger.log(`❌ Unexpected error: ${result.error}`);
+  }
+
+  Logger.log("\n" + "=".repeat(50));
+  Logger.log("🚫 สรุปการยกเลิก Survey:");
+  Logger.log(`🆔 Unique ID: ${result.uniqueId}`);
+  Logger.log(`🗑️ ลบแล้ว: ${result.surveyEventsDeleted}/${result.surveyEventsFound}`);
+  Logger.log(`📧 ส่งอีเมล: ${result.emailsSent ? 'ใช่' : 'ไม่'}`);
+  Logger.log(`✅ สำเร็จ: ${result.success ? 'ใช่' : 'ไม่'}`);
+
+  return result;
+}
+
+// ===== CONFIG: ใส่ Calendar ID ของคุณที่นี่ =====
+// วิธีหา Calendar ID:
+// 1. เปิด Google Calendar
+// 2. คลิกที่ปุ่ม 3 จุดข้าง Calendar ที่ต้องการ
+// 3. เลือก "Settings and sharing"
+// 4. เลื่อนลงหา "Calendar ID" (มีรูปแบบเป็น xxx@group.calendar.google.com)
+
+// Calendar หลัก
+const CALENDAR_ID = "developeritd75@gmail.com";
+
+// Calendar อื่นๆ ที่อาจใช้ (ถ้าต้องการค้นหาหลาย Calendar):
+const SURVEY_WORK_CALENDAR = "8ef1934c9a71220a0f47c1d5227bb6ca26b8bed6d5e54c568036b54117f51620@group.calendar.google.com";
+const SURVEY_WORK_CENTRAL_CALENDAR = "6cbf6620e2630d70b763e8fe7f04d40b59d13da14a4c39cbb17687c69778b135@group.calendar.google.com";
+
+// ค้นหา Calendar Events โดยใช้ Unique ID เป็นหลัก (ปรับปรุงแล้ว)
+function searchCalendarEventsByUniqueId(uniqueId, description, calendarId, searchDays = 60) {
+  Logger.log(`🔍 Searching calendar "${calendarId}" for Unique ID: ${uniqueId}`);
+  
+  try {
+    // ตรวจสอบ calendarId
+    if (!calendarId || calendarId.trim() === '' || calendarId === 'your-calendar-id@group.calendar.google.com') {
+      Logger.log('❌ CALENDAR_ID is not configured!');
+      Logger.log('📝 Please set CALENDAR_ID at the top of the script');
+      return { 
+        success: false, 
+        message: 'CALENDAR_ID is not configured. Please set it in the script.', 
+        events: [] 
+      };
+    }
+    
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    if (!calendar) {
+      Logger.log(`❌ Cannot access calendar: ${calendarId}`);
+      Logger.log('📝 Possible reasons:');
+      Logger.log('   1. Calendar ID is incorrect');
+      Logger.log('   2. Calendar does not exist');
+      Logger.log('   3. You do not have permission to access this calendar');
+      throw new Error(`Cannot access calendar: ${calendarId}`);
+    }
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - searchDays);
+    
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + searchDays);
+    
+    const allEvents = calendar.getEvents(startDate, endDate);
+    Logger.log(`📊 Total events in range: ${allEvents.length}`);
+    
+    if (allEvents.length === 0) {
+      return { success: false, message: 'No events found in date range', events: [] };
+    }
+
+    const matchingEvents = [];
+    const cleanUniqueId = uniqueId.toLowerCase().trim();
+    const cleanDescription = description ? description.toLowerCase().trim() : '';
+    
+    // รูปแบบการค้นหา uniqueId ที่หลากหลาย
+    const uniqueIdSearchPatterns = [
+      cleanUniqueId,                    // ตัว ID เต็มๆ
+      `id: ${cleanUniqueId}`,          // รูปแบบ ID: xxx
+      `(${cleanUniqueId})`,            // รูปแบบในวงเล็บ
+      `[${cleanUniqueId}]`,            // รูปแบบในวงเหลี่ยม
+      `id:${cleanUniqueId}`,           // ไม่มีเว้นวรรค
+      `- ${cleanUniqueId}`,            // มี dash นำหน้า
+      `${cleanUniqueId} -`,            // มี dash ต่อท้าย
+    ];
+    
+    allEvents.forEach((event, index) => {
+      try {
+        const title = event.getTitle() || '';
+        const eventDescription = event.getDescription() || '';
+        const searchableText = (title + ' ' + eventDescription).toLowerCase();
+        
+        // ✅ ลำดับความสำคัญ: ค้นหาจาก uniqueId ก่อนเสมอ
+        let uniqueIdMatch = false;
+        let matchedPattern = '';
+        
+        for (const pattern of uniqueIdSearchPatterns) {
+          if (searchableText.includes(pattern)) {
+            uniqueIdMatch = true;
+            matchedPattern = pattern;
+            break;
+          }
+        }
+        
+        // ถ้า uniqueId ตรง
+        if (uniqueIdMatch) {
+          // ถ้ามี description ให้ตรวจสอบเพิ่ม (optional filter)
+          if (cleanDescription && !searchableText.includes(cleanDescription)) {
+            Logger.log(`⚠️ UniqueId match but description mismatch: "${title}"`);
+            Logger.log(`   Looking for description: "${cleanDescription}"`);
+            // ถ้าต้องการให้ strict ให้ skip ด้วย return
+            // return; 
+            // แต่แนะนำให้ยังคงเก็บไว้เพราะ uniqueId เป็นตัวหลัก
+          }
+          
+          Logger.log(`✅ Found matching event: "${title}"`);
+          Logger.log(`   Matched pattern: "${matchedPattern}"`);
+          
+          matchingEvents.push({
+            event: event,
+            eventId: event.getId(),
+            title: title,
+            description: eventDescription,
+            startTime: event.getStartTime(),
+            endTime: event.getEndTime(),
+            location: event.getLocation() || '',
+            created: event.getDateCreated(),
+            lastUpdated: event.getLastUpdated()
+          });
+        }
+        
+      } catch (eventError) {
+        Logger.log(`⚠️ Error processing event ${index + 1}: ${eventError.toString()}`);
+      }
+    });
+    
+    // เรียงตามวันที่สร้าง (ใหม่สุดก่อน)
+    matchingEvents.sort((a, b) => b.created - a.created);
+    
+    if (matchingEvents.length === 0) {
+      Logger.log(`❌ No events found for uniqueId: ${uniqueId}`);
+      Logger.log(`   Searched patterns: ${uniqueIdSearchPatterns.join(', ')}`);
+    }
+    
+    return {
+      success: matchingEvents.length > 0,
+      message: `Found ${matchingEvents.length} events for Unique ID: ${uniqueId}`,
+      events: matchingEvents
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Error searching calendar events: ${error.toString()}`);
+    return { success: false, error: error.toString(), events: [] };
+  }
+}
+
+// ฟังก์ชัน Debug: แสดง Event ทั้งหมดพร้อม uniqueId ที่พบ
+function debugListAllEventsWithUniqueIds(calendarId = CALENDAR_ID, searchDays = 30) {
+  Logger.log("🔍 DEBUG: Listing all events with potential uniqueIds...\n");
+  
+  try {
+    // ตรวจสอบ calendarId
+    if (!calendarId || calendarId.trim() === '' || calendarId === 'your-calendar-id@group.calendar.google.com') {
+      Logger.log('❌ CALENDAR_ID is not configured!');
+      Logger.log('📝 Please set CALENDAR_ID at the top of the script');
+      return;
+    }
+    
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    
+    if (!calendar) {
+      Logger.log(`❌ Cannot access calendar: ${calendarId}`);
+      Logger.log('\n📝 How to get your Calendar ID:');
+      Logger.log('   1. Open Google Calendar (calendar.google.com)');
+      Logger.log('   2. Find your calendar in the left sidebar');
+      Logger.log('   3. Click the 3-dot menu next to it');
+      Logger.log('   4. Select "Settings and sharing"');
+      Logger.log('   5. Scroll down to find "Calendar ID"');
+      Logger.log('   6. Copy it (format: xxx@group.calendar.google.com or xxx@gmail.com)');
+      Logger.log('\n💡 Or use your primary calendar: "primary"');
+      return;
+    }
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - searchDays);
+    
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + searchDays);
+    
+    const allEvents = calendar.getEvents(startDate, endDate);
+    Logger.log(`📊 Total events found: ${allEvents.length}\n`);
+    
+    allEvents.forEach((event, index) => {
+      const title = event.getTitle() || '';
+      const desc = event.getDescription() || '';
+      
+      Logger.log(`--- Event ${index + 1} ---`);
+      Logger.log(`Title: ${title}`);
+      Logger.log(`Description: ${desc.substring(0, 100)}...`);
+      Logger.log(`Start: ${event.getStartTime()}`);
+      
+      // พยายามแยก uniqueId ออกมา
+      const idPatterns = [
+        /ID:\s*([^\s\)]+)/i,           // ID: xxx
+        /\(([A-Z0-9-]+)\)/,            // (XXX-123)
+        /\[([A-Z0-9-]+)\]/,            // [XXX-123]
+      ];
+      
+      let foundId = null;
+      for (const pattern of idPatterns) {
+        const match = (title + ' ' + desc).match(pattern);
+        if (match) {
+          foundId = match[1];
+          break;
+        }
+      }
+      
+      if (foundId) {
+        Logger.log(`🆔 Detected UniqueId: ${foundId}`);
+      }
+      
+      Logger.log('');
+    });
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+  }
+}
+
+// ฟังก์ชันทดสอบค้นหา
+function testSearchWithUniqueId() {
+  // ตรวจสอบ CALENDAR_ID ก่อน
+  if (!CALENDAR_ID || CALENDAR_ID === 'your-calendar-id@group.calendar.google.com') {
+    Logger.log('❌ กรุณาตั้งค่า CALENDAR_ID ก่อนใช้งาน!');
+    Logger.log('📝 แก้ไขค่า CALENDAR_ID ที่บรรทัดบนสุดของ script');
+    return;
+  }
+  
+  // ใช้ UniqueId จริงที่มีในระบบ (จาก debugListAllEventsWithUniqueIds)
+  const testCases = [
+    { uniqueId: "SW-0001", description: "" },
+    { uniqueId: "SW-0002", description: "" },
+    { uniqueId: "SW-0003", description: "" },
+    { uniqueId: "SW-0012", description: "" },
+  ];
+  
+  testCases.forEach(test => {
+    Logger.log(`\n${'='.repeat(50)}`);
+    Logger.log(`Testing: ${test.uniqueId}`);
+    Logger.log('='.repeat(50));
+    
+    const result = searchCalendarEventsByUniqueId(
+      test.uniqueId,
+      test.description,
+      CALENDAR_ID,
+      60
+    );
+    
+    Logger.log(`Result: ${result.success ? '✅ FOUND' : '❌ NOT FOUND'}`);
+    Logger.log(`Events: ${result.events.length}`);
+    
+    if (result.success) {
+      result.events.forEach((evt, idx) => {
+        Logger.log(`  ${idx + 1}. ${evt.title}`);
+      });
+    }
+  });
+}
+
+// ===== ฟังก์ชันเสริม: ทดสอบ Calendar ID =====
+function testCalendarAccess() {
+  Logger.log('🧪 Testing Calendar Access...\n');
+  
+  if (!CALENDAR_ID || CALENDAR_ID === 'your-calendar-id@group.calendar.google.com') {
+    Logger.log('❌ CALENDAR_ID is not configured!');
+    Logger.log('📝 Please set CALENDAR_ID at the top of the script\n');
+    
+    // แสดง Calendar ทั้งหมดที่เข้าถึงได้
+    Logger.log('📋 Available Calendars:');
+    const calendars = CalendarApp.getAllCalendars();
+    calendars.forEach((cal, index) => {
+      Logger.log(`   ${index + 1}. ${cal.getName()}`);
+      Logger.log(`      ID: ${cal.getId()}`);
+      Logger.log('');
+    });
+    return;
+  }
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    
+    if (calendar) {
+      Logger.log(`✅ Successfully connected to: ${calendar.getName()}`);
+      Logger.log(`📅 Calendar ID: ${CALENDAR_ID}`);
+      Logger.log(`🎨 Color: ${calendar.getColor()}`);
+      Logger.log(`📝 Description: ${calendar.getDescription() || 'N/A'}`);
+      
+      // นับจำนวน events
+      const now = new Date();
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setDate(now.getDate() - 30);
+      
+      const events = calendar.getEvents(oneMonthAgo, now);
+      Logger.log(`📊 Events in last 30 days: ${events.length}`);
+      
+    } else {
+      Logger.log('❌ Cannot access calendar');
+      Logger.log(`📝 Calendar ID used: ${CALENDAR_ID}`);
+    }
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+  }
+}
+// ส่งอีเมลแจ้งการยกเลิก Survey
+function sendSurveyCancellationNotification(uniqueId, description, cancelReason, deletedEvents, participants) {
+  Logger.log(`📧 ส่งอีเมลแจ้งการยกเลิก Survey`);
+  
+  try {
+    const quota = checkEmailQuota();
+    if (quota <= 0) {
+      Logger.log('❌ Email quota exceeded');
+      return { success: false, message: "Email quota exceeded" };
+    }
+
+    if (participants.length === 0) {
+      Logger.log('❌ ไม่มีผู้รับ');
+      return { success: false, message: "No recipients" };
+    }
+    
+    Logger.log(`📧 ผู้รับทั้งหมด: ${participants.length}`);
+
+    const subject = `🚫 ยกเลิกแล้ว - Survey Work ถูกยกเลิก (ID: ${uniqueId})`;
+    
+    // สร้างรายการ Events ที่ถูกลบ
+    let eventsList = '<ul>';
+    deletedEvents.forEach(evt => {
+      eventsList += `<li><strong>${evt.title}</strong></li>`;
+    });
+    eventsList += '</ul>';
+    
+    const htmlMessage = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>
+body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+h2 { color: #dc3545; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+td, th { border: 1px solid #ddd; padding: 8px; }
+th { background-color: #f2f2f2; font-weight: bold; }
+.alert-box { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0; }
+</style></head>
+<body>
+<h2>🚫 ยกเลิกงาน Survey</h2>
+
+<div class="alert-box">
+  <strong>⚠️ ประกาศสำคัญ:</strong> งาน Survey ที่กำหนดไว้ได้ถูก<strong>ยกเลิก</strong>แล้ว
+</div>
+
+<h3>รายละเอียด Survey:</h3>
+<table>
+<tr><th style="width: 30%;">Unique ID</th><td><strong>${uniqueId}</strong></td></tr>
+<tr><th>รายละเอียด</th><td>${description || 'ไม่ระบุ'}</td></tr>
+${cancelReason ? `<tr><th>เหตุผลในการยกเลิก</th><td>${cancelReason}</td></tr>` : ''}
+</table>
+
+<h3>รายการที่ลบออกจาก Calendar:</h3>
+${eventsList}
+
+<p style="margin-top: 20px;"><strong>หมายเหตุ:</strong> Calendar Event ที่เกี่ยวข้องทั้งหมดถูกลบออกแล้ว</p>
+
+<hr>
+<p style="color: #666; font-size: 12px;">
+📨 <strong>ผู้รับ:</strong> ผู้เข้าร่วมงาน Survey<br>
+🤖 ส่งโดย: ระบบ Survey Work - แจ้งการยกเลิก<br>
+🕐 เวลา: ${new Date().toLocaleString('th-TH')}
+</p>
+</body>
+</html>`;
+    
+    const recipientList = participants.join(',');
+    
+    const sent = safeSendEmail({
+      to: recipientList,
+      subject: subject,
+      htmlBody: htmlMessage,
+      name: 'ระบบ Survey Work - แจ้งการยกเลิก'
+    });
+    
+    Logger.log(`📧 อีเมลการยกเลิก: ${sent ? 'ส่งแล้ว' : 'ล้มเหลว'}`);
+    Logger.log(`📧 ส่งถึง ${participants.length} คน`);
+    
+    return {
+      success: sent,
+      totalSent: sent ? participants.length : 0,
+      totalRecipients: participants.length
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Email error: ${error.toString()}`);
+    return { success: false, error: error.toString() };
+  }
+}
+
+// ====== DELETE CALENDAR EVENT ======
+
+function deleteCalendarEvent(eventInfo, calendarId) {
+  Logger.log(`🗑️ Attempting to delete event: ${eventInfo.title}`);
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    
+    if (!calendar) {
+      throw new Error(`Cannot access calendar: ${calendarId}`);
+    }
+    
+    // ดึง event จาก calendar โดยใช้ eventId
+    const event = calendar.getEventById(eventInfo.eventId);
+    
+    if (!event) {
+      Logger.log(`⚠️ Event not found: ${eventInfo.eventId}`);
+      return {
+        success: false,
+        error: 'Event not found',
+        eventId: eventInfo.eventId
+      };
+    }
+    
+    // ลบ event
+    event.deleteEvent();
+    
+    Logger.log(`✅ Event deleted successfully: ${eventInfo.title}`);
+    
+    return {
+      success: true,
+      eventId: eventInfo.eventId,
+      title: eventInfo.title
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Error deleting event: ${error.toString()}`);
+    return {
+      success: false,
+      error: error.toString(),
+      eventId: eventInfo.eventId
+    };
+  }
+}
+
+// ====== CHECK EMAIL QUOTA ======
+
+function checkEmailQuota() {
+  try {
+    const quota = MailApp.getRemainingDailyQuota();
+    Logger.log(`📧 Email quota remaining: ${quota}`);
+    return quota;
+  } catch (error) {
+    Logger.log(`⚠️ Cannot check email quota: ${error.toString()}`);
+    return 100; // ค่า default
+  }
+}
+
+// ====== SAFE SEND EMAIL ======
+
+function safeSendEmail(options) {
+  try {
+    if (!options.to || options.to.trim() === '') {
+      Logger.log('❌ No recipient email provided');
+      return false;
+    }
+    
+    const params = {
+      to: options.to,
+      subject: options.subject || 'No Subject',
+      htmlBody: options.htmlBody || options.body || '',
+    };
+    
+    if (options.name) {
+      params.name = options.name;
+    }
+    
+    if (options.cc) {
+      params.cc = options.cc;
+    }
+    
+    if (options.bcc) {
+      params.bcc = options.bcc;
+    }
+    
+    MailApp.sendEmail(params);
+    Logger.log(`✅ Email sent to: ${options.to}`);
+    
+    return true;
+    
+  } catch (error) {
+    Logger.log(`❌ Error sending email: ${error.toString()}`);
+    return false;
+  }
+}
