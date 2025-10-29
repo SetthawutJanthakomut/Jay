@@ -1623,7 +1623,7 @@ function sendRFINotificationEmail(data, rfiId) {
 }
 
 /**
- * ⭐ สร้าง HTML สำหรับอีเมล RFI (รองรับ Location Layout File)
+ * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล RFI (เพิ่ม Location Layout Link)
  */
 function createRFIEmailHTML(data, rfiId) {
   var categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
@@ -1900,6 +1900,111 @@ td {
     })}</p>
   </div>
 </div>
+</body>
+</html>`;
+  
+  return emailBody;
+}
+
+/**
+ * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล Internal Inspection (เพิ่ม Location Layout Link)
+ */
+function createInternalInspectionEmailHTML(data, rfiId) {
+  var categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
+  var teamInfo = data.assignedTeam ? 
+    '<tr><th>ทีมที่จัดให้</th><td><strong>' + data.assignedTeam + '</strong> (' + categoryDisplay + ')</td></tr>' : '';
+  
+  // ⭐ เพิ่มส่วนแสดง Location Layout File
+  var fileInfo = '';
+  if (data.locationLayoutUrl) {
+    fileInfo = '<tr><th>📎 Location Layout</th><td><a href="' + data.locationLayoutUrl + '" target="_blank" style="color: #f59e0b; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff7ed; border-radius: 6px; border: 1px solid #f59e0b;">📄 ดูไฟล์ Location Layout ↗</a></td></tr>';
+  }
+  
+  var emailBody = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+h2 { color: #f59e0b; }
+.id-badge { 
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #fff7ed; }
+.status-badge {
+  display: inline-block;
+  background: #f59e0b;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.alert-box {
+  background: #fff7ed;
+  border-left: 4px solid #f59e0b;
+  padding: 10px;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+.highlight {
+  background: #fff7ed;
+  padding: 10px;
+  border-left: 4px solid #f59e0b;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<h2>🏢 แจ้ง Internal Inspection Request</h2>
+<div class="id-badge">Internal ID: ${rfiId}</div>
+<p>เรียน ทีม QC และทีมงานที่เกี่ยวข้อง</p>
+<p>มี Internal Inspection Request ใหม่ที่ต้องการตรวจสอบ (ภายใน)</p>
+
+<div class="highlight">
+  <strong>📅 Calendar Event</strong><br>
+  ระบบได้สร้าง Calendar Event แล้ว และส่ง invitation ไปยังอีเมลของคุณ<br>
+  กรุณาตรวจสอบ Calendar เพื่อยืนยันการเข้าร่วม
+</div>
+
+<h3>รายละเอียด Internal Inspection</h3>
+<table>
+<tr><th>Internal ID</th><td><strong style="color: #f59e0b;">${rfiId}</strong></td></tr>
+<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
+<tr><th>สถานที่</th><td>${data.location}</td></tr>
+<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
+<tr><th>เวลา</th><td><strong>${data.startTime} - ${data.endTime} น.</strong></td></tr>
+${teamInfo}
+${fileInfo}
+<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
+${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
+<tr><th>สถานะ</th><td><span class="status-badge">Internal Inspection Submitted</span></td></tr>
+</table>
+
+${data.locationLayoutUrl ? '<div class="highlight"><strong>📎 Location Layout File แนบมาพร้อมนี้</strong><br>กรุณาตรวจสอบไฟล์แนบเพื่อความชัดเจนในการดำเนินการ</div>' : ''}
+
+<div class="alert-box">
+  <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
+  1. ตรวจสอบ Calendar Event ที่ได้รับ<br>
+  2. ยืนยันการเข้าร่วม (Accept/Decline)<br>
+  3. เตรียมอุปกรณ์และเอกสารที่จำเป็น<br>
+  4. ติดต่อผู้ขอหากต้องการข้อมูลเพิ่มเติม<br>
+  5. Internal Inspection ไม่ต้องขออนุมัติ Consultant
+</div>
+
+<hr>
+<p><small>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</small></p>
+<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
 </body>
 </html>`;
   
@@ -7121,101 +7226,7 @@ function sendInternalInspectionNotificationEmail(data, rfiId) {
   }
 }
 
-/**
- * ⭐ สร้าง HTML สำหรับอีเมล Internal Inspection
- */
-function createInternalInspectionEmailHTML(data, rfiId) {
-  const categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
-  const teamInfo = data.assignedTeam ? 
-    '<tr><th>ทีมที่จัดให้</th><td><strong>' + data.assignedTeam + '</strong> (' + categoryDisplay + ')</td></tr>' : '';
-  
-  const emailBody = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-h2 { color: #f59e0b; }
-.id-badge { 
-  display: inline-block;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  padding: 5px 12px;
-  border-radius: 5px;
-  font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 15px;
-}
-table { border-collapse: collapse; width: 100%; }
-td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
-th { background-color: #fff7ed; }
-.status-badge {
-  display: inline-block;
-  background: #f59e0b;
-  color: white;
-  padding: 3px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: bold;
-}
-.alert-box {
-  background: #fff7ed;
-  border-left: 4px solid #f59e0b;
-  padding: 10px;
-  margin: 15px 0;
-  border-radius: 5px;
-}
-.highlight {
-  background: #fff7ed;
-  padding: 10px;
-  border-left: 4px solid #f59e0b;
-  margin: 15px 0;
-  border-radius: 5px;
-}
-</style>
-</head>
-<body>
-<h2>🏢 แจ้ง Internal Inspection Request</h2>
-<div class="id-badge">Internal ID: ${rfiId}</div>
-<p>เรียน ทีม QC และทีมงานที่เกี่ยวข้อง</p>
-<p>มี Internal Inspection Request ใหม่ที่ต้องการตรวจสอบ (ภายใน)</p>
 
-<div class="highlight">
-  <strong>📅 Calendar Event</strong><br>
-  ระบบได้สร้าง Calendar Event แล้ว และส่ง invitation ไปยังอีเมลของคุณ<br>
-  กรุณาตรวจสอบ Calendar เพื่อยืนยันการเข้าร่วม
-</div>
-
-<h3>รายละเอียด Internal Inspection</h3>
-<table>
-<tr><th>Internal ID</th><td><strong style="color: #f59e0b;">${rfiId}</strong></td></tr>
-<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
-<tr><th>สถานที่</th><td>${data.location}</td></tr>
-<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
-<tr><th>เวลา</th><td><strong>${data.startTime} - ${data.endTime} น.</strong></td></tr>
-${teamInfo}
-<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
-${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
-<tr><th>สถานะ</th><td><span class="status-badge">Internal Inspection Submitted</span></td></tr>
-</table>
-
-<div class="alert-box">
-  <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
-  1. ตรวจสอบ Calendar Event ที่ได้รับ<br>
-  2. ยืนยันการเข้าร่วม (Accept/Decline)<br>
-  3. เตรียมอุปกรณ์และเอกสารที่จำเป็น<br>
-  4. ติดต่อผู้ขอหากต้องการข้อมูลเพิ่มเติม<br>
-  5. Internal Inspection ไม่ต้องขออนุมัติ Consultant
-</div>
-
-<hr>
-<p><small>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</small></p>
-<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
-</body>
-</html>`;
-  
-  return emailBody;
-}
 
 /**
  * ⭐ สร้าง Calendar Event สำหรับ Internal Inspection (สีส้ม)
