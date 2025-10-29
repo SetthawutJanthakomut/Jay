@@ -2238,89 +2238,92 @@ function uploadLocationLayout(fileData, rfiId) {
 }
 
 /**
- * ⭐ แก้ไข saveRFIRequirement เพื่อรองรับ Location Layout URL
+ * ⭐ แก้ไข saveRFIRequirement() ให้รองรับ Internal Inspection
  */
 function saveRFIRequirement(data) {
   try {
     console.log('========== saveRFIRequirement START ==========');
+    console.log('Inspection Type:', data.inspectionType); // ⭐ ใหม่
     console.log('Input data:', JSON.stringify(data));
     
-    // Validation เดิม...
-    if (!data.requestDate || !data.startTime || !data.endTime || 
+    // Validation
+    if (!data.inspectionType || !data.requestDate || !data.startTime || !data.endTime || 
         !data.workType || !data.description || !data.location || 
         !data.requesterName || !data.requesterEmail || !data.teamCategory) {
       return {
         success: false,
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน (รวมประเภททีมงานและอีเมลผู้ขอ)'
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
       };
     }
     
-    // Validate User
-    var userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
+    const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
-      console.log('User validation failed:', userValidation.message);
       return {
         success: false,
         message: userValidation.message
       };
     }
     
-    console.log('User validation success:', userValidation);
+    const validatedEmail = userValidation.email;
+    const validatedName = userValidation.name;
     
-    var validatedEmail = userValidation.email;
-    var validatedName = userValidation.name;
+    // ⭐ จัดทีมตาม Inspection Type
+    let teamAssignment;
     
-    // จัดทีมอัตโนมัติ
-    var teamAssignment = assignTeamAutomatically(
-      data.teamCategory, 
-      data.requestDate, 
-      data.startTime, 
-      data.endTime,
-      null,
-      false,
-      data.workType
-    );
+    if (data.inspectionType === 'internal') {
+      // Internal: ใช้ logic ของ Survey Work (ไม่มี buffer)
+      teamAssignment = assignTeamAutomatically(
+        data.teamCategory,
+        data.requestDate,
+        data.startTime,
+        data.endTime,
+        null,
+        false,
+        data.workType
+      );
+    } else {
+      // External: ใช้ logic เดิม (มี buffer ±30 นาที)
+      teamAssignment = assignTeamAutomatically(
+        data.teamCategory,
+        data.requestDate,
+        data.startTime,
+        data.endTime,
+        null,
+        false,
+        data.workType
+      );
+    }
     
     if (!teamAssignment || !teamAssignment.success) {
-      console.log('Team assignment failed');
       return {
         success: false,
         message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้'
       };
     }
     
-    console.log('Team assigned:', teamAssignment);
+    const rfiId = generateUniqueId();
+    console.log('Generated ID:', rfiId);
     
-    // สร้าง Unique ID
-    var rfiId = generateUniqueId();
-    console.log('Generated RFI ID:', rfiId);
-    
-    // ดึง Sheet
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
+    let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
-      console.log('RFI_List sheet not found, creating new one...');
       sheet = createRFIListSheet();
     }
     
-    var lastRow = sheet.getLastRow();
-    var nextRow = lastRow + 1;
-    var currentTime = new Date();
+    const lastRow = sheet.getLastRow();
+    const nextRow = lastRow + 1;
+    const currentTime = new Date();
     
-    console.log('Adding data to sheet at row:', nextRow);
+    const combinedDescription = data.workType + ' - ' + data.description;
     
-    var combinedDescription = data.workType + ' - ' + data.description;
-    console.log('Combined description:', combinedDescription);
+    const dateParts = data.requestDate.split('-');
+    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
-    // เตรียมข้อมูล 41 columns (เพิ่ม Column AO = index 40)
-    var rowData = [];
-    for (var i = 0; i < 41; i++) {
+    const rowData = [];
+    for (let i = 0; i < 41; i++) {
       rowData.push('');
     }
-    
-    var dateParts = data.requestDate.split('-');
-    var formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
     rowData[0] = rfiId;
     rowData[2] = combinedDescription;
@@ -2331,25 +2334,30 @@ function saveRFIRequirement(data) {
     rowData[9] = validatedEmail;
     rowData[10] = validatedName;
     rowData[11] = teamAssignment.teamNames;
-    rowData[14] = 'RFI Request Submitted';
-    rowData[15] = currentTime;
-    rowData[39] = 'RFI Work';
-    rowData[40] = data.locationLayoutUrl || ''; // ⭐ Column AO (index 40)
     
-    console.log('Row data prepared with Column AN = "RFI Work"');
-    if (data.locationLayoutUrl) {
-      console.log('✅ Location Layout URL:', data.locationLayoutUrl);
+    // ⭐ ตั้ง Status และ Column AN ตาม Inspection Type
+    if (data.inspectionType === 'internal') {
+      rowData[14] = 'Internal Inspection Submitted';
+      rowData[39] = 'Internal Inspection';
+    } else {
+      rowData[14] = 'RFI Request Submitted';
+      rowData[39] = 'RFI Work';
     }
     
-    // บันทึก 41 columns
+    rowData[15] = currentTime;
+    
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // ส่งอีเมล
-    var emailSent = false;
-    try {
-      var categoryDisplay = data.teamCategory.replace(/,/g, ', ');
-      var emailData = {
+    // ⭐ ส่งอีเมลและสร้าง Calendar ตาม Inspection Type
+    let emailSent = false;
+    let calendarResult = null;
+    
+    if (data.inspectionType === 'internal') {
+      // Internal: สร้าง Calendar ทันที + ส่งเมล
+      const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+      
+      const calendarData = {
         requestDate: data.requestDate,
         startTime: data.startTime,
         endTime: data.endTime,
@@ -2358,31 +2366,65 @@ function saveRFIRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
-        teamCategory: categoryDisplay,
-        locationLayoutUrl: data.locationLayoutUrl // ⭐ เพิ่มใน email
+        teamCategory: categoryDisplay
       };
+      
+      calendarResult = createInternalInspectionCalendarEvent(calendarData, rfiId);
+      
+      const emailData = {
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamNames,
+        teamCategory: categoryDisplay
+      };
+      
+      emailSent = sendInternalInspectionNotificationEmail(emailData, rfiId);
+      
+    } else {
+      // External: ส่งเมลแจ้ง QC แบบเดิม (ไม่สร้าง Calendar)
+      const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
+      
+      const emailData = {
+        requestDate: data.requestDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        description: combinedDescription,
+        location: data.location,
+        requesterName: validatedName,
+        requesterEmail: validatedEmail,
+        assignedTeam: teamAssignment.teamNames,
+        teamCategory: categoryDisplay
+      };
+      
       emailSent = sendRFINotificationEmail(emailData, rfiId);
-      console.log('Email sent:', emailSent);
-    } catch (emailError) {
-      console.error('Failed to send email:', emailError);
     }
     
-    var categoryDisplay = data.teamCategory.replace(/,/g, ', ');
-    var message = 'บันทึก RFI Request เรียบร้อยแล้ว (ID: ' + rfiId + ')';
+    // ⭐ สร้าง message ตาม Inspection Type
+    let message = 'บันทึก ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' เรียบร้อยแล้ว (ID: ' + rfiId + ')';
     message += '\nงาน: ' + data.workType;
-    message += '\nหมวดงาน: ' + categoryDisplay;
+    message += '\nหมวดงาน: ' + data.teamCategory.replace(/,/g, ', ');
     message += '\nจัดทีม: ' + teamAssignment.teamNames;
-    message += '\nประเภท: RFI Work';
-    
-    if (data.locationLayoutUrl) {
-      message += '\n✅ แนบไฟล์ Location Layout แล้ว';
-    }
+    message += '\nประเภท: ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Work');
     
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
     }
+    
+    if (data.inspectionType === 'internal') {
+      if (calendarResult && calendarResult.success) {
+        message += '\n✅ สร้าง Calendar Event แล้ว (สีส้ม)';
+      } else {
+        message += '\n⚠️ ไม่สามารถสร้าง Calendar Event ได้';
+      }
+    }
+    
     if (emailSent) {
-      message += '\nส่งอีเมลแจ้งทีม QC แล้ว';
+      message += '\nส่งอีเมลแจ้งทีม QC และทีมงานแล้ว';
     }
     
     console.log('========== saveRFIRequirement SUCCESS ==========');
@@ -2392,16 +2434,16 @@ function saveRFIRequirement(data) {
       message: message,
       rfiId: rfiId,
       emailSent: emailSent,
+      calendarCreated: data.inspectionType === 'internal' ? (calendarResult && calendarResult.success) : false,
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamNames,
       workType: data.workType,
-      hasFile: !!data.locationLayoutUrl
+      inspectionType: data.inspectionType
     };
     
   } catch (error) {
     console.error('========== saveRFIRequirement FAILED ==========');
     console.error('Error:', error);
-    console.error('Stack:', error.stack);
     
     return {
       success: false,
@@ -7003,4 +7045,291 @@ function getManualUrl() {
 function testGetManualUrl() {
   const url = getManualUrl();
   console.log('URL Result:', url);
+}
+
+
+/**
+ * ⭐ ส่งอีเมลแจ้ง Internal Inspection (QC + QC Reviewer + Teams)
+ */
+function sendInternalInspectionNotificationEmail(data, rfiId) {
+  try {
+    console.log('========== sendInternalInspectionNotificationEmail ==========');
+    
+    const quota = checkEmailQuota();
+    if (quota <= 1) {
+      console.log('Email quota too low:', quota);
+      return false;
+    }
+    
+    // ⭐ ดึง QC + QC Reviewer
+    const qcEmails = getQCEmailList();
+    const recipients = qcEmails.map(function(e) { return e.email; });
+    
+    // เพิ่ม Requester
+    if (data.requesterEmail && 
+        data.requesterEmail.includes('@') && 
+        !recipients.includes(data.requesterEmail)) {
+      recipients.push(data.requesterEmail);
+    }
+    
+    // ⭐ เพิ่ม Team Emails
+    if (data.assignedTeam) {
+      const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
+      teamEmails.forEach(function(teamMember) {
+        if (!recipients.includes(teamMember.email)) {
+          recipients.push(teamMember.email);
+          console.log('Added team member:', teamMember.name, '->', teamMember.email);
+        }
+      });
+    }
+    
+    console.log('Sending to:', recipients.length, 'recipients');
+    
+    const emailHtml = createInternalInspectionEmailHTML(data, rfiId);
+    
+    const sent = safeSendEmail({
+      to: recipients.join(','),
+      subject: '🏢 Internal Inspection Request [ID: ' + rfiId + ']',
+      htmlBody: emailHtml,
+      name: 'RFI Requirement System'
+    });
+    
+    console.log('Email result:', sent);
+    return sent;
+    
+  } catch (error) {
+    console.error('Error in sendInternalInspectionNotificationEmail:', error);
+    return false;
+  }
+}
+
+/**
+ * ⭐ สร้าง HTML สำหรับอีเมล Internal Inspection
+ */
+function createInternalInspectionEmailHTML(data, rfiId) {
+  const categoryDisplay = data.teamCategory ? data.teamCategory.replace(/,/g, ', ') : '';
+  const teamInfo = data.assignedTeam ? 
+    '<tr><th>ทีมที่จัดให้</th><td><strong>' + data.assignedTeam + '</strong> (' + categoryDisplay + ')</td></tr>' : '';
+  
+  const emailBody = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+h2 { color: #f59e0b; }
+.id-badge { 
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #fff7ed; }
+.status-badge {
+  display: inline-block;
+  background: #f59e0b;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.alert-box {
+  background: #fff7ed;
+  border-left: 4px solid #f59e0b;
+  padding: 10px;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+.highlight {
+  background: #fff7ed;
+  padding: 10px;
+  border-left: 4px solid #f59e0b;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<h2>🏢 แจ้ง Internal Inspection Request</h2>
+<div class="id-badge">Internal ID: ${rfiId}</div>
+<p>เรียน ทีม QC และทีมงานที่เกี่ยวข้อง</p>
+<p>มี Internal Inspection Request ใหม่ที่ต้องการตรวจสอบ (ภายใน)</p>
+
+<div class="highlight">
+  <strong>📅 Calendar Event</strong><br>
+  ระบบได้สร้าง Calendar Event แล้ว และส่ง invitation ไปยังอีเมลของคุณ<br>
+  กรุณาตรวจสอบ Calendar เพื่อยืนยันการเข้าร่วม
+</div>
+
+<h3>รายละเอียด Internal Inspection</h3>
+<table>
+<tr><th>Internal ID</th><td><strong style="color: #f59e0b;">${rfiId}</strong></td></tr>
+<tr><th>รายละเอียด</th><td>${data.description}</td></tr>
+<tr><th>สถานที่</th><td>${data.location}</td></tr>
+<tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
+<tr><th>เวลา</th><td><strong>${data.startTime} - ${data.endTime} น.</strong></td></tr>
+${teamInfo}
+<tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
+${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
+<tr><th>สถานะ</th><td><span class="status-badge">Internal Inspection Submitted</span></td></tr>
+</table>
+
+<div class="alert-box">
+  <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
+  1. ตรวจสอบ Calendar Event ที่ได้รับ<br>
+  2. ยืนยันการเข้าร่วม (Accept/Decline)<br>
+  3. เตรียมอุปกรณ์และเอกสารที่จำเป็น<br>
+  4. ติดต่อผู้ขอหากต้องการข้อมูลเพิ่มเติม<br>
+  5. Internal Inspection ไม่ต้องขออนุมัติ Consultant
+</div>
+
+<hr>
+<p><small>อีเมลนี้ส่งจากระบบ RFI Requirement โดยอัตโนมัติ</small></p>
+<p><small>เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}</small></p>
+</body>
+</html>`;
+  
+  return emailBody;
+}
+
+/**
+ * ⭐ สร้าง Calendar Event สำหรับ Internal Inspection (สีส้ม)
+ */
+function createInternalInspectionCalendarEvent(data, rfiId) {
+  try {
+    console.log('========== Creating Internal Inspection Calendar Event ==========');
+    console.log('RFI ID:', rfiId);
+    
+    const CENTRAL_CALENDAR_ID = '6cbf6620e2630d70b763e8fe7f04d40b59d13da14a4c39cbb17687c69778b135@group.calendar.google.com';
+    
+    let calendar;
+    
+    try {
+      calendar = CalendarApp.getCalendarById(CENTRAL_CALENDAR_ID);
+      
+      if (!calendar) {
+        console.log('❌ Cannot access Central Calendar');
+        calendar = CalendarApp.getDefaultCalendar();
+      } else {
+        console.log('✅ Using Central Calendar:', calendar.getName());
+      }
+      
+    } catch (calError) {
+      console.log('❌ Error accessing Central Calendar:', calError.message);
+      calendar = CalendarApp.getDefaultCalendar();
+    }
+    
+    const dateParts = data.requestDate.split('-');
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1;
+    const day = parseInt(dateParts[2]);
+    
+    const startTimeParts = data.startTime.split(':');
+    const startHour = parseInt(startTimeParts[0]);
+    const startMinute = parseInt(startTimeParts[1]);
+    
+    const endTimeParts = data.endTime.split(':');
+    const endHour = parseInt(endTimeParts[0]);
+    const endMinute = parseInt(endTimeParts[1]);
+    
+    const startDateTime = new Date(year, month, day, startHour, startMinute, 0);
+    const endDateTime = new Date(year, month, day, endHour, endMinute, 0);
+    
+    const eventTitle = '🏢 Internal Inspection: ' + rfiId + ' - ' + data.assignedTeam;
+    
+    const description = 
+      '═══════════════════════════════════════\n' +
+      '🏢 INTERNAL INSPECTION REQUEST\n' +
+      '═══════════════════════════════════════\n\n' +
+      'Internal ID: ' + rfiId + '\n' +
+      'ทีมงาน: ' + data.assignedTeam + '\n' +
+      'รายละเอียด: ' + data.description + '\n' +
+      'สถานที่: ' + data.location + '\n\n' +
+      '───────────────────────────────────────\n' +
+      'ผู้ขอ: ' + data.requesterName + '\n' +
+      'อีเมลผู้ขอ: ' + data.requesterEmail + '\n' +
+      '───────────────────────────────────────\n' +
+      'วันที่: ' + formatDateThai(data.requestDate) + '\n' +
+      'เวลา: ' + data.startTime + ' - ' + data.endTime + ' น.\n\n' +
+      'ประเภท: Internal Inspection\n' +
+      'สถานะ: Internal Inspection Submitted\n\n' +
+      '═══════════════════════════════════════\n' +
+      'สร้างโดย: RFI Requirement System\n' +
+      'เวลาที่สร้าง: ' + new Date().toLocaleString('th-TH') + '\n' +
+      '═══════════════════════════════════════';
+    
+    const guestList = [];
+    
+    if (data.requesterEmail && data.requesterEmail.includes('@')) {
+      guestList.push(data.requesterEmail);
+    }
+    
+    const qcEmails = getQCEmailList();
+    qcEmails.forEach(function(member) {
+      if (guestList.indexOf(member.email) === -1) {
+        guestList.push(member.email);
+        console.log('Added QC:', member.email);
+      }
+    });
+    
+    if (data.assignedTeam) {
+      const teamEmails = getTeamEmailsByTeamNames(data.assignedTeam);
+      teamEmails.forEach(function(teamMember) {
+        if (guestList.indexOf(teamMember.email) === -1) {
+          guestList.push(teamMember.email);
+          console.log('Added team member:', teamMember.name, '->', teamMember.email);
+        }
+      });
+    }
+    
+    console.log('Total guests:', guestList.length);
+    
+    const event = calendar.createEvent(
+      eventTitle,
+      startDateTime,
+      endDateTime,
+      {
+        description: description,
+        location: data.location,
+        guests: guestList.join(','),
+        sendInvites: true
+      }
+    );
+    
+    // ⭐ ตั้งสี Orange
+    try {
+      event.setColor(CalendarApp.EventColor.ORANGE);
+      console.log('✅ Event color set to ORANGE');
+    } catch (colorError) {
+      console.log('Could not set event color:', colorError.message);
+    }
+    
+    console.log('✅ Internal Inspection Calendar Event Created:', event.getId());
+    console.log('========== Calendar Event Creation Complete ==========');
+    
+    return {
+      success: true,
+      eventId: event.getId(),
+      eventTitle: eventTitle,
+      guestsCount: guestList.length,
+      guests: guestList
+    };
+    
+  } catch (error) {
+    console.error('========== Calendar Event Creation FAILED ==========');
+    console.error('Error:', error);
+    
+    return {
+      success: false,
+      error: error.toString(),
+      message: 'ไม่สามารถสร้าง Calendar Event ได้: ' + error.toString()
+    };
+  }
 }
