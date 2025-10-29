@@ -1,0 +1,525 @@
+// ===== CONFIG: Calendar ID =====
+const CALENDAR_ID = "developeritd75@gmail.com";
+const SURVEY_WORK_CALENDAR = "8ef1934c9a71220a0f47c1d5227bb6ca26b8bed6d5e54c568036b54117f51620@group.calendar.google.com";
+const SURVEY_WORK_CENTRAL_CALENDAR = "6cbf6620e2630d70b763e8fe7f04d40b59d13da14a4c39cbb17687c69778b135@group.calendar.google.com";
+
+// ===== STATUS OPTIONS =====
+const STATUS_OPTIONS = {
+  COMPLETED: "Inspection Completed",
+  IN_PROGRESS: "In Progress",
+  PENDING: "Pending Review",
+  ON_HOLD: "On Hold",
+  CANCELLED: "Cancelled",
+  RESCHEDULED: "Rescheduled",
+  APPROVED: "Approved",
+  REJECTED: "Rejected"
+};
+
+// ====== UPDATE SURVEY STATUS (DYNAMIC) ======
+
+function updateSurveyStatus(
+  uniqueId,
+  status = STATUS_OPTIONS.COMPLETED,
+  description = '',
+  statusNote = '',
+  searchDays = 60
+) {
+  Logger.log(`✅ Starting Survey status update for: ${uniqueId} → Status: ${status}`);
+  
+  if (!uniqueId || uniqueId.trim() === '') {
+    return {
+      success: false,
+      error: 'Unique ID is required',
+      uniqueId: uniqueId,
+      eventsFound: 0,
+      eventsUpdated: 0
+    };
+  }
+
+  if (!status || status.trim() === '') {
+    return {
+      success: false,
+      error: 'Status is required',
+      uniqueId: uniqueId,
+      eventsFound: 0,
+      eventsUpdated: 0
+    };
+  }
+
+  const cleanUniqueId = uniqueId.trim();
+  const cleanDescription = description ? description.trim() : '';
+  const cleanStatus = status.trim();
+  
+  let result = {
+    success: false,
+    uniqueId: cleanUniqueId,
+    status: cleanStatus,
+    surveyDescription: cleanDescription,
+    surveyEventsFound: 0,
+    surveyEventsUpdated: 0,
+    updatedSurveyEvents: [],
+    error: null,
+    message: ''
+  };
+
+  try {
+    Logger.log("🔍 Step 1: Searching Calendar Events...");
+    const surveySearchResult = searchCalendarEventsByUniqueId(cleanUniqueId, cleanDescription, CALENDAR_ID, searchDays);
+    
+    if (surveySearchResult.success && surveySearchResult.events.length > 0) {
+      result.surveyEventsFound = surveySearchResult.events.length;
+      Logger.log(`✅ Found ${result.surveyEventsFound} calendar events`);
+    } else {
+      result.error = `No calendar events found for Survey: ${cleanUniqueId} / ${cleanDescription}`;
+      result.message = result.error;
+      Logger.log(`⚠️ ${result.error}`);
+      return result;
+    }
+
+    Logger.log(`📝 Step 2: Updating Calendar Events to '${cleanStatus}'...`);
+    
+    for (let i = 0; i < surveySearchResult.events.length; i++) {
+      const eventInfo = surveySearchResult.events[i];
+      
+      try {
+        const updateSuccess = updateEventStatus(eventInfo, CALENDAR_ID, cleanStatus, statusNote);
+        
+        if (updateSuccess.success) {
+          result.surveyEventsUpdated++;
+          result.updatedSurveyEvents.push({
+            eventId: eventInfo.eventId,
+            title: eventInfo.title,
+            originalTitle: eventInfo.title,
+            updatedTitle: updateSuccess.updatedTitle,
+            status: cleanStatus,
+            calendarType: 'Survey'
+          });
+          Logger.log(`✅ Event updated: "${eventInfo.title}" → "${updateSuccess.updatedTitle}"`);
+        }
+        
+      } catch (updateError) {
+        Logger.log(`❌ Error updating event: ${updateError.toString()}`);
+      }
+    }
+
+    result.success = result.surveyEventsUpdated > 0;
+    
+    if (result.success) {
+      result.message = `อัปเดต Survey ${cleanUniqueId} สำเร็จ: แก้ไข ${result.surveyEventsUpdated} รายการเป็น "${cleanStatus}"`;
+    } else {
+      result.message = `ไม่สามารถอัปเดต Survey ${cleanUniqueId} ได้`;
+    }
+
+  } catch (error) {
+    result.error = error.toString();
+    result.message = `เกิดข้อผิดพลาดในการอัปเดต Survey ${cleanUniqueId}: ${result.error}`;
+    Logger.log(`❌ Unexpected error: ${result.error}`);
+  }
+
+  Logger.log("\n" + "=".repeat(50));
+  Logger.log("✅ สรุปการอัปเดต Survey:");
+  Logger.log(`🆔 Unique ID: ${result.uniqueId}`);
+  Logger.log(`📊 Status: ${result.status}`);
+  Logger.log(`📝 อัปเดตแล้ว: ${result.surveyEventsUpdated}/${result.surveyEventsFound}`);
+  Logger.log(`✅ สำเร็จ: ${result.success ? 'ใช่' : 'ไม่'}`);
+
+  return result;
+}
+
+// ====== UPDATE EVENT STATUS (DYNAMIC) ======
+
+function updateEventStatus(eventInfo, calendarId, status, statusNote = '') {
+  Logger.log(`📝 Attempting to update event: ${eventInfo.title} → ${status}`);
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    
+    if (!calendar) {
+      throw new Error(`Cannot access calendar: ${calendarId}`);
+    }
+    
+    const event = calendar.getEventById(eventInfo.eventId);
+    
+    if (!event) {
+      Logger.log(`⚠️ Event not found: ${eventInfo.eventId}`);
+      return {
+        success: false,
+        error: 'Event not found',
+        eventId: eventInfo.eventId
+      };
+    }
+    
+    // อัปเดตชื่อ Event โดยเพิ่มสถานะ
+    const originalTitle = event.getTitle();
+    let cleanTitle = originalTitle;
+    
+    // ตรวจสอบว่ามีสถานะเก่าอยู่แล้วหรือไม่
+    const statusPattern = /^\[(.*?)\]\s*/;
+    const existingStatusMatch = cleanTitle.match(statusPattern);
+    
+    let newTitle;
+    
+    if (existingStatusMatch) {
+      // ถ้ามีสถานะเก่าอยู่แล้ว → แทนที่สถานะเก่าด้วยสถานะใหม่
+      cleanTitle = cleanTitle.replace(statusPattern, '').trim();
+      newTitle = `[${status}] ${cleanTitle}`;
+      Logger.log(`🔄 Replacing existing status: "${existingStatusMatch[1]}" → "${status}"`);
+    } else {
+      // ถ้าไม่มีสถานะ → เพิ่มสถานะใหม่
+      newTitle = `[${status}] ${cleanTitle}`;
+      Logger.log(`➕ Adding new status: "${status}"`);
+    }
+    
+    event.setTitle(newTitle);
+    
+    // อัปเดต Description
+    const originalDescription = event.getDescription() || '';
+    const statusTimestamp = new Date().toLocaleString('th-TH');
+    
+    let newDescription = originalDescription;
+    
+    // ลบข้อมูลสถานะเก่าออก (ถ้ามี)
+    const statusSectionPattern = /\n\n━{40,}\n[✅🔄⏸️❌📅✔️⛔].*?\n━{40,}[\s\S]*?━{40,}/g;
+    newDescription = newDescription.replace(statusSectionPattern, '');
+    
+    // เลือก emoji ตามสถานะ
+    const statusEmoji = getStatusEmoji(status);
+    
+    // เพิ่มส่วน Status Info ใหม่
+    const statusInfo = `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${statusEmoji} ${status.toUpperCase()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 Updated Date: ${statusTimestamp}
+${statusNote ? `📝 Note: ${statusNote}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    
+    newDescription += statusInfo;
+    event.setDescription(newDescription);
+    
+    // ไม่เปลี่ยนสี Event (ตามที่ user ขอ)
+    // const color = getStatusColor(status);
+    // if (color) {
+    //   event.setColor(color);
+    // }
+    
+    Logger.log(`✅ Event updated successfully:`);
+    Logger.log(`   Original: ${originalTitle}`);
+    Logger.log(`   Updated:  ${newTitle}`);
+    Logger.log(`   Status:   ${status}`);
+    
+    return {
+      success: true,
+      eventId: eventInfo.eventId,
+      originalTitle: originalTitle,
+      updatedTitle: newTitle,
+      status: status,
+      updateDate: statusTimestamp
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Error updating event: ${error.toString()}`);
+    return {
+      success: false,
+      error: error.toString(),
+      eventId: eventInfo.eventId
+    };
+  }
+}
+
+// ====== HELPER: GET STATUS EMOJI ======
+
+function getStatusEmoji(status) {
+  const statusLower = status.toLowerCase();
+  
+  if (statusLower.includes('completed') || statusLower.includes('approved')) {
+    return '✅';
+  } else if (statusLower.includes('progress')) {
+    return '🔄';
+  } else if (statusLower.includes('pending')) {
+    return '⏸️';
+  } else if (statusLower.includes('hold')) {
+    return '⏸️';
+  } else if (statusLower.includes('cancelled') || statusLower.includes('rejected')) {
+    return '❌';
+  } else if (statusLower.includes('rescheduled')) {
+    return '📅';
+  } else {
+    return '📊';
+  }
+}
+
+// ====== HELPER: GET STATUS COLOR ======
+
+function getStatusColor(status) {
+  const statusLower = status.toLowerCase();
+  
+  // Google Calendar Color IDs:
+  // 1=Lavender, 2=Sage, 3=Grape, 4=Flamingo, 5=Banana
+  // 6=Tangerine, 7=Peacock, 8=Graphite, 9=Blueberry, 10=Basil, 11=Tomato
+  
+  if (statusLower.includes('completed') || statusLower.includes('approved')) {
+    return CalendarApp.EventColor.GREEN; // สีเขียว
+  } else if (statusLower.includes('progress')) {
+    return CalendarApp.EventColor.BLUE; // สีน้ำเงิน
+  } else if (statusLower.includes('pending')) {
+    return CalendarApp.EventColor.YELLOW; // สีเหลือง
+  } else if (statusLower.includes('hold')) {
+    return CalendarApp.EventColor.ORANGE; // สีส้ม
+  } else if (statusLower.includes('cancelled') || statusLower.includes('rejected')) {
+    return CalendarApp.EventColor.RED; // สีแดง
+  } else if (statusLower.includes('rescheduled')) {
+    return CalendarApp.EventColor.PALE_BLUE; // สีฟ้าอ่อน
+  }
+  
+  return null; // ไม่เปลี่ยนสี
+}
+
+// ====== SEARCH CALENDAR EVENTS BY UNIQUE ID ======
+
+function searchCalendarEventsByUniqueId(uniqueId, description, calendarId, searchDays = 60) {
+  Logger.log(`🔍 Searching calendar "${calendarId}" for Unique ID: ${uniqueId}`);
+  
+  try {
+    if (!calendarId || calendarId.trim() === '' || calendarId === 'your-calendar-id@group.calendar.google.com') {
+      Logger.log('❌ CALENDAR_ID is not configured!');
+      Logger.log('📝 Please set CALENDAR_ID at the top of the script');
+      return { 
+        success: false, 
+        message: 'CALENDAR_ID is not configured. Please set it in the script.', 
+        events: [] 
+      };
+    }
+    
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    if (!calendar) {
+      Logger.log(`❌ Cannot access calendar: ${calendarId}`);
+      throw new Error(`Cannot access calendar: ${calendarId}`);
+    }
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - searchDays);
+    
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + searchDays);
+    
+    const allEvents = calendar.getEvents(startDate, endDate);
+    Logger.log(`📊 Total events in range: ${allEvents.length}`);
+    
+    if (allEvents.length === 0) {
+      return { success: false, message: 'No events found in date range', events: [] };
+    }
+
+    const matchingEvents = [];
+    const cleanUniqueId = uniqueId.toLowerCase().trim();
+    const cleanDescription = description ? description.toLowerCase().trim() : '';
+    
+    const uniqueIdSearchPatterns = [
+      cleanUniqueId,
+      `id: ${cleanUniqueId}`,
+      `(${cleanUniqueId})`,
+      `[${cleanUniqueId}]`,
+      `id:${cleanUniqueId}`,
+      `- ${cleanUniqueId}`,
+      `${cleanUniqueId} -`,
+    ];
+    
+    allEvents.forEach((event, index) => {
+      try {
+        const title = event.getTitle() || '';
+        const eventDescription = event.getDescription() || '';
+        const searchableText = (title + ' ' + eventDescription).toLowerCase();
+        
+        let uniqueIdMatch = false;
+        let matchedPattern = '';
+        
+        for (const pattern of uniqueIdSearchPatterns) {
+          if (searchableText.includes(pattern)) {
+            uniqueIdMatch = true;
+            matchedPattern = pattern;
+            break;
+          }
+        }
+        
+        if (uniqueIdMatch) {
+          if (cleanDescription && !searchableText.includes(cleanDescription)) {
+            Logger.log(`⚠️ UniqueId match but description mismatch: "${title}"`);
+          }
+          
+          Logger.log(`✅ Found matching event: "${title}"`);
+          Logger.log(`   Matched pattern: "${matchedPattern}"`);
+          
+          matchingEvents.push({
+            event: event,
+            eventId: event.getId(),
+            title: title,
+            description: eventDescription,
+            startTime: event.getStartTime(),
+            endTime: event.getEndTime(),
+            location: event.getLocation() || '',
+            created: event.getDateCreated(),
+            lastUpdated: event.getLastUpdated()
+          });
+        }
+        
+      } catch (eventError) {
+        Logger.log(`⚠️ Error processing event ${index + 1}: ${eventError.toString()}`);
+      }
+    });
+    
+    matchingEvents.sort((a, b) => b.created - a.created);
+    
+    if (matchingEvents.length === 0) {
+      Logger.log(`❌ No events found for uniqueId: ${uniqueId}`);
+    }
+    
+    return {
+      success: matchingEvents.length > 0,
+      message: `Found ${matchingEvents.length} events for Unique ID: ${uniqueId}`,
+      events: matchingEvents
+    };
+    
+  } catch (error) {
+    Logger.log(`❌ Error searching calendar events: ${error.toString()}`);
+    return { success: false, error: error.toString(), events: [] };
+  }
+}
+
+// ====== WRAPPER: UPDATE TO COMPLETED (BACKWARD COMPATIBLE) ======
+
+function updateSurveyToCompleted(
+  uniqueId,
+  description = '',
+  completionNote = '',
+  searchDays = 60
+) {
+  return updateSurveyStatus(
+    uniqueId,
+    STATUS_OPTIONS.COMPLETED,
+    description,
+    completionNote,
+    searchDays
+  );
+}
+
+// ====== TEST FUNCTIONS ======
+
+function testUpdateStatus() {
+  if (!CALENDAR_ID || CALENDAR_ID === 'your-calendar-id@group.calendar.google.com') {
+    Logger.log('❌ กรุณาตั้งค่า CALENDAR_ID ก่อนใช้งาน!');
+    return;
+  }
+  
+  // ทดสอบด้วยสถานะต่างๆ
+  const testCases = [
+    { 
+      uniqueId: "SW-0005", 
+      status: STATUS_OPTIONS.COMPLETED,
+      statusNote: "ตรวจสอบเรียบร้อยแล้ว ไม่พบปัญหา" 
+    },
+    { 
+      uniqueId: "SW-0001", 
+      status: STATUS_OPTIONS.IN_PROGRESS,
+      statusNote: "กำลังดำเนินการตรวจสอบ" 
+    },
+    { 
+      uniqueId: "SW-0003", 
+      status: STATUS_OPTIONS.ON_HOLD,
+      statusNote: "รอข้อมูลเพิ่มเติมจากลูกค้า" 
+    },
+    { 
+      uniqueId: "SW-0004", 
+      status: "Custom Status: Ready for Review",
+      statusNote: "พร้อมให้หัวหน้าตรวจสอบ" 
+    }
+  ];
+  
+  testCases.forEach(test => {
+    Logger.log(`\n${'='.repeat(50)}`);
+    Logger.log(`Testing Update: ${test.uniqueId} → ${test.status}`);
+    Logger.log('='.repeat(50));
+    
+    const result = updateSurveyStatus(
+      test.uniqueId,
+      test.status,
+      '',
+      test.statusNote,
+      60
+    );
+    
+    Logger.log(`\n📊 Result:`);
+    Logger.log(`   Success: ${result.success ? '✅ YES' : '❌ NO'}`);
+    Logger.log(`   Status: ${result.status}`);
+    Logger.log(`   Events Found: ${result.surveyEventsFound}`);
+    Logger.log(`   Events Updated: ${result.surveyEventsUpdated}`);
+    Logger.log(`   Message: ${result.message}`);
+    
+    if (result.updatedSurveyEvents.length > 0) {
+      Logger.log(`\n📝 Updated Events:`);
+      result.updatedSurveyEvents.forEach((evt, idx) => {
+        Logger.log(`   ${idx + 1}. ${evt.originalTitle}`);
+        Logger.log(`      → ${evt.updatedTitle}`);
+      });
+    }
+  });
+}
+
+function testCalendarAccess() {
+  Logger.log('🧪 Testing Calendar Access...\n');
+  
+  if (!CALENDAR_ID || CALENDAR_ID === 'your-calendar-id@group.calendar.google.com') {
+    Logger.log('❌ CALENDAR_ID is not configured!');
+    
+    Logger.log('📋 Available Calendars:');
+    const calendars = CalendarApp.getAllCalendars();
+    calendars.forEach((cal, index) => {
+      Logger.log(`   ${index + 1}. ${cal.getName()}`);
+      Logger.log(`      ID: ${cal.getId()}`);
+    });
+    return;
+  }
+  
+  try {
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    
+    if (calendar) {
+      Logger.log(`✅ Successfully connected to: ${calendar.getName()}`);
+      Logger.log(`📅 Calendar ID: ${CALENDAR_ID}`);
+      
+      const now = new Date();
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setDate(now.getDate() - 30);
+      
+      const events = calendar.getEvents(oneMonthAgo, now);
+      Logger.log(`📊 Events in last 30 days: ${events.length}`);
+      
+    } else {
+      Logger.log('❌ Cannot access calendar');
+    }
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.toString()}`);
+  }
+}
+
+// ====== DEMO: HOW TO USE ======
+
+function demoUsage() {
+  Logger.log('📖 ตัวอย่างการใช้งาน:\n');
+  
+  Logger.log('1. ใช้สถานะที่กำหนดไว้:');
+  Logger.log('   updateSurveyStatus("SW-0001", STATUS_OPTIONS.COMPLETED, "", "ตรวจสอบเสร็จแล้ว");');
+  Logger.log('   updateSurveyStatus("SW-0002", STATUS_OPTIONS.IN_PROGRESS, "", "กำลังดำเนินการ");');
+  Logger.log('   updateSurveyStatus("SW-0003", STATUS_OPTIONS.ON_HOLD, "", "รอข้อมูล");\n');
+  
+  Logger.log('2. ใช้สถานะแบบกำหนดเอง:');
+  Logger.log('   updateSurveyStatus("SW-0004", "Waiting for Approval", "", "รอการอนุมัติ");');
+  Logger.log('   updateSurveyStatus("SW-0005", "ส่งมอบงานแล้ว", "", "ลูกค้ารับงานแล้ว");\n');
+  
+  Logger.log('3. ใช้ฟังก์ชันเดิม (Backward Compatible):');
+  Logger.log('   updateSurveyToCompleted("SW-0006", "", "เสร็จสมบูรณ์");\n');
+  
+  Logger.log('📋 สถานะที่มีให้เลือก:');
+  Object.keys(STATUS_OPTIONS).forEach(key => {
+    Logger.log(`   - ${key}: "${STATUS_OPTIONS[key]}"`);
+  });
+}
