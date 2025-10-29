@@ -568,27 +568,13 @@
       <p class="subtitle">ระบบบันทึก Request for Information</p>
     </div>
     
-   <div class="info-box">
-  <strong>📌 ข้อกำหนด:</strong><br>
-  
-  <!-- ⭐ Joint Inspection Info (แสดงเมื่อเลือก Joint) -->
-  <div id="jointInfo" style="display: block;">
-    • <strong>Joint Inspection:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
-    • มี Buffer Time ±30 นาที ระหว่าง RFI<br>
-    • ต้องรอ Consultant Approval<br>
-  </div>
-  
-  <!-- ⭐ Internal Inspection Info (แสดงเมื่อเลือก Internal) -->
-  <div id="internalInfo" style="display: none;">
-    • <strong>Internal Inspection:</strong> จองล่วงหน้า 30 นาที<br>
-    • ไม่มี Buffer Time (ตรวจต่อเนื่องได้)<br>
-    • ไม่ต้องรอ Consultant Approval<br>
-    • ✅ สร้าง Calendar Event ทันที<br>
-  </div>
-  
-  <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-  <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
-</div>
+    <div class="info-box">
+      <strong>📌 ข้อกำหนด:</strong> จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.<br>
+      <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
+      <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
+      <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
+      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ
+    </div>
 
     <a href="https://calendar.google.com/calendar/u/0/embed?src=developeritd75@gmail.com&ctz=Asia/Bangkok" 
    target="_blank" 
@@ -607,39 +593,6 @@
   <span>คู่มือการใช้งาน</span>
   <span class="external-icon">↗</span>
 </a>
-
-<!-- เพิ่มหลัง info-box -->
-<div class="inspection-type-section">
-  <label>ประเภทการตรวจสอบ <span>*</span></label>
-  
-  <div class="inspection-type-buttons">
-    <button type="button" class="inspection-btn active" data-type="joint">
-      <span class="icon">🤝</span>
-      <div>
-        <div class="type-title">Joint Inspection</div>
-        <div class="type-desc">ตรวจร่วมกับ Consultant</div>
-      </div>
-    </button>
-    
-    <button type="button" class="inspection-btn" data-type="internal">
-      <span class="icon">🏭</span>
-      <div>
-        <div class="type-title">Internal Inspection</div>
-        <div class="type-desc">ตรวจภายในเท่านั้น</div>
-      </div>
-    </button>
-  </div>
-  
-  <input type="hidden" id="inspectionType" value="joint">
-  
-  <!-- แสดงข้อมูลที่แตกต่าง -->
-  <div class="type-info-box" id="typeInfoBox">
-    <strong>🤝 Joint Inspection:</strong><br>
-    • มี Buffer Time ±30 นาที<br>
-    • ต้องได้รับอนุมัติจาก Consultant<br>
-    • จองล่วงหน้าอย่างน้อย 1 วัน (ปิดรับ 13:00 น.)
-  </div>
-</div>
     
     <form id="rfiForm">
       <div class="form-group">
@@ -735,38 +688,6 @@
           placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
         <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
       </div>
-
-<!-- เพิ่มหลังจาก location field -->
-<div class="form-group">
-  <label for="locationLayout">
-    แนบไฟล์ Location Layout
-    <span>*</span>
-  </label>
-  <input type="file" 
-         id="locationLayout" 
-         name="locationLayout" 
-         accept=".pdf,.jpg,.jpeg,.png"
-         required
-         style="padding: 10px; border: 2px dashed #e4e6eb; background: #f8f9fa; cursor: pointer;">
-  <div class="time-info" id="fileInfo">
-    📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br>
-    <span style="color: #dc2626;">⚠️ จำเป็นต้องแนบไฟล์</span>
-  </div>
-  <div id="filePreview" style="display: none; margin-top: 10px; padding: 10px; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 24px;">📄</span>
-      <div style="flex: 1;">
-        <div id="fileName" style="font-weight: 500; color: #047857;"></div>
-        <div id="fileSize" style="font-size: 12px; color: #065f46;"></div>
-      </div>
-      <button type="button" 
-              onclick="clearFile()" 
-              style="width: auto; padding: 6px 12px; background: #ef4444; font-size: 13px; margin: 0;">
-        ✕ ลบ
-      </button>
-    </div>
-  </div>
-</div>
       
       <div class="form-group">
         <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
@@ -810,7 +731,6 @@
       loadWorkTypes();
       initTeamCategoryButtons();
       initCheckboxes();
-      initInspectionTypeButtons();
       loadUserEmailAndName();
       loadManualLink(); // ⭐ เพิ่มบรรทัดนี้
       showMessage('กรุณาเลือกประเภทงานก่อน ระบบจะแนะนำทีมงานที่เหมาะสมให้', 'info');
@@ -1195,11 +1115,8 @@ function getManualUrl() {
     document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
     document.getElementById('rfiForm').addEventListener('submit', handleSubmit);
     
-// ⭐ แก้ไข updateAvailableSlots() ให้รองรับ Internal Inspection
-
 function updateAvailableSlots() {
   var date = document.getElementById('requestDate').value;
-  var inspectionType = document.getElementById('inspectionType').value;
   var startTimeSelect = document.getElementById('startTime');
   var endTimeSelect = document.getElementById('endTime');
   
@@ -1212,61 +1129,38 @@ function updateAvailableSlots() {
     var todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     var selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     
-    // ⭐ Internal Inspection - เช็คแค่ไม่เลือกอดีต
-    if (inspectionType === 'internal') {
-      if (selectedDateOnly < todayDateOnly) {
+    // ตรวจสอบว่าเลือกวันในอดีตหรือไม่
+    if (selectedDateOnly <= todayDateOnly) {
+      startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+      startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
+      startTimeSelect.disabled = true;
+      showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
+      return;
+    }
+    
+    // ตรวจสอบว่าถ้าจองวันพรุ่งนี้ ต้องจองก่อน 13:00 น.
+    var tomorrow = new Date(todayDateOnly);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
+    
+    if (isTomorrow) {
+      var currentHour = today.getHours();
+      
+      if (currentHour >= 13) {
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
+        startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
         startTimeSelect.disabled = true;
-        showMessage('❌ กรุณาเลือกวันนี้หรือวันถัดไป', 'error');
+        showMessage('❌ ไม่สามารถจองวันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)\nกรุณาเลือกวันถัดไปเพื่อให้ทีมมีเวลาเตรียมเอกสารขอ Consult อนุมัติ', 'error');
         return;
       }
       
-      // ⭐ ถ้าเลือกวันนี้ → กรอง Time Slots ที่ผ่านไปแล้ว + 30 นาที
-      if (selectedDateOnly.getTime() === todayDateOnly.getTime()) {
-        var minTime = new Date(today.getTime() + (30 * 60 * 1000)); // +30 นาที
-        var minHour = minTime.getHours();
-        var minMinute = minTime.getMinutes();
-        
-        console.log('Internal Inspection - Today selected');
-        console.log('Min time allowed:', minTime.toLocaleTimeString('th-TH'));
-        console.log('Current time + 30min:', minHour + ':' + minMinute);
-      }
-    } 
-    // ⭐ Joint Inspection - เช็คตามเดิม (ปิดรับวันพรุ่งนี้ที่ 13:00 น.)
-    else if (inspectionType === 'joint') {
-      if (selectedDateOnly <= todayDateOnly) {
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันพรุ่งนี้เป็นต้นไป --</option>';
-        startTimeSelect.disabled = true;
-        showMessage('กรุณาเลือกวันพรุ่งนี้หรือวันถัดไป', 'warning');
-        return;
-      }
-      
-      // เช็ควันพรุ่งนี้ต้องจองก่อน 13:00 น.
-      var tomorrow = new Date(todayDateOnly);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      var isTomorrow = selectedDateOnly.getTime() === tomorrow.getTime();
-      
-      if (isTomorrow) {
-        var currentHour = today.getHours();
-        
-        if (currentHour >= 13) {
-          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-          startTimeSelect.innerHTML = '<option value="">-- เลยเวลาจองวันพรุ่งนี้แล้ว (ต้องจองก่อน 13:00 น.) --</option>';
-          startTimeSelect.disabled = true;
-          showMessage('❌ ไม่สามารถจอง Joint Inspection วันพรุ่งนี้ได้แล้ว (เลย 13:00 น.)', 'error');
-          return;
-        }
-        
-        if (currentHour >= 11 && currentHour < 13) {
-          var timeLeft = 13 - currentHour;
-          showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
-        }
+      // เตือนล่วงหน้าถ้าเหลือเวลาไม่มาก
+      if (currentHour >= 11 && currentHour < 13) {
+        var timeLeft = 13 - currentHour;
+        showMessage('⚠️ แจ้งเตือน: เหลือเวลาจองวันพรุ่งนี้อีก ' + timeLeft + ' ชั่วโมง (ปิดรับ 13:00 น.)', 'warning', 8000);
       }
     }
     
-    // ⭐ เรียก Backend โดยส่ง inspectionType ไปด้วย
     google.script.run
       .withSuccessHandler(function(availableSlots) {
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
@@ -1279,27 +1173,6 @@ function updateAvailableSlots() {
         } else {
           startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
           
-          // ⭐ ถ้าเป็น Internal + วันนี้ → กรอง Time Slots ที่ผ่านไปแล้ว + 30 นาที
-          if (inspectionType === 'internal' && selectedDateOnly.getTime() === todayDateOnly.getTime()) {
-            var minTime = new Date(today.getTime() + (30 * 60 * 1000));
-            var minMinutes = minTime.getHours() * 60 + minTime.getMinutes();
-            
-            availableSlots = availableSlots.filter(function(slot) {
-              var slotParts = slot.split(':');
-              var slotMinutes = parseInt(slotParts[0]) * 60 + parseInt(slotParts[1]);
-              return slotMinutes >= minMinutes;
-            });
-            
-            console.log('Filtered slots (30min lead time):', availableSlots.length);
-            
-            if (availableSlots.length === 0) {
-              startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่างที่เหลือวันนี้ --</option>';
-              startTimeSelect.disabled = true;
-              showMessage('⚠️ ไม่มีเวลาว่างที่เหลือวันนี้ (ต้องจองล่วงหน้า 30 นาที)\nกรุณาเลือกวันถัดไป', 'warning');
-              return;
-            }
-          }
-          
           availableSlots.forEach(function(slot) {
             var option = document.createElement('option');
             option.value = slot;
@@ -1308,11 +1181,6 @@ function updateAvailableSlots() {
           });
           
           startTimeSelect.disabled = false;
-          
-          // ⭐ แสดงข้อความแตกต่างตามประเภท
-          if (inspectionType === 'internal') {
-            showMessage('✅ Internal Inspection: จองล่วงหน้า 30 นาที', 'info', 3000);
-          }
         }
       })
       .withFailureHandler(function(error) {
@@ -1321,7 +1189,10 @@ function updateAvailableSlots() {
         startTimeSelect.disabled = true;
         showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
       })
-      .getAvailableTimeSlots(date, selectedTeamCategory, inspectionType);  // ⭐ ส่ง inspectionType
+      .getAvailableTimeSlots(date);
+  } else {
+    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+    startTimeSelect.disabled = true;
   }
 }
     
@@ -1394,192 +1265,70 @@ function updateAvailableSlots() {
       endTimeSelect.disabled = true;
     }
     
-    // เพิ่มใน <script> section
-
-// ฟังก์ชันตรวจสอบไฟล์
-document.getElementById('locationLayout').addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  var fileInfo = document.getElementById('fileInfo');
-  var filePreview = document.getElementById('filePreview');
-  
-  if (!file) {
-    filePreview.style.display = 'none';
-    fileInfo.innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #f59e0b;">⭐ แนะนำให้แนบเพื่อความชัดเจน</span>';
-    return;
-  }
-  
-  // ตรวจสอบประเภทไฟล์
-  var validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-  if (validTypes.indexOf(file.type) === -1) {
-    showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง กรุณาอัปโหลด PDF, JPG หรือ PNG เท่านั้น', 'error');
-    e.target.value = '';
-    filePreview.style.display = 'none';
-    return;
-  }
-  
-  // ตรวจสอบขนาดไฟล์ (10MB = 10 * 1024 * 1024 bytes)
-  var maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    showMessage('❌ ไฟล์มีขนาดเกิน 10MB กรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
-    e.target.value = '';
-    filePreview.style.display = 'none';
-    return;
-  }
-  
-  // แสดง Preview
-  var fileName = file.name;
-  var fileSize = (file.size / 1024).toFixed(2) + ' KB';
-  if (file.size > 1024 * 1024) {
-    fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-  }
-  
-  document.getElementById('fileName').textContent = fileName;
-  document.getElementById('fileSize').textContent = '📊 ขนาด: ' + fileSize;
-  filePreview.style.display = 'block';
-  
-  fileInfo.innerHTML = '✅ ไฟล์พร้อมอัปโหลด';
-  fileInfo.style.color = '#16a34a';
-});
-
-// ฟังก์ชันลบไฟล์
-function clearFile() {
-  document.getElementById('locationLayout').value = '';
-  document.getElementById('filePreview').style.display = 'none';
-  document.getElementById('fileInfo').innerHTML = '📎 รองรับ: PDF, JPG, PNG (ไม่เกิน 10MB)<br><span style="color: #dc2626;">⚠️ จำเป็นต้องแนบไฟล์</span>';
-  document.getElementById('fileInfo').style.color = '#1c4587';
-}
-
-// แก้ไข handleSubmit เดิม
-function handleSubmit(event) {
-  event.preventDefault();
-  
-  if (!selectedTeamCategory) {
-    showMessage('กรุณาเลือกทีมงานก่อน', 'error');
-    return;
-  }
-  
-  var email = document.getElementById('requesterEmail').value;
-  if (!email || email === 'กำลังโหลด...') {
-    showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
-    return;
-  }
-  
-  // ⭐ เพิ่ม Validation สำหรับไฟล์บังคับ
-  var fileInput = document.getElementById('locationLayout');
-  var file = fileInput.files[0];
-  
-  if (!file) {
-    showMessage('❌ กรุณาแนบไฟล์ Location Layout (บังคับ)', 'error');
-    fileInput.focus();
-    return;
-  }
-  
-  var submitBtn = document.getElementById('submitBtn');
-  var loading = document.querySelector('.loading');
-  
-  // เตรียมข้อมูลฟอร์ม
-  var formData = {
-    teamCategory: selectedTeamCategory,
-    requestDate: document.getElementById('requestDate').value,
-    workType: document.getElementById('workType').value,
-    startTime: document.getElementById('startTime').value,
-    endTime: document.getElementById('endTime').value,
-    description: document.getElementById('description').value.trim(),
-    location: document.getElementById('location').value.trim(),
-    requesterName: document.getElementById('requesterName').value.trim(),
-    requesterEmail: email
-  };
-  
-  // ตรวจสอบฟิลด์ที่จำเป็น
-  var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-  var missingFields = requiredFields.filter(function(field) {
-    return !formData[field];
-  });
-  
-  if (missingFields.length > 0) {
-    showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-    return;
-  }
-  
-  submitBtn.disabled = true;
-  loading.style.display = 'block';
-  
-  // มีไฟล์แน่นอน (เพราะเช็คแล้ว) → อัปโหลดไฟล์และบันทึก RFI
-  uploadFileAndSaveRFI(formData, file, submitBtn, loading);
-}
-
-// ฟังก์ชันอัปโหลดไฟล์และบันทึก RFI
-function uploadFileAndSaveRFI(formData, file, submitBtn, loading) {
-  var reader = new FileReader();
-  
-  reader.onload = function(e) {
-    var tempRfiId = generateTempRFIId();
-    
-    var fileData = {
-      name: file.name,
-      mimeType: file.type,
-      content: e.target.result.split(',')[1]
-    };
-    
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result && result.success) {
-          formData.locationLayoutUrl = result.fileUrl;
-          formData.tempRfiId = tempRfiId;
-          
-          // ⭐ บันทึก RFI ทันที
-          google.script.run
-            .withSuccessHandler(function(saveResult) {
-              loading.style.display = 'none';
-              submitBtn.disabled = false;
-              
-              if (saveResult && saveResult.success) {
-                showMessage(saveResult.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
-                resetForm();
-              } else {
-                showMessage(saveResult.message || 'เกิดข้อผิดพลาด', 'error');
-              }
-            })
-            .withFailureHandler(function(error) {
-              loading.style.display = 'none';
-              submitBtn.disabled = false;
-              showMessage('เกิดข้อผิดพลาดในการบันทึก: ' + error.message, 'error');
-            })
-            .saveRFIRequirement(formData);
-        } else {
+    function handleSubmit(event) {
+      event.preventDefault();
+      
+      if (!selectedTeamCategory) {
+        showMessage('กรุณาเลือกทีมงานก่อน', 'error');
+        return;
+      }
+      
+      var email = document.getElementById('requesterEmail').value;
+      if (!email || email === 'กำลังโหลด...') {
+        showMessage('กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ', 'warning');
+        return;
+      }
+      
+      var submitBtn = document.getElementById('submitBtn');
+      var loading = document.querySelector('.loading');
+      
+      var formData = {
+        teamCategory: selectedTeamCategory,
+        requestDate: document.getElementById('requestDate').value,
+        workType: document.getElementById('workType').value,
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value,
+        description: document.getElementById('description').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        requesterName: document.getElementById('requesterName').value.trim(),
+        requesterEmail: email
+      };
+      
+      var requiredFields = ['teamCategory', 'requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+      var missingFields = requiredFields.filter(function(field) {
+        return !formData[field];
+      });
+      
+      if (missingFields.length > 0) {
+        showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      loading.style.display = 'block';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
           loading.style.display = 'none';
           submitBtn.disabled = false;
-          showMessage('❌ อัปโหลดไฟล์ล้มเหลว: ' + (result.message || 'Unknown error'), 'error');
-        }
-      })
-      .withFailureHandler(function(error) {
-        loading.style.display = 'none';
-        submitBtn.disabled = false;
-        showMessage('❌ เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.message, 'error');
-      })
-      .uploadLocationLayout(fileData, tempRfiId);
-  };
-  
-  reader.onerror = function() {
-    loading.style.display = 'none';
-    submitBtn.disabled = false;
-    showMessage('❌ ไม่สามารถอ่านไฟล์ได้', 'error');
-  };
-  
-  reader.readAsDataURL(file);
-}
-
-// ⭐ ฟังก์ชันสร้าง Temporary RFI ID
-function generateTempRFIId() {
-  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  var id = '';
-  for (var i = 0; i < 8; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return id;
-}
-
-
+          
+          if (result && result.success) {
+            showMessage(result.message || 'บันทึก RFI Request เรียบร้อยแล้ว', 'success', 8000);
+            resetForm();
+          } else {
+            var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+            showMessage(errorMessage, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          loading.style.display = 'none';
+          submitBtn.disabled = false;
+          
+          var errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
+          showMessage(errorMessage, 'error');
+        })
+        .saveRFIRequirement(formData);
+    }
     
     function resetForm() {
       document.getElementById('rfiForm').reset();
@@ -1604,67 +1353,6 @@ function generateTempRFIId() {
       loadUserEmailAndName();
       setMinDate();
     }
-
-    function initInspectionTypeButtons() {
-  var inspectionButtons = document.querySelectorAll('.inspection-btn');
-  var typeInfoBox = document.getElementById('typeInfoBox');
-  var jointInfo = document.getElementById('jointInfo');
-  var internalInfo = document.getElementById('internalInfo');
-  
-  inspectionButtons.forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      // Remove active class
-      inspectionButtons.forEach(function(b) {
-        b.classList.remove('active');
-      });
-      
-      // Add active class
-      this.classList.add('active');
-      
-      // Get type
-      var type = this.getAttribute('data-type');
-      document.getElementById('inspectionType').value = type;
-      
-      // ⭐ Update info box
-      if (type === 'internal') {
-        jointInfo.style.display = 'none';
-        internalInfo.style.display = 'block';
-        
-        typeInfoBox.innerHTML = 
-          '<strong>🏭 Internal Inspection:</strong><br>' +
-          '• จองล่วงหน้า 30 นาที<br>' +
-          '• ไม่มี Buffer Time<br>' +
-          '• ไม่ต้องรอ Consultant<br>' +
-          '• สร้าง Calendar Event ทันที';
-        typeInfoBox.style.background = 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)';
-        typeInfoBox.style.borderColor = '#f59e0b';
-        
-        showMessage('✅ เลือก Internal Inspection - จองล่วงหน้า 30 นาที', 'success', 3000);
-      } else {
-        jointInfo.style.display = 'block';
-        internalInfo.style.display = 'none';
-        
-        typeInfoBox.innerHTML = 
-          '<strong>🤝 Joint Inspection:</strong><br>' +
-          '• มี Buffer Time ±30 นาที<br>' +
-          '• ต้องได้รับอนุมัติจาก Consultant<br>' +
-          '• จองล่วงหน้าอย่างน้อย 1 วัน (ปิดรับ 13:00 น.)';
-        typeInfoBox.style.background = 'linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%)';
-        typeInfoBox.style.borderColor = '#1877f2';
-        
-        showMessage('✅ เลือก Joint Inspection - จองก่อน 13:00 น. (วันพรุ่งนี้)', 'info', 3000);
-      }
-      
-      // Reset date/time ถ้ามีการเลือกไว้แล้ว
-      var dateInput = document.getElementById('requestDate');
-      if (dateInput.value) {
-        updateAvailableSlots();  // Reload time slots
-      }
-    });
-  });
-}
-
-    
   </script>
 </body>
 </html>
