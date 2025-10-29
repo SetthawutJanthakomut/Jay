@@ -665,6 +665,16 @@ input[type="file"]::file-selector-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
 }
+
+#clearFileBtn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+#clearFileBtn:active {
+  transform: translateY(0);
+}
   </style>
 </head>
 <body>
@@ -839,12 +849,20 @@ input[type="file"]::file-selector-button:hover {
 <!-- ⭐ เพิ่ม: Location Layout File Upload -->
 <div class="form-group">
   <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout <span>*</span></label>
-  <input type="file" 
-         id="locationLayoutFile" 
-         name="locationLayoutFile" 
-         accept=".pdf,.png,.jpg,.jpeg,.gif" 
-         required
-         style="padding: 10px; border: 2px dashed #1877f2; background: #f0f7ff; cursor: pointer;">
+  <div style="display: flex; gap: 10px; align-items: flex-start;">
+    <input type="file" 
+           id="locationLayoutFile" 
+           name="locationLayoutFile" 
+           accept=".pdf,.png,.jpg,.jpeg,.gif" 
+           required
+           style="flex: 1; padding: 10px; border: 2px dashed #1877f2; background: #f0f7ff; cursor: pointer;">
+    <button type="button" 
+            id="clearFileBtn" 
+            onclick="clearLocationFile()"
+            style="display: none; padding: 10px 16px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; white-space: nowrap;">
+      🗑️ ลบไฟล์
+    </button>
+  </div>
   <div class="time-info">
     📎 แนบไฟล์ PDF หรือรูปภาพ (PNG, JPG, GIF)<br>
     💡 ไฟล์จะถูกบันทึกใน Google Drive อัตโนมัติ<br>
@@ -905,12 +923,13 @@ input[type="file"]::file-selector-button:hover {
       showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     };
 
-    // ⭐ เพิ่ม: File Upload Event Listener
+// อัปเดต: File Upload Event Listener
 document.getElementById('locationLayoutFile').addEventListener('change', function(e) {
   var file = e.target.files[0];
   var fileInfo = document.getElementById('fileInfo');
   var fileName = document.getElementById('fileName');
   var fileSize = document.getElementById('fileSize');
+  var clearBtn = document.getElementById('clearFileBtn');
   
   if (file) {
     // ⭐ เช็คขนาดไฟล์ (ไม่เกิน 10 MB)
@@ -920,6 +939,7 @@ document.getElementById('locationLayoutFile').addEventListener('change', functio
       showMessage('❌ ไฟล์ใหญ่เกินไป! ขนาดไฟล์ต้องไม่เกิน 10 MB', 'error');
       e.target.value = ''; // ล้างไฟล์
       fileInfo.style.display = 'none';
+      clearBtn.style.display = 'none';
       return;
     }
     
@@ -927,12 +947,29 @@ document.getElementById('locationLayoutFile').addEventListener('change', functio
     fileName.textContent = file.name;
     fileSize.textContent = formatFileSize(file.size);
     fileInfo.style.display = 'block';
+    clearBtn.style.display = 'block'; // ⭐ แสดงปุ่มลบ
     
     showMessage('✓ เลือกไฟล์: ' + file.name, 'success', 3000);
   } else {
     fileInfo.style.display = 'none';
+    clearBtn.style.display = 'none';
   }
 });
+
+// ⭐ ฟังก์ชันลบไฟล์
+function clearLocationFile() {
+  var fileInput = document.getElementById('locationLayoutFile');
+  var fileInfo = document.getElementById('fileInfo');
+  var clearBtn = document.getElementById('clearFileBtn');
+  
+  // ยืนยันก่อนลบ
+  if (confirm('🗑️ ต้องการลบไฟล์ที่เลือกไว้หรือไม่?')) {
+    fileInput.value = ''; // ล้างไฟล์
+    fileInfo.style.display = 'none'; // ซ่อนข้อมูลไฟล์
+    clearBtn.style.display = 'none'; // ซ่อนปุ่มลบ
+    showMessage('🗑️ ลบไฟล์เรียบร้อยแล้ว - กรุณาเลือกไฟล์ใหม่', 'info', 3000);
+  }
+}
 
 // ⭐ ฟังก์ชันแปลงขนาดไฟล์
 function formatFileSize(bytes) {
@@ -1686,7 +1723,7 @@ function formatFileSize(bytes) {
   reader.readAsDataURL(file);
 }
     
-    function resetForm() {
+function resetForm() {
   document.getElementById('rfiForm').reset();
   
   // ⭐ Reset Inspection Type
@@ -1699,8 +1736,8 @@ function formatFileSize(bytes) {
   document.getElementById('infoBoxInternal').classList.remove('show');
   
   // ⭐ Reset variables
-  selectedInspectionType = null; // ✅ เพิ่มบรรทัดนี้
-  document.getElementById('inspectionType').value = ''; // ✅ เพิ่มบรรทัดนี้
+  selectedInspectionType = null;
+  document.getElementById('inspectionType').value = '';
   
   // Reset Team
   var teamButtons = document.querySelectorAll('.team-btn');
@@ -1719,6 +1756,11 @@ function formatFileSize(bytes) {
   document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
   document.getElementById('startTime').disabled = true;
   resetEndTimeSelect();
+  
+  // ⭐ Reset Location Layout File
+  var fileInput = document.getElementById('locationLayoutFile');
+  fileInput.value = ''; // ล้างไฟล์
+  document.getElementById('fileInfo').style.display = 'none'; // ซ่อนข้อมูลไฟล์
   
   // Reload Data
   loadWorkTypes();
