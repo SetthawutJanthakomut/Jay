@@ -1,4 +1,4 @@
-<!--version 1 18/10/2025 15:50-->
+<!--version 2 with Confirmation Dialog-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -282,18 +282,6 @@
       border-radius: 10px;
     }
     
-    @media (max-width: 480px) {
-      .container {
-        padding: 30px 20px;
-      }
-      
-      h1 {
-        font-size: 26px;
-      }
-      
-      .subtitle {
-        font-size: 14px;
-      }
 .calendar-link-btn {
   display: flex;
   align-items: center;
@@ -326,6 +314,7 @@
   font-size: 18px;
   opacity: 0.8;
 }
+
 .manual-link-btn {
   display: flex;
   align-items: center;
@@ -359,7 +348,6 @@
   opacity: 0.8;
 }
 
-/* ⭐ ปุ่มลบไฟล์ขนาดเล็ก - รุ่นสุดท้าย */
 #clearFileBtn {
   padding: 0;
   width: 28px;
@@ -391,7 +379,6 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* ⭐ File Info Box - Animation */
 #fileInfo {
   animation: slideDown 0.3s ease-out;
 }
@@ -406,36 +393,43 @@
     transform: translateY(0);
   }
 }
-
-/* ⭐ Responsive - มือถือ */
-@media (max-width: 480px) {
-  #clearFileBtn {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 18px !important;
-  }
-  
-  #fileInfo {
-    font-size: 12px !important;
-  }
-  
-  #fileName {
-    font-size: 11px !important;
-  }
-}
     
+    @media (max-width: 480px) {
+      .container {
+        padding: 30px 20px;
+      }
+      
+      h1 {
+        font-size: 26px;
+      }
+      
+      .subtitle {
+        font-size: 14px;
+      }
+      
+      #clearFileBtn {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 18px !important;
+      }
+      
+      #fileInfo {
+        font-size: 12px !important;
+      }
+      
+      #fileName {
+        font-size: 11px !important;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
    <div class="header-section" style="text-align: center; margin-bottom: 30px;">
-      <!-- Icon Container -->
       <div style="display: inline-flex; align-items: center; justify-content: center; width: 65px; height: 65px; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); border-radius: 16px; margin-bottom: 12px; box-shadow: 0 6px 20px rgba(22, 163, 74, 0.3);">
         <span style="font-size: 36px;">🗺️</span>
       </div>
       
-      <!-- Title with Icon Decoration -->
       <h1>
         <span style="display: inline-flex; align-items: center; gap: 10px;">
           Survey Work System
@@ -458,6 +452,7 @@
   <span>ดูปฏิทินการจอง</span>
   <span class="external-icon">↗</span>
 </a>
+
     <a href="#" 
    id="manualLinkBtn"
    target="_blank" 
@@ -467,6 +462,7 @@
   <span>คู่มือการใช้งาน Survey</span>
   <span class="external-icon">↗</span>
 </a>
+
     <form id="surveyWorkForm">
       <div class="form-group">
         <label for="requestDate">วันที่ต้องการ <span>*</span></label>
@@ -507,7 +503,6 @@
         <input type="text" id="location" name="location" required placeholder="กรอกสถานที่">
       </div>
 
-<!-- ⭐ เพิ่ม: Location Layout File Upload (ไม่บังคับ) -->
 <div class="form-group">
   <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout (ถ้ามี)</label>
   <input type="file" 
@@ -522,15 +517,12 @@
     ⚠️ ขนาดไฟล์ไม่เกิน 10 MB
   </div>
   
-  <!-- ⭐ File Info Box - แสดงเมื่อเลือกไฟล์ -->
   <div id="fileInfo" style="display: none; margin-top: 10px; padding: 10px 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
     <div style="display: flex; align-items: flex-start; gap: 10px;">
-      <!-- ไอคอนไฟล์ -->
       <div style="flex-shrink: 0; font-size: 24px; line-height: 1;">
         ✓
       </div>
       
-      <!-- ข้อมูลไฟล์ -->
       <div style="flex: 1; min-width: 0;">
         <div style="margin-bottom: 4px;">
           <strong style="color: #065f46;">ไฟล์ที่เลือก:</strong>
@@ -541,19 +533,16 @@
         </div>
       </div>
       
-      <!-- ⭐ ปุ่มลบ - ขนาดเล็ก -->
       <button type="button" 
               id="clearFileBtn" 
               onclick="clearLocationFile()"
-              title="ลบไฟล์"
-              style="flex-shrink: 0; padding: 0; width: 28px; height: 28px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+              title="ลบไฟล์">
         🗑️
       </button>
     </div>
   </div>
 </div>
       
-      <!-- ✅ อัปเดต: ชื่อผู้ขอ -->
 <div class="form-group">
   <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
   <input type="text" id="requesterName" name="requesterName" required 
@@ -569,7 +558,6 @@
          placeholder="กำลังโหลดอีเมลของคุณ...">
   <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
 </div>
-
       
       <button type="submit" id="submitBtn">ส่ง Survey Work Request</button>
     </form>
@@ -590,9 +578,6 @@
   <script>
     var selectedFileData = null;
 
-/**
- * ⭐ แปลงขนาดไฟล์เป็นรูปแบบที่อ่านง่าย
- */
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -601,9 +586,6 @@ function formatFileSize(bytes) {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-/**
- * ⭐ จัดการเมื่อเลือกไฟล์
- */
 function handleFileSelect(event) {
   const file = event.target.files[0];
   const fileInfo = document.getElementById('fileInfo');
@@ -615,8 +597,7 @@ function handleFileSelect(event) {
     return;
   }
   
-  // ✅ เช็คขนาดไฟล์ (ไม่เกิน 10 MB)
-  const maxSize = 10 * 1024 * 1024; // 10 MB
+  const maxSize = 10 * 1024 * 1024;
   if (file.size > maxSize) {
     showMessage('❌ ไฟล์มีขนาดใหญ่เกินไป (เกิน 10 MB)\nกรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
     event.target.value = '';
@@ -624,7 +605,6 @@ function handleFileSelect(event) {
     return;
   }
   
-  // ✅ เช็คประเภทไฟล์
   const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
   if (!allowedTypes.includes(file.type)) {
     showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง\nรองรับเฉพาะ PDF, PNG, JPG, GIF', 'error');
@@ -633,18 +613,16 @@ function handleFileSelect(event) {
     return;
   }
   
-  // ✅ แสดงข้อมูลไฟล์
   fileName.textContent = file.name;
   fileSize.textContent = formatFileSize(file.size);
   fileInfo.style.display = 'block';
   
-  // ✅ อ่านไฟล์เป็น Base64
   const reader = new FileReader();
   reader.onload = function(e) {
     selectedFileData = {
       name: file.name,
       mimeType: file.type,
-      content: e.target.result.split(',')[1] // เอาเฉพาะ Base64
+      content: e.target.result.split(',')[1]
     };
     console.log('✅ File loaded:', file.name, '(', formatFileSize(file.size), ')');
   };
@@ -656,9 +634,6 @@ function handleFileSelect(event) {
   reader.readAsDataURL(file);
 }
 
-/**
- * ⭐ ลบไฟล์ที่เลือก
- */
 function clearLocationFile() {
   document.getElementById('locationLayoutFile').value = '';
   document.getElementById('fileInfo').style.display = 'none';
@@ -681,9 +656,8 @@ function loadManualLink() {
     .withSuccessHandler(function(url) {
       if (url && url.trim() !== '') {
         var manualBtn = document.getElementById('manualLinkBtn');
-        var fullUrl = url + '?page=survey_manual'; // หรือ '?page=survey_manual' สำหรับ survey
+        var fullUrl = url + '?page=survey_manual';
         
-        // ตรวจสอบว่า URL ถูกต้อง
         if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
           manualBtn.href = fullUrl;
           manualBtn.style.display = 'flex';
@@ -697,15 +671,12 @@ function loadManualLink() {
     })
     .withFailureHandler(function(error) {
       console.error('❌ Error loading manual link:', error);
-      // ไม่แสดงปุ่มถ้าเกิด error
     })
     .getManualUrl();
 }
     
 function setMinDate() {
   const today = new Date();
-  
-  // ✅ ใช้วันนี้แทนวันพรุ่งนี้
   const dateString = today.getFullYear() + '-' + 
                     String(today.getMonth() + 1).padStart(2, '0') + '-' + 
                     String(today.getDate()).padStart(2, '0');
@@ -742,10 +713,9 @@ function setMinDate() {
       workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
       showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
     })
-    .getWorkTypeList('Survey Work');  // ⭐ เพิ่ม parameter
+    .getWorkTypeList('Survey Work');
 }
     
-    // ✅ ใหม่: โหลดทั้งอีเมลและชื่อ (เหมือน index.html)
 function loadUserEmailAndName() {
   const emailInput = document.getElementById('requesterEmail');
   const nameInput = document.getElementById('requesterName');
@@ -760,7 +730,6 @@ function loadUserEmailAndName() {
   nameInput.style.background = '#ecfdf5';
   nameInput.style.cursor = 'wait';
   
-  // 1. โหลดอีเมล
   google.script.run
     .withSuccessHandler(function(email) {
       if (email) {
@@ -768,11 +737,9 @@ function loadUserEmailAndName() {
         emailInput.disabled = true;
         console.log('✅ User email loaded:', email);
         
-        // 2. โหลดชื่อจากอีเมล
         google.script.run
           .withSuccessHandler(function(result) {
             if (result.success && result.name) {
-              // ✅ เจอชื่อในระบบ
               nameInput.value = result.name;
               nameInput.readOnly = false;
               nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
@@ -781,7 +748,6 @@ function loadUserEmailAndName() {
               nameInfo.style.color = '#16a34a';
               console.log('✅ User name loaded:', result.name);
             } else if (!result.success && result.message) {
-              // ❌ อีเมลมีปัญหา
               nameInput.value = '';
               nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
               nameInput.readOnly = true;
@@ -790,7 +756,6 @@ function loadUserEmailAndName() {
               nameInfo.style.color = '#dc2626';
               showMessage(result.message, 'error');
             } else {
-              // ⚠️ ไม่เจอชื่อ → ให้กรอกเอง
               nameInput.value = '';
               nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
               nameInput.readOnly = false;
@@ -877,13 +842,13 @@ function loadUserEmailAndName() {
         const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         
-if (selectedDateOnly < todayDateOnly) {
-  startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-  startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
-  startTimeSelect.disabled = true;
-  showMessage('ไม่สามารถเลือกวันที่ผ่านไปแล้ว', 'warning');
-  return;
-}
+        if (selectedDateOnly < todayDateOnly) {
+          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+          startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
+          startTimeSelect.disabled = true;
+          showMessage('ไม่สามารถเลือกวันที่ผ่านไปแล้ว', 'warning');
+          return;
+        }
         
         google.script.run
           .withSuccessHandler(function(availableSlots) {            
@@ -991,19 +956,12 @@ if (selectedDateOnly < todayDateOnly) {
       endTimeSelect.disabled = true;
     }
 
-
-
+// ⭐ ฟังก์ชันหลัก: แสดงกล่องยืนยันก่อนส่งฟอร์ม
 function handleSubmit(event) {
   event.preventDefault();
   
   const submitBtn = document.getElementById('submitBtn');
   const loading = document.querySelector('.loading');
-  
-  // ⭐ ลบการเช็คไฟล์ออก - ไม่บังคับแล้ว
-  // if (!selectedFileData) {
-  //   showMessage('❌ กรุณาแนบไฟล์ Location Layout', 'error');
-  //   return;
-  // }
   
   const formData = {
     requestDate: document.getElementById('requestDate').value,
@@ -1014,17 +972,38 @@ function handleSubmit(event) {
     location: document.getElementById('location').value.trim(),
     requesterName: document.getElementById('requesterName').value.trim(),
     requesterEmail: document.getElementById('requesterEmail').value.trim(),
-    locationLayoutFile: selectedFileData // ⭐ อาจเป็น null ได้
+    locationLayoutFile: selectedFileData
   };
   
   const requiredFields = ['requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
   const missingFields = requiredFields.filter(field => !formData[field]);
   
   if (missingFields.length > 0) {
-    showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+    showMessage('❌ กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
     return;
   }
   
+  // ⭐⭐⭐ แสดงกล่องข้อความยืนยันก่อนส่ง ⭐⭐⭐
+  const confirmMessage = 
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '📋 ยืนยันการส่ง Survey Work Request\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '📅 วันที่: ' + formData.requestDate + '\n' +
+    '🔧 ประเภทงาน: ' + formData.workType + '\n' +
+    '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime + ' น.\n' +
+    '📍 สถานที่: ' + formData.location + '\n' +
+    '👤 ผู้ขอ: ' + formData.requesterName + '\n' +
+    '📧 อีเมล: ' + formData.requesterEmail + '\n' +
+    (selectedFileData ? '📎 ไฟล์: ' + selectedFileData.name + '\n' : '📎 ไฟล์: ไม่มีไฟล์แนบ\n') +
+    '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ ต้องการส่งคำขอนี้หรือไม่?';
+  
+  if (!confirm(confirmMessage)) {
+    console.log('❌ User cancelled submission');
+    return;
+  }
+  
+  // ส่งฟอร์มหลังจากยืนยัน
   submitBtn.disabled = true;
   loading.style.display = 'block';
   
@@ -1034,9 +1013,8 @@ function handleSubmit(event) {
       submitBtn.disabled = false;
       
       if (result && result.success) {
-        let successMsg = result.message || 'บันทึก Survey Work Request เรียบร้อยแล้ว';
+        let successMsg = result.message || '✅ บันทึก Survey Work Request เรียบร้อยแล้ว';
         
-        // ⭐ เพิ่มข้อความไฟล์ที่อัปโหลด (ถ้ามี)
         if (result.fileName) {
           successMsg += '\n📎 ไฟล์: ' + result.fileName;
         }
@@ -1045,13 +1023,13 @@ function handleSubmit(event) {
         resetForm();
       } else {
         const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-        showMessage(errorMessage, 'error');
+        showMessage('❌ ' + errorMessage, 'error');
       }
     })
     .withFailureHandler(function(error) {
       loading.style.display = 'none';
       submitBtn.disabled = false;
-      const errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
+      const errorMessage = '❌ เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
       showMessage(errorMessage, 'error');
     })
     .saveSurveyWorkRequirement(formData);
