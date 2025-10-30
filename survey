@@ -358,6 +358,71 @@
   font-size: 18px;
   opacity: 0.8;
 }
+
+/* ⭐ ปุ่มลบไฟล์ขนาดเล็ก - รุ่นสุดท้าย */
+#clearFileBtn {
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#clearFileBtn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.3);
+}
+
+#clearFileBtn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ⭐ File Info Box - Animation */
+#fileInfo {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ⭐ Responsive - มือถือ */
+@media (max-width: 480px) {
+  #clearFileBtn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 18px !important;
+  }
+  
+  #fileInfo {
+    font-size: 12px !important;
+  }
+  
+  #fileName {
+    font-size: 11px !important;
+  }
+}
     
     }
   </style>
@@ -441,6 +506,52 @@
         <label for="location">สถานที่ <span>*</span></label>
         <input type="text" id="location" name="location" required placeholder="กรอกสถานที่">
       </div>
+
+<!-- ⭐ เพิ่ม: Location Layout File Upload (ไม่บังคับ) -->
+<div class="form-group">
+  <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout (ถ้ามี)</label>
+  <input type="file" 
+         id="locationLayoutFile" 
+         name="locationLayoutFile" 
+         accept=".pdf,.png,.jpg,.jpeg,.gif" 
+         onchange="handleFileSelect(event)"
+         style="width: 100%; padding: 10px; border: 2px dashed #16a34a; background: #ecfdf5; cursor: pointer; border-radius: 8px;">
+  <div class="time-info">
+    📎 แนบไฟล์ PDF หรือรูปภาพ (PNG, JPG, GIF) - ไม่บังคับ<br>
+    💡 ไฟล์จะถูกบันทึกใน Google Drive อัตโนมัติ<br>
+    ⚠️ ขนาดไฟล์ไม่เกิน 10 MB
+  </div>
+  
+  <!-- ⭐ File Info Box - แสดงเมื่อเลือกไฟล์ -->
+  <div id="fileInfo" style="display: none; margin-top: 10px; padding: 10px 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
+    <div style="display: flex; align-items: flex-start; gap: 10px;">
+      <!-- ไอคอนไฟล์ -->
+      <div style="flex-shrink: 0; font-size: 24px; line-height: 1;">
+        ✓
+      </div>
+      
+      <!-- ข้อมูลไฟล์ -->
+      <div style="flex: 1; min-width: 0;">
+        <div style="margin-bottom: 4px;">
+          <strong style="color: #065f46;">ไฟล์ที่เลือก:</strong>
+        </div>
+        <div id="fileName" style="word-break: break-all; color: #047857; font-size: 12px; margin-bottom: 4px;"></div>
+        <div style="font-size: 11px; color: #059669;">
+          <strong>📏 ขนาด:</strong> <span id="fileSize"></span>
+        </div>
+      </div>
+      
+      <!-- ⭐ ปุ่มลบ - ขนาดเล็ก -->
+      <button type="button" 
+              id="clearFileBtn" 
+              onclick="clearLocationFile()"
+              title="ลบไฟล์"
+              style="flex-shrink: 0; padding: 0; width: 28px; height: 28px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+        🗑️
+      </button>
+    </div>
+  </div>
+</div>
       
       <!-- ✅ อัปเดต: ชื่อผู้ขอ -->
 <div class="form-group">
@@ -477,6 +588,86 @@
   </div>
   
   <script>
+    var selectedFileData = null;
+
+/**
+ * ⭐ แปลงขนาดไฟล์เป็นรูปแบบที่อ่านง่าย
+ */
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * ⭐ จัดการเมื่อเลือกไฟล์
+ */
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  const fileInfo = document.getElementById('fileInfo');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  
+  if (!file) {
+    clearLocationFile();
+    return;
+  }
+  
+  // ✅ เช็คขนาดไฟล์ (ไม่เกิน 10 MB)
+  const maxSize = 10 * 1024 * 1024; // 10 MB
+  if (file.size > maxSize) {
+    showMessage('❌ ไฟล์มีขนาดใหญ่เกินไป (เกิน 10 MB)\nกรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
+    event.target.value = '';
+    clearLocationFile();
+    return;
+  }
+  
+  // ✅ เช็คประเภทไฟล์
+  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+  if (!allowedTypes.includes(file.type)) {
+    showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง\nรองรับเฉพาะ PDF, PNG, JPG, GIF', 'error');
+    event.target.value = '';
+    clearLocationFile();
+    return;
+  }
+  
+  // ✅ แสดงข้อมูลไฟล์
+  fileName.textContent = file.name;
+  fileSize.textContent = formatFileSize(file.size);
+  fileInfo.style.display = 'block';
+  
+  // ✅ อ่านไฟล์เป็น Base64
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    selectedFileData = {
+      name: file.name,
+      mimeType: file.type,
+      content: e.target.result.split(',')[1] // เอาเฉพาะ Base64
+    };
+    console.log('✅ File loaded:', file.name, '(', formatFileSize(file.size), ')');
+  };
+  reader.onerror = function(error) {
+    console.error('❌ Error reading file:', error);
+    showMessage('เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
+    clearLocationFile();
+  };
+  reader.readAsDataURL(file);
+}
+
+/**
+ * ⭐ ลบไฟล์ที่เลือก
+ */
+function clearLocationFile() {
+  document.getElementById('locationLayoutFile').value = '';
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('fileName').textContent = '';
+  document.getElementById('fileSize').textContent = '';
+  selectedFileData = null;
+  console.log('🗑️ File cleared');
+}
+
     window.onload = function() {
   setMinDate();
   loadWorkTypes();
@@ -799,62 +990,79 @@ if (selectedDateOnly < todayDateOnly) {
       endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
       endTimeSelect.disabled = true;
     }
-    
-    function handleSubmit(event) {
-      event.preventDefault();
+
+
+
+function handleSubmit(event) {
+  event.preventDefault();
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const loading = document.querySelector('.loading');
+  
+  // ⭐ ลบการเช็คไฟล์ออก - ไม่บังคับแล้ว
+  // if (!selectedFileData) {
+  //   showMessage('❌ กรุณาแนบไฟล์ Location Layout', 'error');
+  //   return;
+  // }
+  
+  const formData = {
+    requestDate: document.getElementById('requestDate').value,
+    workType: document.getElementById('workType').value,
+    startTime: document.getElementById('startTime').value,
+    endTime: document.getElementById('endTime').value,
+    description: document.getElementById('description').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    requesterName: document.getElementById('requesterName').value.trim(),
+    requesterEmail: document.getElementById('requesterEmail').value.trim(),
+    locationLayoutFile: selectedFileData // ⭐ อาจเป็น null ได้
+  };
+  
+  const requiredFields = ['requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+  const missingFields = requiredFields.filter(field => !formData[field]);
+  
+  if (missingFields.length > 0) {
+    showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  loading.style.display = 'block';
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
       
-      const submitBtn = document.getElementById('submitBtn');
-      const loading = document.querySelector('.loading');
-      
-      const formData = {
-        requestDate: document.getElementById('requestDate').value,
-        workType: document.getElementById('workType').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value,
-        description: document.getElementById('description').value.trim(),
-        location: document.getElementById('location').value.trim(),
-        requesterName: document.getElementById('requesterName').value.trim(),
-        requesterEmail: document.getElementById('requesterEmail').value.trim()
-      };
-      
-      const requiredFields = ['requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
-      
-      if (missingFields.length > 0) {
-        showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-        return;
+      if (result && result.success) {
+        let successMsg = result.message || 'บันทึก Survey Work Request เรียบร้อยแล้ว';
+        
+        // ⭐ เพิ่มข้อความไฟล์ที่อัปโหลด (ถ้ามี)
+        if (result.fileName) {
+          successMsg += '\n📎 ไฟล์: ' + result.fileName;
+        }
+        
+        showMessage(successMsg, 'success', 8000);
+        resetForm();
+      } else {
+        const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+        showMessage(errorMessage, 'error');
       }
-      
-      submitBtn.disabled = true;
-      loading.style.display = 'block';
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          loading.style.display = 'none';
-          submitBtn.disabled = false;
-          
-          if (result && result.success) {
-            showMessage(result.message || 'บันทึก Survey Work Request เรียบร้อยแล้ว', 'success', 8000);
-            resetForm();
-          } else {
-            const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-            showMessage(errorMessage, 'error');
-          }
-        })
-        .withFailureHandler(function(error) {
-          loading.style.display = 'none';
-          submitBtn.disabled = false;
-          const errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
-          showMessage(errorMessage, 'error');
-        })
-        .saveSurveyWorkRequirement(formData);
-    }
+    })
+    .withFailureHandler(function(error) {
+      loading.style.display = 'none';
+      submitBtn.disabled = false;
+      const errorMessage = 'เกิดข้อผิดพลาดในการบันทึก: ' + (error.message || error.toString());
+      showMessage(errorMessage, 'error');
+    })
+    .saveSurveyWorkRequirement(formData);
+}
     
     function resetForm() {
       document.getElementById('surveyWorkForm').reset();
       document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
       document.getElementById('startTime').disabled = true;
       resetEndTimeSelect();
+      clearLocationFile();
       loadWorkTypes();
       loadUserEmailAndName();
       setMinDate();
