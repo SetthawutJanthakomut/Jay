@@ -2649,9 +2649,9 @@ function updateAvailableSlots() {
 }
 
 function updateEndTimeSlots() {
-  const date = document.getElementById('requestDate').value;
-  const startTime = document.getElementById('startTime').value;
-  const endTimeSelect = document.getElementById('endTime');
+  var date = document.getElementById('requestDate').value;
+  var startTime = document.getElementById('startTime').value;
+  var endTimeSelect = document.getElementById('endTime');
   
   if (!startTime) {
     resetEndTimeSelect();
@@ -2661,7 +2661,25 @@ function updateEndTimeSlots() {
   setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
   
   if (date && startTime) {
-    const category = selectedTeamCategory;  // เพิ่มบรรทัดนี้
+    // ✅ ดึง Work Type และ Duration
+    var workTypeSelect = document.getElementById('workType');
+    var selectedOption = workTypeSelect.options[workTypeSelect.selectedIndex];
+    var duration = parseInt(selectedOption.getAttribute('data-duration')) || 60;
+    var workType = workTypeSelect.value; // ✅ ดึง Work Type
+    
+    var startParts = startTime.split(':');
+    var startHour = parseInt(startParts[0]);
+    var startMin = parseInt(startParts[1]);
+    
+    // ✅ คำนวณ End Time จาก Duration
+    var totalMinutes = (startHour * 60) + startMin + duration;
+    var endHour = Math.floor(totalMinutes / 60);
+    var endMin = totalMinutes % 60;
+    
+    var defaultEndTime = endHour.toString().padStart(2, '0') + ':' + 
+                        endMin.toString().padStart(2, '0');
+    
+    var category = selectedTeamCategory;
     
     google.script.run
       .withSuccessHandler(function(availableEndTimes) {
@@ -2675,13 +2693,8 @@ function updateEndTimeSlots() {
         } else {
           endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
           
-          const startHour = parseInt(startTime.split(':')[0]);
-          const startMinute = parseInt(startTime.split(':')[1]);
-          const defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
-                               startMinute.toString().padStart(2, '0');
-          
           availableEndTimes.forEach(function(time) {
-            const option = document.createElement('option');
+            var option = document.createElement('option');
             option.value = time;
             option.textContent = time + ' น.';
             if (time === defaultEndTime) {
@@ -2693,20 +2706,17 @@ function updateEndTimeSlots() {
           endTimeSelect.disabled = false;
           
           if (availableEndTimes.includes(defaultEndTime)) {
-            showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
+            showMessage('✅ เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (' + duration + ' นาที)', 'info', 3000);
           }
         }
       })
       .withFailureHandler(function(error) {
-        console.error('Error getting end times:', error);
-        
         endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
         endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
         endTimeSelect.disabled = true;
-        
-        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด', 'error');
       })
-      .getAvailableEndTimes(date, startTime, category);  // ส่ง category ไปด้วย
+      .getAvailableEndTimes(date, startTime, category, workType); // ✅ ส่ง workType
   }
 }
 
@@ -4266,11 +4276,7 @@ function getSurveyAvailableTimeSlots(date) {
   }
 }
 
-/**
- * ⚡ UPDATED: Survey Available End Times (Optimized)
- * ✅ รักษา function signature เดิม
- */
-function getSurveyAvailableEndTimes(date, startTime) {
+function getSurveyAvailableEndTimes(date, startTime, workType) {
   try {
     if (!startTime || !date) return [];
     
@@ -4285,13 +4291,38 @@ function getSurveyAvailableEndTimes(date, startTime) {
     }
     
     const startMinutes = timeToMinutes(startTime);
+    
+    // ✅ ดึง Duration จาก Sheet "Work"
+    let minDuration = 60;
+    
+    if (workType) {
+      const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
+      
+      if (workSheet) {
+        const lastRow = workSheet.getLastRow();
+        const data = workSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+        
+        for (let i = 0; i < data.length; i++) {
+          const nameWork = String(data[i][1] || '').trim();
+          const duration = parseInt(data[i][4]) || 60;
+          
+          if (nameWork === workType) {
+            minDuration = duration;
+            console.log('✅ Survey Work Duration:', duration, 'min');
+            break;
+          }
+        }
+      }
+    }
+    
+    const minEndMinutes = startMinutes + minDuration;
+    
     const availableTeams = getSurveyTeams();
     
     if (availableTeams.length === 0) {
       return [];
     }
     
-    // ⚡ Cache blocked slots
     const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
     
     const availableEndTimes = [];
@@ -4300,9 +4331,9 @@ function getSurveyAvailableEndTimes(date, startTime) {
       const endSlot = allEndSlots[i];
       const endMinutes = timeToMinutes(endSlot);
       
-      if (endMinutes <= startMinutes) continue;
+      // ✅ ต้อง >= min duration
+      if (endMinutes < minEndMinutes) continue;
       
-      // ⚡ เช็คจาก cached data (ไม่มี buffer)
       let hasAvailableTeam = false;
       
       for (let j = 0; j < availableTeams.length; j++) {
@@ -4313,6 +4344,7 @@ function getSurveyAvailableEndTimes(date, startTime) {
         
         for (let k = 0; k < blocks.length; k++) {
           const block = blocks[k];
+          // ✅ ไม่มี buffer
           if (!(endMinutes <= block.start || startMinutes >= block.end)) {
             isAvailable = false;
             break;
