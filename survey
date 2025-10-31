@@ -694,14 +694,15 @@ function setMinDate() {
       
       if (!workTypes || workTypes.length === 0) {
         workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน Survey --</option>';
-        showMessage('ไม่พบข้อมูลประเภทงาน Survey กรุณาเพิ่มข้อมูลใน Sheet "Work"', 'warning');
+        showMessage('ไม่พบข้อมูลประเภทงาน Survey', 'warning');
       } else {
         workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
         
         workTypes.forEach(function(workType) {
           const option = document.createElement('option');
-          option.value = workType;
-          option.textContent = workType;
+          option.value = workType.name; // ✅ ใช้ .name
+          option.textContent = workType.name + ' (' + workType.duration + ' นาที)'; // ✅ แสดง Duration
+          option.setAttribute('data-duration', workType.duration); // ✅ เก็บ Duration
           workTypeSelect.appendChild(option);
         });
         
@@ -713,7 +714,7 @@ function setMinDate() {
       workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
       showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
     })
-    .getWorkTypeList('Survey Work');
+    .getWorkTypeList('Survey Work'); // ✅ ส่ง 'Survey Work'
 }
     
 function loadUserEmailAndName() {
@@ -887,62 +888,75 @@ function loadUserEmailAndName() {
     }
     
     function updateEndTimeSlots() {
-      const date = document.getElementById('requestDate').value;
-      const startTime = document.getElementById('startTime').value;
-      const endTimeSelect = document.getElementById('endTime');
-      
-      if (!startTime) {
-        resetEndTimeSelect();
-        return;
-      }
-      
-      setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
-      
-      if (date && startTime) {
-        google.script.run
-          .withSuccessHandler(function(availableEndTimes) {
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '';
-            
-            if (!availableEndTimes || availableEndTimes.length === 0) {
-              endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
-              endTimeSelect.disabled = true;
-              showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
-            } else {
-              endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
-              
-              const startHour = parseInt(startTime.split(':')[0]);
-              const startMinute = parseInt(startTime.split(':')[1]);
-              const defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
-                                   startMinute.toString().padStart(2, '0');
-              
-              availableEndTimes.forEach(function(time) {
-                const option = document.createElement('option');
-                option.value = time;
-                option.textContent = time + ' น.';
-                if (time === defaultEndTime) {
-                  option.selected = true;
-                }
-                endTimeSelect.appendChild(option);
-              });
-              
-              endTimeSelect.disabled = false;
-              
-              if (availableEndTimes.includes(defaultEndTime)) {
-                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (1 ชั่วโมง)', 'info', 3000);
-              }
+  const date = document.getElementById('requestDate').value;
+  const startTime = document.getElementById('startTime').value;
+  const endTimeSelect = document.getElementById('endTime');
+  
+  if (!startTime) {
+    resetEndTimeSelect();
+    return;
+  }
+  
+  setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
+  
+  if (date && startTime) {
+    // ✅ ดึง Duration จาก Dropdown
+    const workTypeSelect = document.getElementById('workType');
+    const selectedOption = workTypeSelect.options[workTypeSelect.selectedIndex];
+    const duration = parseInt(selectedOption.getAttribute('data-duration')) || 60;
+    const workType = workTypeSelect.value;
+    
+    const startParts = startTime.split(':');
+    const startHour = parseInt(startParts[0]);
+    const startMinute = parseInt(startParts[1]);
+    
+    // ✅ คำนวณ End Time จาก Duration
+    const totalMinutes = (startHour * 60) + startMinute + duration;
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMin = totalMinutes % 60;
+    
+    const defaultEndTime = endHour.toString().padStart(2, '0') + ':' + 
+                          endMin.toString().padStart(2, '0');
+    
+    google.script.run
+      .withSuccessHandler(function(availableEndTimes) {
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '';
+        
+        if (!availableEndTimes || availableEndTimes.length === 0) {
+          endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
+          endTimeSelect.disabled = true;
+          showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
+        } else {
+          endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
+          
+          availableEndTimes.forEach(function(time) {
+            const option = document.createElement('option');
+            option.value = time;
+            option.textContent = time + ' น.';
+            if (time === defaultEndTime) {
+              option.selected = true;
             }
-          })
-          .withFailureHandler(function(error) {
-            console.error('Error getting end times:', error);
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-            endTimeSelect.disabled = true;
-            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด: ' + error.message, 'error');
-          })
-          .getSurveyAvailableEndTimes(date, startTime);
-      }
-    }
+            endTimeSelect.appendChild(option);
+          });
+          
+          endTimeSelect.disabled = false;
+          
+          if (availableEndTimes.includes(defaultEndTime)) {
+            showMessage('✅ เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (' + duration + ' นาที)', 'info', 3000);
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Error getting end times:', error);
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        endTimeSelect.disabled = true;
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด', 'error');
+      })
+      .getSurveyAvailableEndTimes(date, startTime, workType); // ✅ ส่ง workType
+  }
+}
     
     function setSelectLoading(selectElement, loadingText) {
       selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
