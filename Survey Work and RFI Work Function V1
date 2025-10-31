@@ -300,11 +300,7 @@ function timeToMinutes(timeString) {
 }
 
 /**
- * ✅ โหลด Work Types จาก Sheet "Work"
- * กรองตาม Work_Category (Column C)
- * - "RFI Work" สำหรับ index.html
- * - "Survey Work" สำหรับ survey.html
- * ดึง Name_Work (Column B) มาแสดง
+ * ✅ UPDATED: โหลด Work Types พร้อม Duration
  */
 function getWorkTypeList(category) {
   try {
@@ -324,40 +320,42 @@ function getWorkTypeList(category) {
       return [];
     }
     
-    // ดึง Column A (ID_Work), B (Name_Work), C (Work_Category)
-    const data = workSheet.getRange(2, 1, lastRow - 1, 3).getValues();
-    const uniqueWorkTypes = new Set();
+    // ✅ ดึง Column A-E (ID, Name, Category, (ไม่ใช้), Duration)
+    const data = workSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const workTypes = [];
     
-    // ถ้าไม่ส่ง category มา ให้ใช้ "RFI Work" เป็น default
     const filterCategory = category || 'RFI Work';
     
     for (let i = 0; i < data.length; i++) {
-      const idWork = String(data[i][0] || '').trim(); // Column A (ไม่ใช้)
-      const nameWork = String(data[i][1] || '').trim(); // Column B (Name_Work)
-      const workCategory = String(data[i][2] || '').trim(); // Column C (Work_Category)
+      const idWork = String(data[i][0] || '').trim();
+      const nameWork = String(data[i][1] || '').trim();
+      const workCategory = String(data[i][2] || '').trim();
+      const duration = parseInt(data[i][4]) || 60; // ✅ Column E (Duration, default 60 นาที)
       
-      // กรองตาม category ที่ส่งมา และมี Name_Work
       if (workCategory === filterCategory && nameWork) {
-        uniqueWorkTypes.add(nameWork);
-        console.log('✅ Found', filterCategory + ':', nameWork);
+        workTypes.push({
+          name: nameWork,
+          duration: duration  // ✅ ส่ง duration กลับด้วย
+        });
+        console.log('✅ Found', filterCategory + ':', nameWork, '(Duration:', duration, 'min)');
       }
     }
     
-    // แปลง Set เป็น Array และ Sort A-Z
-    const sortedWorkTypes = Array.from(uniqueWorkTypes).sort();
+    // Sort A-Z
+    workTypes.sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
     
-    console.log('📊 Total', filterCategory, 'Types:', sortedWorkTypes.length);
-    console.log('📋 Work Types:', sortedWorkTypes);
+    console.log('📊 Total', filterCategory, 'Types:', workTypes.length);
     console.log('======================================');
     
-    return sortedWorkTypes;
+    return workTypes;
     
   } catch (error) {
     console.error('❌ Error getting work type list:', error);
     return [];
   }
 }
-
 
 
 function teamSupportsWorkType(teamWorkTypes, requestedWorkType) {
@@ -520,8 +518,7 @@ function isStatusInactive(status) {
 }
 
 /**
- * ✨ เช็คว่าทีมว่างหรือไม่ (RFI System - มี buffer ±30 นาที)
- * (ปรับปรุงจากเดิม)
+ * ✅ UPDATED: ยกเลิก Buffer - เช็คแค่เวลาทับซ้อน
  */
 function isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId) {
   try {
@@ -538,20 +535,18 @@ function isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId) {
     
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const rfiId = String(row[0] || '').trim();              // Column A - ID
-      const rfiDate = formatDate(new Date(row[4]));           // Column E - Request_Date
-      const rfiStartTime = formatTime(row[5]);                // Column F - Start_Time
-      const rfiEndTime = formatTime(row[6]);                  // Column G - End_Time
-      const assignedTeams = String(row[11] || '').trim();     // Column L - Assigned_Inspector
-      const status = String(row[14] || '').trim();            // Column O - Status
+      const rfiId = String(row[0] || '').trim();
+      const rfiDate = formatDate(new Date(row[4]));
+      const rfiStartTime = formatTime(row[5]);
+      const rfiEndTime = formatTime(row[6]);
+      const assignedTeams = String(row[11] || '').trim();
+      const status = String(row[14] || '').trim();
       
-      // ⭐ ข้าม RFI ที่กำลังแก้ไข
       if (excludeRfiId && rfiId === excludeRfiId) {
         console.log('Skipping RFI being edited:', rfiId);
         continue;
       }
       
-      // ✅ ข้าม Status ที่ไม่ใช้ทีมแล้ว
       if (isStatusInactive(status)) {
         console.log('Skipping inactive status:', status, '(RFI:', rfiId + ')');
         continue;
@@ -592,12 +587,9 @@ function isTeamAvailable(resourceId, date, startTime, endTime, excludeRfiId) {
         const existingStartMinutes = timeToMinutes(rfiStartTime);
         const existingEndMinutes = timeToMinutes(rfiEndTime);
         
-        // Buffer ±30 นาที (25 นาทีในโค้ด)
-        const bufferedExistingStart = existingStartMinutes - 25;
-        const bufferedExistingEnd = existingEndMinutes + 25;
-        
-        const isAvailable = (requestEndMinutes < bufferedExistingStart) || 
-                           (requestStartMinutes > bufferedExistingEnd);
+        // ✅ ยกเลิก Buffer - เช็คแค่เวลาทับซ้อน
+        const isAvailable = (requestEndMinutes <= existingStartMinutes) || 
+                           (requestStartMinutes >= existingEndMinutes);
         
         if (!isAvailable) {
           console.log('Team ' + resourceId + ' is NOT available (RFI: ' + rfiId + ', Status: ' + status + ')');
@@ -1924,10 +1916,8 @@ ${data.locationLayoutUrl ? '<div class="highlight"><strong>📎 Location Layout 
   return emailBody;
 }
 
-
 /**
- * ⚡ UPDATED: ดึง Available Time Slots (Optimized)
- * ✅ รักษา function signature เดิม
+ * ✅ UPDATED: Get Available Time Slots (ไม่มี Buffer)
  */
 function getAvailableTimeSlots(date, category) {
   try {
@@ -1938,7 +1928,6 @@ function getAvailableTimeSlots(date, category) {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     
-    // สร้าง all slots
     const allSlots = [];
     for (let hour = 9; hour <= 19; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
@@ -1950,7 +1939,6 @@ function getAvailableTimeSlots(date, category) {
     
     let filteredSlots = allSlots.slice();
     
-    // กรองเวลาที่ผ่านไป (วันนี้)
     if (selectedDateOnly.getTime() === today.getTime()) {
       const minTime = new Date(now.getTime() + (30 * 60 * 1000));
       
@@ -1964,7 +1952,6 @@ function getAvailableTimeSlots(date, category) {
       return [];
     }
     
-    // ถ้าไม่มี category ให้ return slots ที่กรองตามเวลาแล้ว
     if (!category) {
       return filteredSlots;
     }
@@ -1975,7 +1962,6 @@ function getAvailableTimeSlots(date, category) {
       return [];
     }
     
-    // ⚡ Cache blocked slots ครั้งเดียว (Performance Optimization)
     const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
     
     const availableSlots = [];
@@ -1983,7 +1969,6 @@ function getAvailableTimeSlots(date, category) {
     for (let i = 0; i < filteredSlots.length; i++) {
       const startSlot = filteredSlots[i];
       
-      // คำนวณ end time (default +1 ชั่วโมง)
       const startParts = startSlot.split(':');
       const startHour = parseInt(startParts[0]);
       const startMin = parseInt(startParts[1]);
@@ -1994,7 +1979,6 @@ function getAvailableTimeSlots(date, category) {
       const requestStartMinutes = timeToMinutes(startSlot);
       const requestEndMinutes = timeToMinutes(endSlot);
       
-      // ⚡ เช็คจาก cached data แทนการ loop ซ้ำ
       let hasAvailableTeam = false;
       
       for (let j = 0; j < availableTeams.length; j++) {
@@ -2005,11 +1989,8 @@ function getAvailableTimeSlots(date, category) {
         
         for (let k = 0; k < blocks.length; k++) {
           const block = blocks[k];
-          // Buffer ±25 นาที
-          const bufferedStart = block.start - 25;
-          const bufferedEnd = block.end + 25;
-          
-          if (!(requestEndMinutes < bufferedStart || requestStartMinutes > bufferedEnd)) {
+          // ✅ ยกเลิก buffer
+          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
             isAvailable = false;
             break;
           }
@@ -2035,10 +2016,9 @@ function getAvailableTimeSlots(date, category) {
 }
 
 /**
- * ⚡ UPDATED: ดึง Available End Times (Optimized)
- * ✅ รักษา function signature เดิม
+ * ✅ UPDATED: Get Available End Times (ใช้ Duration จาก Work Type)
  */
-function getAvailableEndTimes(date, startTime, category) {
+function getAvailableEndTimes(date, startTime, category, workType) {
   try {
     if (!startTime || !date) return [];
     
@@ -2054,36 +2034,47 @@ function getAvailableEndTimes(date, startTime, category) {
     
     const startMinutes = timeToMinutes(startTime);
     
-    // ถ้าไม่มี category ใช้วิธีเดิม (เช็คจาก RFI ในวันนั้น)
-    if (!category) {
-      const existingRFI = getRFIByDate(date);
+    // ✅ ดึง Duration จาก Sheet "Work"
+    let minDuration = 60; // Default 60 นาที
+    
+    if (workType) {
+      const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
       
-      let nextRFIMinutes = Infinity;
-      existingRFI.forEach(function(rfi) {
-        const rfiStartMinutes = timeToMinutes(rfi.startTime);
-        if (rfiStartMinutes > startMinutes && rfiStartMinutes < nextRFIMinutes) {
-          nextRFIMinutes = rfiStartMinutes;
+      if (workSheet) {
+        const lastRow = workSheet.getLastRow();
+        const data = workSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+        
+        for (let i = 0; i < data.length; i++) {
+          const nameWork = String(data[i][1] || '').trim();
+          const duration = parseInt(data[i][4]) || 60;
+          
+          if (nameWork === workType) {
+            minDuration = duration;
+            console.log('✅ Found duration for', workType + ':', duration, 'min');
+            break;
+          }
         }
-      });
-      
+      }
+    }
+    
+    const minEndMinutes = startMinutes + minDuration;
+    
+    // ถ้าไม่มี category ใช้วิธีเดิม
+    if (!category) {
       const availableEndTimes = allEndSlots.filter(function(slot) {
         const slotMinutes = timeToMinutes(slot);
-        if (slotMinutes <= startMinutes) return false;
-        if (nextRFIMinutes !== Infinity && slotMinutes > nextRFIMinutes) return false;
-        return true;
+        return slotMinutes >= minEndMinutes; // ✅ ต้อง >= min duration
       });
       
       return availableEndTimes;
     }
     
-    // ดึงทีมทั้งหมดในหมวดที่เลือก
-    const availableTeams = getTeamsByCategory(category);
+    const availableTeams = getTeamsByCategory(category, workType);
     
     if (availableTeams.length === 0) {
       return [];
     }
     
-    // ⚡ Cache blocked slots ครั้งเดียว
     const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
     
     const availableEndTimes = [];
@@ -2092,9 +2083,9 @@ function getAvailableEndTimes(date, startTime, category) {
       const endSlot = allEndSlots[i];
       const endMinutes = timeToMinutes(endSlot);
       
-      if (endMinutes <= startMinutes) continue;
+      // ✅ ต้อง >= min duration
+      if (endMinutes < minEndMinutes) continue;
       
-      // ⚡ เช็คจาก cached data
       let hasAvailableTeam = false;
       
       for (let j = 0; j < availableTeams.length; j++) {
@@ -2105,11 +2096,8 @@ function getAvailableEndTimes(date, startTime, category) {
         
         for (let k = 0; k < blocks.length; k++) {
           const block = blocks[k];
-          // Buffer ±25 นาที
-          const bufferedStart = block.start - 25;
-          const bufferedEnd = block.end + 25;
-          
-          if (!(endMinutes < bufferedStart || startMinutes > bufferedEnd)) {
+          // ✅ ไม่มี buffer
+          if (!(endMinutes <= block.start || startMinutes >= block.end)) {
             isAvailable = false;
             break;
           }
@@ -2124,7 +2112,6 @@ function getAvailableEndTimes(date, startTime, category) {
       if (hasAvailableTeam) {
         availableEndTimes.push(endSlot);
       } else {
-        // ถ้าไม่มีทีมว่างแล้ว ให้หยุดเช็คต่อ (เพราะถัดไปก็จะไม่ว่างแน่นอน)
         break;
       }
     }
