@@ -733,7 +733,6 @@ input[type="file"]::file-selector-button:hover {
       <strong>📅 Lead Time:</strong> ≥ 1 วัน (จองพรุ่งนี้ปิดรับ 13:00 น.)<br>
       <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-      <strong>🛡️ Buffer:</strong> ระบบจะสำรอง ±30 นาที ระหว่าง RFI<br>
       <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
       <strong>✅ Approval:</strong> ต้องขออนุมัติ Consultant
     </div>
@@ -744,7 +743,6 @@ input[type="file"]::file-selector-button:hover {
       <strong>⚡ Lead Time:</strong> 30 นาที (จองวันนี้ก็ได้)<br>
       <strong>📅 วันที่จอง:</strong> วันนี้หรือวันถัดไป<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-      <strong>🛡️ Buffer:</strong> ±30 นาที ระหว่างการตรวจ<br>
       <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
       <strong>📅 Calendar:</strong> สร้างทันที + ส่ง invitation<br>
       <strong>✅ Approval:</strong> ไม่ต้องขออนุมัติ Consultant
@@ -1250,56 +1248,97 @@ function formatFileSize(bytes) {
         .getCurrentUserEmail();
     }
     
-    function loadWorkTypes() {
-      var workTypeSelect = document.getElementById('workType');
-      workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
-      workTypeSelect.disabled = true;
+function loadWorkTypes() {
+  var workTypeSelect = document.getElementById('workType');
+  workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
+  workTypeSelect.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(workTypes) {
+      workTypeSelect.innerHTML = '';
       
-      google.script.run
-        .withSuccessHandler(function(workTypes) {
-          workTypeSelect.innerHTML = '';
-          
-          if (!workTypes || workTypes.length === 0) {
-            workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน --</option>';
-            showMessage('ไม่พบข้อมูลประเภทงาน กรุณาเพิ่มข้อมูลใน Sheet "Work"', 'warning');
-          } else {
-            workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
-            
-            workTypes.forEach(function(workType) {
-              var option = document.createElement('option');
-              option.value = workType;
-              option.textContent = workType;
-              workTypeSelect.appendChild(option);
-            });
-            
-            workTypeSelect.disabled = false;
-            workTypeSelect.addEventListener('change', handleWorkTypeChange);
-          }
-        })
-        .withFailureHandler(function(error) {
-          workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-          showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
-        })
-        .getWorkTypeList();
-    }
-    
-    function handleWorkTypeChange() {
-      var workType = document.getElementById('workType').value;
-      
-      if (!workType) {
-        hideRecommendation();
-        return;
+      if (!workTypes || workTypes.length === 0) {
+        workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน --</option>';
+        showMessage('ไม่พบข้อมูลประเภทงาน กรุณาเพิ่มข้อมูลใน Sheet "Work"', 'warning');
+      } else {
+        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+        
+        workTypes.forEach(function(workType) {
+          var option = document.createElement('option');
+          option.value = workType.name;
+          option.textContent = workType.name + ' (' + workType.duration + ' นาที)';
+          option.setAttribute('data-duration', workType.duration);
+          workTypeSelect.appendChild(option);
+        });
+        
+        workTypeSelect.disabled = false;
+        // ✅ เพิ่ม Event Listener
+        workTypeSelect.addEventListener('change', handleWorkTypeChange);
       }
-      
-      showRecommendationLoading();
-      
-      google.script.run
-        .withSuccessHandler(handleRecommendationResponse)
-        .withFailureHandler(function(error) {
-          hideRecommendation();
-        })
-        .getRecommendedCategory(workType);
-    }
+    })
+    .withFailureHandler(function(error) {
+      workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+      showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
+    })
+    .getWorkTypeList();
+}
+    
+// ✅ UPDATED: Reset Time เมื่อเปลี่ยน Work Type
+function handleWorkTypeChange() {
+  var workType = document.getElementById('workType').value;
+  
+  // ✅ Reset Start Time และ End Time
+  resetTimeSelects();
+  
+  if (!workType) {
+    hideRecommendation();
+    return;
+  }
+  
+  showRecommendationLoading();
+  
+  google.script.run
+    .withSuccessHandler(handleRecommendationResponse)
+    .withFailureHandler(function(error) {
+      hideRecommendation();
+    })
+    .getRecommendedCategory(workType);
+}
+
+function resetTimeSelects() {
+  var startTimeSelect = document.getElementById('startTime');
+  var endTimeSelect = document.getElementById('endTime');
+  var dateInput = document.getElementById('requestDate');
+  
+  // เก็บค่าวันที่ไว้
+  var currentDate = dateInput.value;
+  
+  // Reset Start Time
+  if (currentDate) {
+    // ถ้ามีวันที่อยู่แล้ว ให้ reload slots ใหม่
+    startTimeSelect.innerHTML = '<option value="">-- กำลังโหลดเวลาใหม่... --</option>';
+    startTimeSelect.disabled = true;
+    startTimeSelect.className += ' loading-select';
+  } else {
+    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+    startTimeSelect.disabled = true;
+  }
+  
+  startTimeSelect.value = '';
+  
+  // Reset End Time
+  resetEndTimeSelect();
+  
+  console.log('✅ Time selects reset due to Work Type change');
+  
+  // ✅ ถ้ามีวันที่อยู่แล้ว ให้โหลด slots ใหม่ทันที
+  if (currentDate) {
+    setTimeout(function() {
+      updateAvailableSlots();
+    }, 100);
+  }
+}
+
     
     function showRecommendationLoading() {
       var box = document.getElementById('recommendationBox');
@@ -1524,61 +1563,76 @@ function formatFileSize(bytes) {
     }
     
     function updateEndTimeSlots() {
-      var date = document.getElementById('requestDate').value;
-      var startTime = document.getElementById('startTime').value;
-      var endTimeSelect = document.getElementById('endTime');
-      
-      if (!startTime) {
-        resetEndTimeSelect();
-        return;
-      }
-      
-      setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
-      
-      if (date && startTime) {
-        google.script.run
-          .withSuccessHandler(function(availableEndTimes) {
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '';
-            
-            if (!availableEndTimes || availableEndTimes.length === 0) {
-              endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
-              endTimeSelect.disabled = true;
-              showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
-            } else {
-              endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
-              
-              var startHour = parseInt(startTime.split(':')[0]);
-              var startMinute = parseInt(startTime.split(':')[1]);
-              var defaultEndTime = (startHour + 1).toString().padStart(2, '0') + ':' + 
-                                 startMinute.toString().padStart(2, '0');
-              
-              availableEndTimes.forEach(function(time) {
-                var option = document.createElement('option');
-                option.value = time;
-                option.textContent = time + ' น.';
-                if (time === defaultEndTime) {
-                  option.selected = true;
-                }
-                endTimeSelect.appendChild(option);
-              });
-              
-              endTimeSelect.disabled = false;
-              
-              if (availableEndTimes.includes(defaultEndTime)) {
-                showMessage('เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น.', 'info', 3000);
-              }
+  var date = document.getElementById('requestDate').value;
+  var startTime = document.getElementById('startTime').value;
+  var endTimeSelect = document.getElementById('endTime');
+  
+  if (!startTime) {
+    resetEndTimeSelect();
+    return;
+  }
+  
+  setSelectLoading(endTimeSelect, 'กำลังโหลดเวลาสิ้นสุด...');
+  
+  if (date && startTime) {
+    // ✅ ดึง Duration จาก Work Type Dropdown
+    var workTypeSelect = document.getElementById('workType');
+    var selectedOption = workTypeSelect.options[workTypeSelect.selectedIndex];
+    var duration = parseInt(selectedOption.getAttribute('data-duration')) || 60;
+    
+    var startParts = startTime.split(':');
+    var startHour = parseInt(startParts[0]);
+    var startMin = parseInt(startParts[1]);
+    
+    // ✅ คำนวณ End Time จาก Duration
+    var totalMinutes = (startHour * 60) + startMin + duration;
+    var endHour = Math.floor(totalMinutes / 60);
+    var endMin = totalMinutes % 60;
+    
+    var defaultEndTime = endHour.toString().padStart(2, '0') + ':' + 
+                        endMin.toString().padStart(2, '0');
+    
+    var category = selectedTeamCategory;
+    var workType = workTypeSelect.value;
+    
+    google.script.run
+      .withSuccessHandler(function(availableEndTimes) {
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '';
+        
+        if (!availableEndTimes || availableEndTimes.length === 0) {
+          endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุดที่ว่าง --</option>';
+          endTimeSelect.disabled = true;
+          showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
+        } else {
+          endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
+          
+          availableEndTimes.forEach(function(time) {
+            var option = document.createElement('option');
+            option.value = time;
+            option.textContent = time + ' น.';
+            if (time === defaultEndTime) {
+              option.selected = true;
             }
-          })
-          .withFailureHandler(function(error) {
-            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-            endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-            endTimeSelect.disabled = true;
-            showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด', 'error');
-          })
-          .getAvailableEndTimes(date, startTime);
-      }
-    }
+            endTimeSelect.appendChild(option);
+          });
+          
+          endTimeSelect.disabled = false;
+          
+          if (availableEndTimes.includes(defaultEndTime)) {
+            showMessage('✅ เลือกเวลาสิ้นสุดเริ่มต้น: ' + defaultEndTime + ' น. (' + duration + ' นาที)', 'info', 3000);
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+        endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        endTimeSelect.disabled = true;
+        showMessage('เกิดข้อผิดพลาดในการโหลดเวลาสิ้นสุด', 'error');
+      })
+      .getAvailableEndTimes(date, startTime, category, workType); // ✅ ส่ง workType
+  }
+}
     
     function setSelectLoading(selectElement, loadingText) {
       selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
@@ -1586,11 +1640,12 @@ function formatFileSize(bytes) {
       selectElement.disabled = true;
     }
     
-    function resetEndTimeSelect() {
-      var endTimeSelect = document.getElementById('endTime');
-      endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
-      endTimeSelect.disabled = true;
-    }
+function resetEndTimeSelect() {
+  var endTimeSelect = document.getElementById('endTime');
+  endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
+  endTimeSelect.disabled = true;
+  endTimeSelect.value = '';
+}
     
     function handleSubmit(event) {
   event.preventDefault();
