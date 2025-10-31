@@ -2183,6 +2183,76 @@ function getRFIByDate(date) {
 }
 
 /**
+ * ⭐ อัปโหลดไฟล์ Location Layout สำหรับ Survey Work
+ */
+function uploadSurveyLocationLayout(fileData, surveyNo) {
+  try {
+    console.log('========== Upload Survey Location Layout START ==========');
+    console.log('Survey NO:', surveyNo);
+    console.log('Original file name:', fileData.name);
+    console.log('MIME type:', fileData.mimeType);
+    
+    // ⭐ ใช้ Folder เดียวกับ RFI
+    var LOCATION_LAYOUT_FOLDER_ID = '11xT2Ik1A5yD8S7yPaVEEeVfJGKLY5LRW';
+    
+    // ดึง Folder
+    var folder = DriveApp.getFolderById(LOCATION_LAYOUT_FOLDER_ID);
+    
+    if (!folder) {
+      throw new Error('ไม่พบ Folder Location Layout');
+    }
+    
+    console.log('✅ Folder found:', folder.getName());
+    
+    // ⭐ สร้างชื่อไฟล์ใหม่: SW_[Survey_NO]_LocationLayout.[ext]
+    var fileExtension = fileData.name.split('.').pop().toLowerCase();
+    var newFileName = 'SW_' + surveyNo + '_LocationLayout.' + fileExtension;
+    
+    console.log('✅ New file name:', newFileName);
+    
+    // Decode Base64
+    var blob = Utilities.newBlob(
+      Utilities.base64Decode(fileData.content),
+      fileData.mimeType,
+      newFileName
+    );
+    
+    // สร้างไฟล์ใน Drive
+    var file = folder.createFile(blob);
+    
+    // ตั้งค่า Permission (Anyone with link can view)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    var fileUrl = file.getUrl();
+    var fileId = file.getId();
+    
+    console.log('✅ File uploaded successfully');
+    console.log('File ID:', fileId);
+    console.log('File URL:', fileUrl);
+    console.log('========== Upload Survey Location Layout END ==========');
+    
+    return {
+      success: true,
+      fileUrl: fileUrl,
+      fileId: fileId,
+      fileName: file.getName(),
+      originalFileName: fileData.name
+    };
+    
+  } catch (error) {
+    console.error('========== Upload Survey Location Layout FAILED ==========');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.toString()
+    };
+  }
+}
+
+
+/**
  * ⭐ อัปเดต: อัปโหลดไฟล์พร้อมตั้งชื่อที่มีความหมาย
  */
 function uploadLocationLayout(fileData, rfiId) {
@@ -4344,14 +4414,10 @@ function getSurveyAvailableEndTimes(date, startTime) {
   }
 }
 
-
-/**
- * ✅ อัปเดต: บันทึก Survey Work พร้อมกรอง Work Type
- */
 function saveSurveyWorkRequirement(data) {
   try {
     console.log('========== saveSurveyWorkRequirement START ==========');
-    console.log('Input data:', JSON.stringify(data));
+    console.log('Has file:', !!data.locationLayoutFile);
     
     // Validation
     if (!data.requestDate || !data.startTime || !data.endTime || 
@@ -4363,6 +4429,7 @@ function saveSurveyWorkRequirement(data) {
       };
     }
     
+
     // Validate User
     const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
@@ -4379,13 +4446,13 @@ function saveSurveyWorkRequirement(data) {
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
     
-    // ⭐ จัดทีม Survey อัตโนมัติ (ส่ง workType ไปด้วย)
+    // จัดทีม Survey อัตโนมัติ
     const teamAssignment = assignSurveyTeamAutomatically(
       data.requestDate, 
       data.startTime, 
       data.endTime,
       false,
-      data.workType  // ⭐ ส่ง work type
+      data.workType
     );
     
     if (!teamAssignment || !teamAssignment.success) {
@@ -4407,6 +4474,26 @@ function saveSurveyWorkRequirement(data) {
     const surveyNo = 'SW-' + String(orderSurvey).padStart(4, '0');
     console.log('Survey NO:', surveyNo);
     
+    // ⭐ อัปโหลดไฟล์ไปยัง Google Drive (ถ้ามี)
+    let uploadResult = null;
+    
+    if (data.locationLayoutFile) {
+      console.log('Uploading file to Drive...');
+      uploadResult = uploadSurveyLocationLayout(data.locationLayoutFile, surveyNo);
+      
+      if (!uploadResult.success) {
+        console.error('File upload failed:', uploadResult.message);
+        return {
+          success: false,
+          message: 'ไม่สามารถอัปโหลดไฟล์ได้: ' + uploadResult.message
+        };
+      }
+      
+      console.log('✅ File uploaded:', uploadResult.fileUrl);
+    } else {
+      console.log('⚠️ No file attached - skipping upload');
+    }
+    
     // บันทึกลง Sheet
     let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
@@ -4423,8 +4510,9 @@ function saveSurveyWorkRequirement(data) {
     const dateParts = data.requestDate.split('-');
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
+    // ⭐ เตรียมข้อมูล 41 columns
     const rowData = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 41; i++) {
       rowData.push('');
     }
     
@@ -4442,11 +4530,12 @@ function saveSurveyWorkRequirement(data) {
     rowData[14] = 'Survey Work Request Submitted';
     rowData[15] = currentTime;
     rowData[39] = 'Survey Work';
+    rowData[40] = uploadResult ? uploadResult.fileUrl : ''; // ⭐ ถ้าไม่มีไฟล์ ใส่ค่าว่าง
     
-    sheet.getRange(nextRow, 1, 1, 40).setValues([rowData]);
+    sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // เรียก Calendar Service (ไม่เปลี่ยน)
+    // เรียก Calendar Service
     let calendarResult = null;
     
     try {
@@ -4476,7 +4565,8 @@ function saveSurveyWorkRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamName,
         surveyNo: surveyNo,
-        teamEmails: teamEmails
+        teamEmails: teamEmails,
+        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null // ⭐ ส่ง null ถ้าไม่มี
       }, 3);
       
       if (calendarResult.success) {
@@ -4506,7 +4596,8 @@ function saveSurveyWorkRequirement(data) {
         requesterName: validatedName,
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamName,
-        teamCategory: 'Survey Work'
+        teamCategory: 'Survey Work',
+        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null // ⭐ ส่ง null ถ้าไม่มี
       };
       emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId, surveyNo);
     } catch (emailError) {
@@ -4515,8 +4606,13 @@ function saveSurveyWorkRequirement(data) {
     
     let message = 'บันทึก Survey Work Request เรียบร้อยแล้ว';
     message += '\n📋 Survey NO: ' + surveyNo;
-    message += '\nงาน: ' + data.workType;  // ⭐ แสดง work type
+    message += '\nงาน: ' + data.workType;
     message += '\n👥 ทีมงาน: ' + teamAssignment.teamName;
+    
+    // ⭐ แสดงชื่อไฟล์ถ้ามี
+    if (uploadResult && uploadResult.fileName) {
+      message += '\n📎 ไฟล์: ' + uploadResult.fileName;
+    }
     
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
@@ -4543,7 +4639,9 @@ function saveSurveyWorkRequirement(data) {
       calendarCreated: calendarResult ? calendarResult.success : false,
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamName,
-      workType: data.workType  // ⭐ ส่ง work type กลับ
+      workType: data.workType,
+      fileUrl: uploadResult ? uploadResult.fileUrl : null, // ⭐ null ถ้าไม่มี
+      fileName: uploadResult ? uploadResult.fileName : null // ⭐ null ถ้าไม่มี
     };
     
   } catch (error) {
@@ -4873,12 +4971,15 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {
 }
 
 /**
- * ⭐ อัปเดต HTML สำหรับอีเมล Survey Work (ปรับสีเขียว)
+ * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล Survey Work (เพิ่ม Location Layout Link)
  */
-/**
- * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล Survey Work (เพิ่ม parameter surveyNo)
- */
-function createSurveyWorkEmailHTML(data, rfiId, surveyNo) {  // ⭐ เพิ่ม parameter
+function createSurveyWorkEmailHTML(data, rfiId, surveyNo) {
+  // ⭐ เพิ่มส่วนแสดง Location Layout File
+  var fileInfo = '';
+  if (data.locationLayoutUrl) {
+    fileInfo = '<tr><th>📎 Location Layout</th><td><a href="' + data.locationLayoutUrl + '" target="_blank" style="color: #16a34a; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #16a34a;">📄 ดูไฟล์ Location Layout ↗</a></td></tr>';
+  }
+  
   const emailBody = `<!DOCTYPE html>
 <html>
 <head>
@@ -4937,10 +5038,13 @@ th { background-color: #ecfdf5; }
 <tr><th>วันที่ต้องการ</th><td>${formatDateThai(data.requestDate)}</td></tr>
 <tr><th>เวลา</th><td>${data.startTime} - ${data.endTime} น.</td></tr>
 <tr><th>ทีมที่จัดให้</th><td><strong style="color: #16a34a;">${data.assignedTeam}</strong> (Survey Team)</td></tr>
+${fileInfo}
 <tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
 ${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
 <tr><th>สถานะ</th><td><span class="status-badge">Survey Work Request Submitted</span></td></tr>
 </table>
+
+${data.locationLayoutUrl ? '<div class="highlight"><strong>📎 Location Layout File แนบมาพร้อมนี้</strong><br>กรุณาตรวจสอบไฟล์แนบเพื่อความชัดเจนในการดำเนินการ</div>' : ''}
 
 <div class="highlight">
   <strong>⚠️ ขั้นตอนถัดไป:</strong><br>
@@ -4958,7 +5062,6 @@ ${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data
   
   return emailBody;
 }
-
 
 
 
