@@ -4384,8 +4384,11 @@ function saveSurveyWorkRequirement(data) {
       };
     }
     
+    // ⭐ เพิ่ม: Progress Array
+    var progressSteps = [];
 
     // Validate User
+    progressSteps.push('ตรวจสอบผู้ใช้');
     const userValidation = validateAndGetUser(data.requesterEmail, data.requesterName);
     
     if (!userValidation.success) {
@@ -4402,6 +4405,7 @@ function saveSurveyWorkRequirement(data) {
     const validatedName = userValidation.name;
     
     // จัดทีม Survey อัตโนมัติ
+    progressSteps.push('จัดทีม Survey');
     const teamAssignment = assignSurveyTeamAutomatically(
       data.requestDate, 
       data.startTime, 
@@ -4433,8 +4437,9 @@ function saveSurveyWorkRequirement(data) {
     let uploadResult = null;
     
     if (data.locationLayoutFile) {
-      console.log('Uploading file to Drive...');
-      uploadResult = uploadSurveyLocationLayout(data.locationLayoutFile, surveyNo);
+    progressSteps.push('อัปโหลดไฟล์'); // ✅ เพิ่มบรรทัดนี้
+    console.log('Uploading file to Drive...');
+    uploadResult = uploadSurveyLocationLayout(data.locationLayoutFile, surveyNo);
       
       if (!uploadResult.success) {
         console.error('File upload failed:', uploadResult.message);
@@ -4450,6 +4455,7 @@ function saveSurveyWorkRequirement(data) {
     }
     
     // บันทึกลง Sheet
+    progressSteps.push('บันทึกข้อมูล');
     let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
@@ -4485,12 +4491,13 @@ function saveSurveyWorkRequirement(data) {
     rowData[14] = 'Survey Work Request Submitted';
     rowData[15] = currentTime;
     rowData[39] = 'Survey Work';
-    rowData[40] = uploadResult ? uploadResult.fileUrl : ''; // ⭐ ถ้าไม่มีไฟล์ ใส่ค่าว่าง
+    rowData[40] = uploadResult ? uploadResult.fileUrl : '';
     
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
     // เรียก Calendar Service
+    progressSteps.push('สร้าง Calendar Event');
     let calendarResult = null;
     
     try {
@@ -4521,7 +4528,7 @@ function saveSurveyWorkRequirement(data) {
         assignedTeam: teamAssignment.teamName,
         surveyNo: surveyNo,
         teamEmails: teamEmails,
-        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null // ⭐ ส่ง null ถ้าไม่มี
+        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null
       }, 3);
       
       if (calendarResult.success) {
@@ -4540,6 +4547,7 @@ function saveSurveyWorkRequirement(data) {
     }
     
     // ส่งอีเมล
+    progressSteps.push('ส่งอีเมลแจ้งเตือน');
     let emailSent = false;
     try {
       const emailData = {
@@ -4552,7 +4560,7 @@ function saveSurveyWorkRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamName,
         teamCategory: 'Survey Work',
-        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null // ⭐ ส่ง null ถ้าไม่มี
+        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null
       };
       emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId, surveyNo);
     } catch (emailError) {
@@ -4564,7 +4572,6 @@ function saveSurveyWorkRequirement(data) {
     message += '\nงาน: ' + data.workType;
     message += '\n👥 ทีมงาน: ' + teamAssignment.teamName;
     
-    // ⭐ แสดงชื่อไฟล์ถ้ามี
     if (uploadResult && uploadResult.fileName) {
       message += '\n📎 ไฟล์: ' + uploadResult.fileName;
     }
@@ -4585,6 +4592,7 @@ function saveSurveyWorkRequirement(data) {
     
     console.log('========== saveSurveyWorkRequirement SUCCESS ==========');
     
+    // ⭐ ส่ง progress กลับไปด้วย
     return {
       success: true,
       message: message,
@@ -4595,8 +4603,9 @@ function saveSurveyWorkRequirement(data) {
       userAdded: !userValidation.exists,
       assignedTeam: teamAssignment.teamName,
       workType: data.workType,
-      fileUrl: uploadResult ? uploadResult.fileUrl : null, // ⭐ null ถ้าไม่มี
-      fileName: uploadResult ? uploadResult.fileName : null // ⭐ null ถ้าไม่มี
+      fileUrl: uploadResult ? uploadResult.fileUrl : null,
+      fileName: uploadResult ? uploadResult.fileName : null,
+      progress: progressSteps // ⭐ ส่ง progress steps กลับไป
     };
     
   } catch (error) {
