@@ -1,9 +1,4 @@
 //Version 14 20/10/2025 10:30
-// ===== Survey Work Functions =====
-// เพิ่มฟังก์ชันเหล่านี้ใน Code.gs
-/**
- * อัปเดต doGet() เพื่อเพิ่มหน้า Survey Work
- */
 
 function doGet(e) {
   const page = e.parameter.page;
@@ -2309,10 +2304,17 @@ function uploadLocationLayout(fileData, rfiId) {
 }
 
 function saveRFIRequirement(data) {
+  // ⭐ เพิ่ม: สร้าง Array เก็บ Progress
+  var progress = [];
+  var isInternal = data.inspectionType === 'internal';
+  
   try {
     console.log('========== saveRFIRequirement START ==========');
     console.log('Inspection Type:', data.inspectionType);
     console.log('Has file:', !!data.locationLayoutFile);
+    
+    // ⭐ Step 1: ตรวจสอบข้อมูล
+    progress.push('ตรวจสอบข้อมูล');
     
     // Validation
     if (!data.inspectionType || !data.requestDate || !data.startTime || !data.endTime || 
@@ -2320,7 +2322,8 @@ function saveRFIRequirement(data) {
         !data.requesterName || !data.requesterEmail || !data.teamCategory) {
       return {
         success: false,
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+        progress: progress
       };
     }
     
@@ -2328,7 +2331,8 @@ function saveRFIRequirement(data) {
     if (!data.locationLayoutFile) {
       return {
         success: false,
-        message: 'กรุณาแนบไฟล์ Location Layout'
+        message: 'กรุณาแนบไฟล์ Location Layout',
+        progress: progress
       };
     }
     
@@ -2337,12 +2341,16 @@ function saveRFIRequirement(data) {
     if (!userValidation.success) {
       return {
         success: false,
-        message: userValidation.message
+        message: userValidation.message,
+        progress: progress
       };
     }
     
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
+    
+    // ⭐ Step 2: บันทึกลงฐานข้อมูล
+    progress.push('บันทึกลงฐานข้อมูล');
     
     // จัดทีมตาม Inspection Type
     let teamAssignment;
@@ -2372,14 +2380,17 @@ function saveRFIRequirement(data) {
     if (!teamAssignment || !teamAssignment.success) {
       return {
         success: false,
-        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้'
+        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้',
+        progress: progress
       };
     }
     
     const rfiId = generateUniqueId();
     console.log('Generated ID:', rfiId);
     
-    // ⭐ อัปโหลดไฟล์ไปยัง Google Drive
+    // ⭐ Step 3: อัพโหลดไฟล์
+    progress.push('อัพโหลดไฟล์');
+    
     console.log('Uploading file to Drive...');
     const uploadResult = uploadLocationLayout(data.locationLayoutFile, rfiId);
     
@@ -2387,7 +2398,8 @@ function saveRFIRequirement(data) {
       console.error('File upload failed:', uploadResult.message);
       return {
         success: false,
-        message: 'ไม่สามารถอัปโหลดไฟล์ได้: ' + uploadResult.message
+        message: 'ไม่สามารถอัปโหลดไฟล์ได้: ' + uploadResult.message,
+        progress: progress
       };
     }
     
@@ -2439,11 +2451,12 @@ function saveRFIRequirement(data) {
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    // ส่งอีเมลและสร้าง Calendar
-    let emailSent = false;
+    // ⭐ Step 4: สร้าง Calendar Event (เฉพาะ Internal)
     let calendarResult = null;
     
-    if (data.inspectionType === 'internal') {
+    if (isInternal) {
+      progress.push('สร้าง Calendar Event');
+      
       const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
       
       const calendarData = {
@@ -2456,10 +2469,19 @@ function saveRFIRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
         teamCategory: categoryDisplay,
-        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
+        locationLayoutUrl: uploadResult.fileUrl
       };
       
       calendarResult = createInternalInspectionCalendarEvent(calendarData, rfiId);
+    }
+    
+    // ⭐ Step 5: ส่งอีเมลแจ้งเตือน
+    progress.push('ส่งอีเมลแจ้งเตือน');
+    
+    let emailSent = false;
+    
+    if (data.inspectionType === 'internal') {
+      const categoryDisplay = data.teamCategory.replace(/,/g, ', ');
       
       const emailData = {
         requestDate: data.requestDate,
@@ -2471,7 +2493,7 @@ function saveRFIRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
         teamCategory: categoryDisplay,
-        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
+        locationLayoutUrl: uploadResult.fileUrl
       };
       
       emailSent = sendInternalInspectionNotificationEmail(emailData, rfiId);
@@ -2489,18 +2511,21 @@ function saveRFIRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamNames,
         teamCategory: categoryDisplay,
-        locationLayoutUrl: uploadResult.fileUrl // ⭐ ส่ง URL ไปด้วย
+        locationLayoutUrl: uploadResult.fileUrl
       };
       
       emailSent = sendRFINotificationEmail(emailData, rfiId);
     }
+    
+    // ⭐ Step 6: จัดทีมงาน (เสร็จแล้วตั้งแต่ตอนต้น)
+    progress.push('จัดทีมงาน');
     
     let message = 'บันทึก ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' เรียบร้อยแล้ว (ID: ' + rfiId + ')';
     message += '\nงาน: ' + data.workType;
     message += '\nหมวดงาน: ' + data.teamCategory.replace(/,/g, ', ');
     message += '\nจัดทีม: ' + teamAssignment.teamNames;
     message += '\nประเภท: ' + (data.inspectionType === 'internal' ? 'Internal Inspection' : 'RFI Work');
-    message += '\n📎 ไฟล์: ' + uploadResult.fileName; // ⭐ เพิ่มชื่อไฟล์
+    message += '\n📎 ไฟล์: ' + uploadResult.fileName;
     
     if (!userValidation.exists) {
       message += '\nเพิ่มข้อมูลผู้ใช้ใหม่แล้ว';
@@ -2520,6 +2545,7 @@ function saveRFIRequirement(data) {
     
     console.log('========== saveRFIRequirement SUCCESS ==========');
     
+    // ⭐ เพิ่ม: ส่ง progress กลับไป
     return {
       success: true,
       message: message,
@@ -2530,17 +2556,20 @@ function saveRFIRequirement(data) {
       assignedTeam: teamAssignment.teamNames,
       workType: data.workType,
       inspectionType: data.inspectionType,
-      fileUrl: uploadResult.fileUrl, // ⭐ ส่ง URL กลับ
-      fileName: uploadResult.fileName // ⭐ ส่งชื่อไฟล์กลับ
+      fileUrl: uploadResult.fileUrl,
+      fileName: uploadResult.fileName,
+      progress: progress // ⭐ ส่ง progress กลับไป
     };
     
   } catch (error) {
     console.error('========== saveRFIRequirement FAILED ==========');
     console.error('Error:', error);
     
+    // ⭐ เพิ่ม: ส่ง progress กลับแม้เกิด error
     return {
       success: false,
-      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+      message: 'เกิดข้อผิดพลาด: ' + error.toString(),
+      progress: progress
     };
   }
 }
@@ -4276,19 +4305,14 @@ function getSurveyAvailableTimeSlots(date) {
   }
 }
 
+/**
+ * ⚡ OPTIMIZED: Get Available End Times (ใช้ Duration จาก Work Type)
+ */
 function getSurveyAvailableEndTimes(date, startTime, workType) {
   try {
     if (!startTime || !date) return [];
     
-    const allEndSlots = [];
-    for (let hour = 9; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        if (hour === 9 && minute === 0) continue;
-        if (hour === 20 && minute > 0) break;
-        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
-        allEndSlots.push(time);
-      }
-    }
+    console.log('⚡ Getting end times - Quick mode');
     
     const startMinutes = timeToMinutes(startTime);
     
@@ -4308,63 +4332,35 @@ function getSurveyAvailableEndTimes(date, startTime, workType) {
           
           if (nameWork === workType) {
             minDuration = duration;
-            console.log('✅ Survey Work Duration:', duration, 'min');
             break;
           }
         }
       }
     }
+    
+    console.log('Duration:', minDuration, 'min');
     
     const minEndMinutes = startMinutes + minDuration;
     
-    const availableTeams = getSurveyTeams();
-    
-    if (availableTeams.length === 0) {
-      return [];
-    }
-    
-    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
-    
-    const availableEndTimes = [];
-    
-    for (let i = 0; i < allEndSlots.length; i++) {
-      const endSlot = allEndSlots[i];
-      const endMinutes = timeToMinutes(endSlot);
-      
-      // ✅ ต้อง >= min duration
-      if (endMinutes < minEndMinutes) continue;
-      
-      let hasAvailableTeam = false;
-      
-      for (let j = 0; j < availableTeams.length; j++) {
-        const team = availableTeams[j];
-        const blocks = blockedSlots[team.resourceId] || [];
+    // ⚡ สร้าง end slots แบบเร็ว (ไม่เช็ค availability)
+    const allEndSlots = [];
+    for (let hour = 9; hour <= 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 9 && minute === 0) continue;
+        if (hour === 20 && minute > 0) break;
         
-        let isAvailable = true;
+        const endMinutes = (hour * 60) + minute;
         
-        for (let k = 0; k < blocks.length; k++) {
-          const block = blocks[k];
-          // ✅ ไม่มี buffer
-          if (!(endMinutes <= block.start || startMinutes >= block.end)) {
-            isAvailable = false;
-            break;
-          }
+        if (endMinutes >= minEndMinutes && endMinutes <= 20 * 60) {
+          const time = hour.toString().padStart(2, '0') + ':' + 
+                      minute.toString().padStart(2, '0');
+          allEndSlots.push(time);
         }
-        
-        if (isAvailable) {
-          hasAvailableTeam = true;
-          break;
-        }
-      }
-      
-      if (hasAvailableTeam) {
-        availableEndTimes.push(endSlot);
-      } else {
-        break;
       }
     }
     
-    return availableEndTimes;
+    console.log('✅ Generated', allEndSlots.length, 'end time options');
+    return allEndSlots;
     
   } catch (error) {
     console.error('Error in getSurveyAvailableEndTimes:', error);
