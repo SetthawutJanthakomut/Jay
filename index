@@ -694,6 +694,176 @@ input[type="file"]::file-selector-button:hover {
 #clearFileBtn:active {
   transform: translateY(0) scale(0.98);
 }
+
+/* ⭐ Progress Bar in Submit Button */
+.submit-progress-container {
+  position: relative;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.submit-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 0 0 10px 10px;
+  transition: width 0.5s ease;
+  width: 0%;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.submit-step-text {
+  display: none;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #1877f2;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+
+.submit-step-text.show {
+  display: block;
+}
+
+/* ⭐ Toast Notification System */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+}
+
+.toast {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+}
+
+.toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.toast.success::before { background: #10b981; }
+.toast.error::before { background: #ef4444; }
+.toast.warning::before { background: #f59e0b; }
+.toast.info::before { background: #3b82f6; }
+
+.toast-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.toast-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toast-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.toast-message {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin: 0;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.8) 100%);
+  transition: width 0.1s linear;
+}
+
+.toast.success .toast-progress { background: linear-gradient(90deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.8) 100%); }
+.toast.error .toast-progress { background: linear-gradient(90deg, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0.8) 100%); }
+.toast.warning .toast-progress { background: linear-gradient(90deg, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0.8) 100%); }
+.toast.info .toast-progress { background: linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.8) 100%); }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-container {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .toast {
+    min-width: auto;
+  }
+}
   </style>
 </head>
 <body>
@@ -910,7 +1080,11 @@ input[type="file"]::file-selector-button:hover {
         <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
       </div>
       
-      <button type="submit" id="submitBtn">ส่ง RFI Request</button>
+      <div class="submit-progress-container">
+        <button type="submit" id="submitBtn">ส่ง RFI Request</button>
+        <div class="submit-progress-bar" id="submitProgressBar"></div>
+      </div>
+      <div class="submit-step-text" id="submitStepText"></div>
     </form>
     
     <div class="loading" id="loading">
@@ -926,22 +1100,92 @@ input[type="file"]::file-selector-button:hover {
     </div>
   </div>
   
+  <div class="toast-container" id="toastContainer"></div>
   <script>
     var selectedTeamCategory = null;
     var isMultiWork = false;
     var recommendedCategory = null;
     var selectedInspectionType = null; // ⭐ ใหม่
     
-    window.onload = function() {
+window.onload = function() {
       setMinDate();
       loadWorkTypes();
-      initInspectionTypeButtons(); // ⭐ ใหม่
+      initInspectionTypeButtons();
       initTeamCategoryButtons();
       initCheckboxes();
       loadUserEmailAndName();
       loadManualLink();
+      setupFormChangeDetection(); // ⭐ เพิ่มบรรทัดนี้
       showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
     };
+
+    // ⭐ Prevent Page Exit - ป้องกันการออกจากหน้าเว็บขณะกรอกฟอร์ม
+    var formChanged = false;
+    var isSubmitting = false;
+    
+    // ตรวจจับการเปลี่ยนแปลงในฟอร์ม
+    function setupFormChangeDetection() {
+      var form = document.getElementById('rfiForm');
+      var inputs = form.querySelectorAll('input, select, textarea');
+      
+      inputs.forEach(function(input) {
+        // ข้ามฟิลด์ที่ readonly (เช่น email)
+        if (input.readOnly || input.disabled) return;
+        
+        input.addEventListener('change', function() {
+          formChanged = true;
+          console.log('Form changed detected');
+        });
+        
+        input.addEventListener('input', function() {
+          formChanged = true;
+        });
+      });
+      
+      // ตรวจจับการคลิกปุ่ม Inspection Type และ Team
+      var inspectionButtons = document.querySelectorAll('.inspection-btn');
+      var teamButtons = document.querySelectorAll('.team-btn');
+      
+      inspectionButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          formChanged = true;
+        });
+      });
+      
+      teamButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          formChanged = true;
+        });
+      });
+    }
+    
+    // ป้องกันการออกจากหน้าเว็บ
+    window.addEventListener('beforeunload', function(e) {
+      // ถ้ากำลัง submit หรือฟอร์มไม่ได้เปลี่ยนแปลง ให้ออกได้เลย
+      if (isSubmitting || !formChanged) {
+        return undefined;
+      }
+      
+      // แสดงข้อความเตือน
+      var confirmationMessage = 'คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?';
+      
+      e.preventDefault();
+      e.returnValue = confirmationMessage;
+      return confirmationMessage;
+    });
+    
+    // รีเซ็ต flag เมื่อ submit สำเร็จ
+    function resetFormChangeFlag() {
+      formChanged = false;
+      isSubmitting = false;
+      console.log('Form change flag reset');
+    }
+    
+    // ตั้งค่า flag เมื่อเริ่ม submit
+    function setSubmittingFlag() {
+      isSubmitting = true;
+      console.log('Submitting flag set');
+    }
 
 // อัปเดต: File Upload Event Listener
 document.getElementById('locationLayoutFile').addEventListener('change', function(e) {
@@ -1453,6 +1697,101 @@ function resetTimeSelects() {
         messageDiv.style.display = 'none';
       }, duration);
     }
+
+    // ⭐ Toast Notification System
+    function showToast(title, message, type, duration) {
+      if (typeof type === 'undefined') type = 'info';
+      if (typeof duration === 'undefined') duration = 5000;
+      
+      var container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      
+      var icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          ${message ? '<div class="toast-message">' + message + '</div>' : ''}
+        </div>
+        <button class="toast-close" onclick="removeToast(this)">×</button>
+        <div class="toast-progress"></div>
+      `;
+      
+      container.appendChild(toast);
+      
+      var progress = toast.querySelector('.toast-progress');
+      var startTime = Date.now();
+      
+      var interval = setInterval(function() {
+        var elapsed = Date.now() - startTime;
+        var percentage = (elapsed / duration) * 100;
+        
+        if (percentage >= 100) {
+          clearInterval(interval);
+          removeToast(toast.querySelector('.toast-close'));
+        } else {
+          progress.style.width = (100 - percentage) + '%';
+        }
+      }, 50);
+      
+      toast._progressInterval = interval;
+    }
+    
+    function removeToast(closeBtn) {
+      var toast = closeBtn.parentElement || closeBtn;
+      if (toast._progressInterval) {
+        clearInterval(toast._progressInterval);
+      }
+      
+      toast.style.animation = 'slideOutRight 0.3s ease-out';
+      setTimeout(function() {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 300);
+    }
+
+    // ⭐ Progress Bar in Submit Button
+    function updateSubmitProgress(step, totalSteps, stepText) {
+      var progressBar = document.getElementById('submitProgressBar');
+      var stepTextDiv = document.getElementById('submitStepText');
+      
+      if (!progressBar || !stepTextDiv) return;
+      
+      var percentage = (step / totalSteps) * 100;
+      progressBar.style.width = percentage + '%';
+      
+      if (stepText) {
+        stepTextDiv.textContent = '⏳ ' + stepText + ' (' + step + '/' + totalSteps + ')';
+        stepTextDiv.classList.add('show');
+      } else {
+        stepTextDiv.classList.remove('show');
+      }
+    }
+    
+    function resetSubmitProgress() {
+      var progressBar = document.getElementById('submitProgressBar');
+      var stepTextDiv = document.getElementById('submitStepText');
+      
+      if (progressBar) progressBar.style.width = '0%';
+      if (stepTextDiv) {
+        stepTextDiv.classList.remove('show');
+        stepTextDiv.textContent = '';
+      }
+    }
     
     document.getElementById('requestDate').addEventListener('change', updateAvailableSlots);
     document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
@@ -1649,6 +1988,7 @@ function resetEndTimeSelect() {
     
     function handleSubmit(event) {
   event.preventDefault();
+  setSubmittingFlag();
   
   // ⭐ FIX: เช็คจาก hidden input ด้วย
   var inspectionTypeInput = document.getElementById('inspectionType').value;
@@ -1745,8 +2085,8 @@ function resetEndTimeSelect() {
   // ⭐ แปลงไฟล์เป็น Base64
   var reader = new FileReader();
   
-  reader.onload = function(e) {
-    var base64Content = e.target.result.split(',')[1]; // ตัด "data:image/png;base64," ออก
+reader.onload = function(e) {
+    var base64Content = e.target.result.split(',')[1];
     
     formData.locationLayoutFile = {
       name: file.name,
@@ -1756,7 +2096,13 @@ function resetEndTimeSelect() {
     
     console.log('📤 Submitting with file:', file.name, '(' + formatFileSize(file.size) + ')');
     
-    // ⭐ ส่งข้อมูลไปยัง Backend
+    // ⭐ เริ่ม Progress Bar
+    var isInternal = finalInspectionType === 'internal';
+    var totalSteps = isInternal ? 6 : 5;
+    
+    showToast('กำลังประมวลผล', 'กำลังบันทึก RFI Request...', 'info', 3000);
+    updateSubmitProgress(1, totalSteps, 'ตรวจสอบข้อมูล');
+    
     google.script.run
       .withSuccessHandler(function(result) {
         loading.style.display = 'none';
@@ -1765,28 +2111,54 @@ function resetEndTimeSelect() {
         console.log('📥 Response:', result);
         
         if (result && result.success) {
-          var successMsg = '✅ บันทึก ' + (finalInspectionType === 'internal' ? 'Internal Inspection' : 'RFI Request') + ' สำเร็จ!\n\n';
-          successMsg += result.message || '';
-          
-          if (result.fileUrl) {
-            successMsg += '\n\n📎 ไฟล์ Location Layout บันทึกแล้ว';
+          // ⭐ แสดง Progress ตามขั้นตอนที่ Backend ทำเสร็จ
+          if (result.progress) {
+            result.progress.forEach(function(step, index) {
+              setTimeout(function() {
+                updateSubmitProgress(index + 1, totalSteps, step);
+              }, index * 300);
+            });
           }
           
-          showMessage(successMsg, 'success', 10000);
-          resetForm();
+          setTimeout(function() {
+            updateSubmitProgress(totalSteps, totalSteps, '✅ สำเร็จ');
+            
+            setTimeout(function() {
+              resetSubmitProgress();
+            }, 2000);
+            
+            var successMsg = result.message || 'บันทึกสำเร็จ';
+            var toastMsg = '';
+            
+            if (result.fileUrl) {
+              toastMsg = 'บันทึกข้อมูลและไฟล์เรียบร้อย';
+            }
+            
+            showToast('✅ สำเร็จ!', toastMsg, 'success', 8000);
+            showMessage('✅ ' + successMsg, 'success', 10000);
+            resetFormChangeFlag();
+            
+            resetForm();
+          }, result.progress ? result.progress.length * 300 : 0);
+          
         } else {
+          resetSubmitProgress();
           var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+          showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
           showMessage('❌ ' + errorMessage, 'error');
         }
       })
       .withFailureHandler(function(error) {
         loading.style.display = 'none';
         submitBtn.disabled = false;
+        resetSubmitProgress();
+        isSubmitting = false;
         
         console.error('❌ Error:', error);
         
-        var errorMessage = '❌ เกิดข้อผิดพลาดในการบันทึก:\n' + (error.message || error.toString());
-        showMessage(errorMessage, 'error');
+        var errorMessage = error.message || error.toString();
+        showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
+        showMessage('❌ เกิดข้อผิดพลาดในการบันทึก:\n' + errorMessage, 'error');
       })
       .saveRFIRequirement(formData);
   };
@@ -1850,6 +2222,7 @@ function resetForm() {
   loadWorkTypes();
   loadUserEmailAndName();
   setMinDate();
+  resetFormChangeFlag();
   
   showMessage('✅ รีเซ็ตฟอร์มเรียบร้อยแล้ว - กรุณาเลือกประเภทการตรวจใหม่', 'info', 3000);
 }
