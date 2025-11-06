@@ -1,4 +1,3 @@
-<version 1 18/10/2025 10:12>
 <!DOCTYPE html>
 <html>
 <head>
@@ -85,36 +84,31 @@
 </head>
 <body>
   <div class="container">
-    <!-- ✅ แบบที่ 1: Modern with Icon Badge -->
-<div style="text-align: center; margin-bottom: 40px;">
-  <!-- Icon Badge -->
-  <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
-    <span style="font-size: 40px;">📝</span>
-  </div>
-  
-  <!-- Title -->
-  <h1 style="font-size: 32px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;">
-    QC - แก้ไข RFI
-  </h1>
-  
-  <!-- Subtitle with Badge -->
-  <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
-    <span style="color: #666; font-size: 16px;">แก้ไขและตรวจสอบ Request for Information</span>
-    <span style="display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; font-size: 12px; font-weight: 500;">QC Editor</span>
-  </div>
-  
-  <!-- Status Info -->
-  <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; font-size: 13px; color: #999;">
-    <div style="display: flex; align-items: center; gap: 5px;">
-      <span style="width: 8px; height: 8px; background: #ffc107; border-radius: 50%; display: inline-block;"></span>
-      <span>Draft</span>
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
+        <span style="font-size: 40px;">📝</span>
+      </div>
+      
+      <h1 style="font-size: 32px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;">
+        QC - แก้ไข RFI
+      </h1>
+      
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <span style="color: #666; font-size: 16px;">แก้ไขและตรวจสอบ Request for Information</span>
+        <span style="display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; font-size: 12px; font-weight: 500;">QC Editor</span>
+      </div>
+      
+      <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; font-size: 13px; color: #999;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 8px; height: 8px; background: #ffc107; border-radius: 50%; display: inline-block;"></span>
+          <span>Draft</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 8px; height: 8px; background: #17a2b8; border-radius: 50%; display: inline-block;"></span>
+          <span>Submitted</span>
+        </div>
+      </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 5px;">
-      <span style="width: 8px; height: 8px; background: #17a2b8; border-radius: 50%; display: inline-block;"></span>
-      <span>Submitted</span>
-    </div>
-  </div>
-</div>
     
     <div style="margin-bottom: 20px;">
       <button class="btn btn-primary" onclick="loadRFIList()">🔄 Refresh</button>
@@ -133,74 +127,70 @@
     <div id="editView" style="display:none; margin-top: 30px; border-top: 2px solid #667eea; padding-top: 30px;">
       <div style="background: linear-gradient(135deg, #e7f0ff 0%, #d4e6ff 100%); border-left: 4px solid #667eea; padding: 15px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; color: #1c4587;">
         <strong>📝 แก้ไข RFI:</strong> <span id="editRFINo"></span><br>
-        <strong id="editInfoNote">⚠️ หมายเหตุ: ไม่สามารถแก้ไข RFI NO และ Code ได้</strong>
+        <strong id="editInfoNote">⚠️ หมายเหตุ: ไม่สามารถแก้ไข RFI NO และ Work Type ได้</strong>
       </div>
       
       <form id="editForm">
         <input type="hidden" id="editRfiId">
         <input type="hidden" id="editOriginalStatus">
         
+        <!-- ✅ เปลี่ยนจาก Code เป็น Work Type -->
         <div style="margin-bottom: 20px;">
-          <label class="form-label">รหัสโครงการ (Code) <span class="required">*</span></label>
-          <select id="editCode" disabled>
+          <label class="form-label">ประเภทงาน (Work Type) <span class="required">*</span></label>
+          <select id="editWorkType" disabled>
             <option value="">-- กำลังโหลด... --</option>
           </select>
-          <div class="info-note" id="codeNote">ไม่สามารถแก้ไข Code ได้ (Status: Draft)</div>
+          <div class="info-note" id="workTypeNote">ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)</div>
         </div>
 
-<div style="margin-bottom: 20px;">
-  <label class="form-label">รายละเอียด RFI <span class="required">*</span></label>
-  <textarea id="editDescription" required placeholder="กรอกรายละเอียดให้ชัดเจนและครบถ้วน..."></textarea>
-  
-  <!-- ⭐ Warning Box -->
-  <div style="display: flex; align-items: start; gap: 8px; margin-top: 8px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
-    <span style="font-size: 16px;">⚠️</span>
-    <div style="font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>สำหรับ QC:</strong> กรุณาตรวจสอบและแก้ไขข้อมูลให้ถูกต้อง<br>
-      <span style="font-size: 12px;">• User อาจกรอกข้อมูลไม่ละเอียดหรือไม่ครบถ้วน</span><br>
-      <span style="font-size: 12px;">• ควรระบุรายละเอียดเพิ่มเติม เช่น จุดตรวจ, ขอบเขตงาน, หรือข้อกำหนดพิเศษ</span>
-    </div>
-  </div>
-</div>
+        <div style="margin-bottom: 20px;">
+          <label class="form-label">รายละเอียด RFI <span class="required">*</span></label>
+          <textarea id="editDescription" required placeholder="กรอกรายละเอียดให้ชัดเจนและครบถ้วน..."></textarea>
+          
+          <div style="display: flex; align-items: start; gap: 8px; margin-top: 8px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <div style="font-size: 13px; color: #856404; line-height: 1.5;">
+              <strong>สำหรับ QC:</strong> กรุณาตรวจสอบและแก้ไขข้อมูลให้ถูกต้อง<br>
+              <span style="font-size: 12px;">• User อาจกรอกข้อมูลไม่ละเอียดหรือไม่ครบถ้วน</span><br>
+              <span style="font-size: 12px;">• ควรระบุรายละเอียดเพิ่มเติม เช่น จุดตรวจ, ขอบเขตงาน, หรือข้อกำหนดพิเศษ</span>
+            </div>
+          </div>
+        </div>
         
         <div style="margin-bottom: 20px;">
-  <label class="form-label">สถานที่ <span class="required">*</span></label>
-  <input type="text" id="editLocation" required placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
-  
-  <!-- ⭐ Warning Box -->
-  <div style="display: flex; align-items: start; gap: 8px; margin-top: 8px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
-    <span style="font-size: 16px;">📍</span>
-    <div style="font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>สำหรับ QC:</strong> กรุณาตรวจสอบและระบุสถานที่ให้ชัดเจน<br>
-      <span style="font-size: 12px;">• User อาจระบุสถานที่ไม่ละเอียดหรือไม่ครบถ้วน</span><br>
-      <span style="font-size: 12px;">• ควรระบุ: STA. หรือจุดอ้างอิงที่ชัดเจน</span>
-    </div>
-  </div>
-</div>
+          <label class="form-label">สถานที่ <span class="required">*</span></label>
+          <input type="text" id="editLocation" required placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
+          
+          <div style="display: flex; align-items: start; gap: 8px; margin-top: 8px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
+            <span style="font-size: 16px;">📍</span>
+            <div style="font-size: 13px; color: #856404; line-height: 1.5;">
+              <strong>สำหรับ QC:</strong> กรุณาตรวจสอบและระบุสถานที่ให้ชัดเจน<br>
+              <span style="font-size: 12px;">• User อาจระบุสถานที่ไม่ละเอียดหรือไม่ครบถ้วน</span><br>
+              <span style="font-size: 12px;">• ควรระบุ: STA. หรือจุดอ้างอิงที่ชัดเจน</span>
+            </div>
+          </div>
+        </div>
         
         <div style="margin-bottom: 20px;">
           <label class="form-label">วันที่ตรวจงาน <span class="required">*</span></label>
           <input type="date" id="editRequestDate" required>
         </div>
         
-        
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-  <div>
-    <label class="form-label">เวลาเริ่มต้น <span class="required">*</span></label>
-    <!-- ✅ เปลี่ยนจาก input เป็น select -->
-    <select id="editStartTime" required>
-      <option value="">-- เลือกเวลา --</option>
-    </select>
-  </div>
-  
-  <div>
-    <label class="form-label">เวลาสิ้นสุด <span class="required">*</span></label>
-    <!-- ✅ เปลี่ยนจาก input เป็น select -->
-    <select id="editEndTime" required>
-      <option value="">-- เลือกเวลา --</option>
-    </select>
-  </div>
-</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+          <div>
+            <label class="form-label">เวลาเริ่มต้น <span class="required">*</span></label>
+            <select id="editStartTime" required>
+              <option value="">-- เลือกเวลา --</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="form-label">เวลาสิ้นสุด <span class="required">*</span></label>
+            <select id="editEndTime" required>
+              <option value="">-- เลือกเวลา --</option>
+            </select>
+          </div>
+        </div>
 
         <div style="margin-bottom: 20px;">
           <label class="form-label">ทีมงาน (Assigned Inspector) <span class="required">*</span></label>
@@ -211,22 +201,22 @@
           <div id="editSelectedTeamsInfo" class="info-note">เลือกได้หลายทีม (เฉพาะทีมที่ว่าง)</div>
         </div>
 
-<div style="margin-bottom: 20px;">
-  <label class="form-label">ผู้ขอ</label>
-  <div style="padding: 12px; background: #f5f6f7; border: 2px solid #e4e6eb; border-radius: 10px; color: #666; font-size: 15px;">
-    <div style="font-weight: 600; margin-bottom: 4px;">
-      <span id="editRequesterNameDisplay">-</span>
-    </div>
-    <div style="font-size: 13px; color: #999;">
-      📧 <span id="editRequesterEmailDisplay">-</span>
-    </div>
-  </div>
-  <input type="hidden" id="editRequesterName">
-  <input type="hidden" id="editRequesterEmail">
-  <div class="info-note" style="color: #999;">ℹ️ ไม่สามารถแก้ไขผู้ขอได้</div>
-</div>
+        <div style="margin-bottom: 20px;">
+          <label class="form-label">ผู้ขอ</label>
+          <div style="padding: 12px; background: #f5f6f7; border: 2px solid #e4e6eb; border-radius: 10px; color: #666; font-size: 15px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">
+              <span id="editRequesterNameDisplay">-</span>
+            </div>
+            <div style="font-size: 13px; color: #999;">
+              📧 <span id="editRequesterEmailDisplay">-</span>
+            </div>
+          </div>
+          <input type="hidden" id="editRequesterName">
+          <input type="hidden" id="editRequesterEmail">
+          <div class="info-note" style="color: #999;">ℹ️ ไม่สามารถแก้ไขผู้ขอได้</div>
+        </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
           <div id="editSurveyReportGroup" style="display:none;">
             <input type="hidden" id="editRequireSurveyReport" value="None">
             <div style="padding: 12px; background: #e7f0ff; border: 2px solid #667eea; border-radius: 10px;">
@@ -259,23 +249,20 @@
     </div>
   </div>
   
- <script>
+  <script>
 var availableTeams = [];
 var originalAssignedTeams = [];
-var allCodes = [];
+var allWorkTypes = [];
 
-
-// ⭐ เพิ่ม Function ใหม่: สร้าง Time Slots (09:00-20:00, ทุกๆ 30 นาที)
 function generateTimeSlots(isEndTime) {
   var slots = [];
-  
-  var startHour = isEndTime ? 9 : 9;   // Start Time เริ่มที่ 09:00
-  var endHour = isEndTime ? 20 : 19;   // Start Time สิ้นสุดที่ 19:30, End Time ถึง 20:00
+  var startHour = 9;
+  var endHour = isEndTime ? 20 : 19;
   
   for (var hour = startHour; hour <= endHour; hour++) {
     for (var minute = 0; minute < 60; minute += 30) {
-      if (hour === 19 && minute === 30 && !isEndTime) break; // Start Time ถึง 19:00 เท่านั้น
-      if (hour === 20 && minute > 0) break; // End Time ถึง 20:00 เท่านั้น
+      if (hour === 19 && minute === 30 && !isEndTime) break;
+      if (hour === 20 && minute > 0) break;
       
       var time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
       slots.push(time);
@@ -285,7 +272,6 @@ function generateTimeSlots(isEndTime) {
   return slots;
 }
 
-// ⭐ เพิ่ม Function ใหม่: Populate Time Dropdown
 function populateTimeDropdown(selectId, selectedValue, isEndTime) {
   var select = document.getElementById(selectId);
   if (!select) return;
@@ -307,7 +293,6 @@ function populateTimeDropdown(selectId, selectedValue, isEndTime) {
   }
 }
 
-// ⭐ เพิ่ม Function ใหม่: กรอง End Time ให้มากกว่า Start Time
 function filterEndTimeOptions() {
   var startTime = document.getElementById('editStartTime').value;
   var endTimeSelect = document.getElementById('editEndTime');
@@ -326,7 +311,6 @@ function filterEndTimeOptions() {
   for (var i = 0; i < slots.length; i++) {
     var slotMinutes = timeToMinutes(slots[i]);
     
-    // แสดงเฉพาะเวลาที่มากกว่า Start Time อย่างน้อย 30 นาที
     if (slotMinutes > startMinutes) {
       var option = document.createElement('option');
       option.value = slots[i];
@@ -341,7 +325,6 @@ function filterEndTimeOptions() {
   }
 }
 
-// ⭐ Helper Function: แปลงเวลาเป็นนาที
 function timeToMinutes(time) {
   if (!time) return 0;
   var parts = time.split(':');
@@ -350,11 +333,10 @@ function timeToMinutes(time) {
 
 window.onload = function() {
   loadRFIList();
-  loadCodeList();
-  getCurrentUserEmail();      // ← เพิ่มบรรทัดนี้
-  checkQCRole();              // ← เพิ่มบรรทัดนี้
+  loadWorkTypeList();
+  getCurrentUserEmail();
+  checkQCRole();
   
-  // ⭐ Populate Time Dropdowns ตั้งแต่เริ่มต้น
   populateTimeDropdown('editStartTime', '', false);
   populateTimeDropdown('editEndTime', '', true);
   
@@ -392,17 +374,17 @@ function getCurrentUserEmail() {
     .getCurrentUserEmail();
 }
 
-function loadCodeList() {
+function loadWorkTypeList() {
   google.script.run
-    .withSuccessHandler(function(codes) {
-      allCodes = codes || [];
-      console.log('Loaded codes:', allCodes.length);
+    .withSuccessHandler(function(workTypes) {
+      allWorkTypes = workTypes || [];
+      console.log('✅ Loaded', allWorkTypes.length, 'work types');
     })
     .withFailureHandler(function(error) {
-      console.error('Error loading codes:', error);
-      allCodes = [];
+      console.error('❌ Error loading work types:', error);
+      allWorkTypes = [];
     })
-    .getCodeList();
+    .getWorkTypeList('RFI Work');
 }
 
 function setupEditFormListeners() {
@@ -410,7 +392,6 @@ function setupEditFormListeners() {
   var editStartInput = document.getElementById('editStartTime');
   var editEndInput = document.getElementById('editEndTime');
   
-  // ⭐ เพิ่ม Listener: กรอง End Time เมื่อเปลี่ยน Start Time
   if (editStartInput) {
     editStartInput.addEventListener('change', function() {
       filterEndTimeOptions();
@@ -460,7 +441,7 @@ function setupEditFormListeners() {
       var loading = document.getElementById('editLoading');
       
       var formData = {
-        code: document.getElementById('editCode').value,
+        workType: document.getElementById('editWorkType').value,
         description: document.getElementById('editDescription').value.trim(),
         location: document.getElementById('editLocation').value.trim(),
         requestDate: document.getElementById('editRequestDate').value,
@@ -573,64 +554,66 @@ function editRFI(rfiId) {
       document.getElementById('editLocation').value = rfi.location || '';
       document.getElementById('editRequestDate').value = rfi.requestDate || '';
       
-      // ⭐ Populate Time Dropdowns พร้อมค่าเดิม
       populateTimeDropdown('editStartTime', rfi.startTime || '', false);
       populateTimeDropdown('editEndTime', rfi.endTime || '', true);
       
-      // ⭐ กรอง End Time ตามค่า Start Time ที่มีอยู่
       if (rfi.startTime) {
         filterEndTimeOptions();
       }
       
-var requesterNameDisplay = document.getElementById('editRequesterNameDisplay');
-var requesterEmailDisplay = document.getElementById('editRequesterEmailDisplay');
+      var requesterNameDisplay = document.getElementById('editRequesterNameDisplay');
+      var requesterEmailDisplay = document.getElementById('editRequesterEmailDisplay');
 
-if (requesterNameDisplay) {
-  requesterNameDisplay.textContent = rfi.requesterName || '-';
-}
-if (requesterEmailDisplay) {
-  requesterEmailDisplay.textContent = rfi.requesterEmail || '-';
-}
+      if (requesterNameDisplay) {
+        requesterNameDisplay.textContent = rfi.requesterName || '-';
+      }
+      if (requesterEmailDisplay) {
+        requesterEmailDisplay.textContent = rfi.requesterEmail || '-';
+      }
 
-document.getElementById('editRequesterName').value = rfi.requesterName || '';
-document.getElementById('editRequesterEmail').value = rfi.requesterEmail || '';
+      document.getElementById('editRequesterName').value = rfi.requesterName || '';
+      document.getElementById('editRequesterEmail').value = rfi.requesterEmail || '';
       document.getElementById('editRequireSurveyReport').value = rfi.requireSurveyReport || 'None';
       document.getElementById('editRequireLabReport').value = rfi.requireLabReport || 'None';
       
-      // จัดการ Code Dropdown
-      var codeSelect = document.getElementById('editCode');
-      var codeNote = document.getElementById('codeNote');
+      // ✅ จัดการ Work Type Dropdown
+      var workTypeSelect = document.getElementById('editWorkType');
+      var workTypeNote = document.getElementById('workTypeNote');
       var editInfoNote = document.getElementById('editInfoNote');
       
       if (rfi.status === 'RFI Request Submitted') {
-        codeSelect.disabled = false;
-        codeSelect.innerHTML = '<option value="">-- เลือกรหัสโครงการ --</option>';
+        workTypeSelect.disabled = false;
+        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
         
-        for (var i = 0; i < allCodes.length; i++) {
+        for (var i = 0; i < allWorkTypes.length; i++) {
           var option = document.createElement('option');
-          option.value = allCodes[i].code;
-          option.textContent = allCodes[i].code + ' - ' + allCodes[i].name;
-          if (allCodes[i].code === rfi.code) {
+          option.value = allWorkTypes[i].name;
+          option.textContent = allWorkTypes[i].name;
+          option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
+          option.setAttribute('data-qctype', allWorkTypes[i].qcType || '999');
+          option.setAttribute('data-duration', allWorkTypes[i].duration || 60);
+          
+          if (allWorkTypes[i].name === rfi.workType) {
             option.selected = true;
           }
-          codeSelect.appendChild(option);
+          
+          workTypeSelect.appendChild(option);
         }
         
-        codeNote.textContent = '✅ สามารถเปลี่ยน Code ได้ (Status: RFI Request Submitted)';
-        codeNote.style.color = '#28a745';
-        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Code ได้:</strong> เมื่อเปลี่ยน Code ระบบจะสร้าง RFI NO ใหม่อัตโนมัติ';
+        workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้ (Status: RFI Request Submitted)';
+        workTypeNote.style.color = '#28a745';
+        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้:</strong> เมื่อเปลี่ยน Work Type ระบบจะสร้าง RFI NO ใหม่อัตโนมัติ';
         editInfoNote.style.color = '#28a745';
       } else {
-        codeSelect.disabled = true;
-        codeSelect.innerHTML = '<option value="' + (rfi.code || '') + '">' + (rfi.code || 'N/A') + '</option>';
+        workTypeSelect.disabled = true;
+        workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
         
-        codeNote.textContent = '⚠️ ไม่สามารถแก้ไข Code ได้ (Status: Draft)';
-        codeNote.style.color = '#856404';
-        editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ:</strong> ไม่สามารถแก้ไข Code ได้เมื่อ Status = Draft';
+        workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)';
+        workTypeNote.style.color = '#856404';
+        editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ:</strong> ไม่สามารถแก้ไข Work Type ได้เมื่อ Status = Draft';
         editInfoNote.style.color = '#856404';
       }
       
-      // โหลดทีมที่ว่าง (ถ้ามีวันที่และเวลา)
       if (rfi.requestDate && rfi.startTime) {
         loadAvailableTeamsForEdit(rfi.requestDate, rfi.startTime, rfi.endTime, rfi.id);
       }
@@ -651,7 +634,6 @@ function cancelEdit() {
   document.getElementById('editSurveyReportGroup').style.display = 'none';
   document.getElementById('editLabReportGroup').style.display = 'none';
   
-  // ⭐ Reset Time Dropdowns
   populateTimeDropdown('editStartTime', '', false);
   populateTimeDropdown('editEndTime', '', true);
   
@@ -663,10 +645,9 @@ function loadAvailableTeamsForEdit(date, startTime, endTime, excludeRfiId) {
   var container = document.getElementById('editAssignedInspectorContainer');
   container.innerHTML = '<div class="inspector-loading">กำลังโหลดทีมงานที่ว่าง...</div>';
   
-  // ⭐ ลบการคำนวณ endTime อัตโนมัติ - ใช้ค่าที่เลือกจาก dropdown
   if (!endTime && startTime) {
     var startMinutes = timeToMinutes(startTime);
-    var endMinutes = startMinutes + 30; // default +30 นาที
+    var endMinutes = startMinutes + 30;
     var hours = Math.floor(endMinutes / 60);
     var mins = endMinutes % 60;
     endTime = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
@@ -735,11 +716,11 @@ function updateEditSelectedTeams() {
   
   document.getElementById('editAssignedInspector').value = selectedTeams.join(',');
   
-var surveyGroup = document.getElementById('editSurveyReportGroup');
+  var surveyGroup = document.getElementById('editSurveyReportGroup');
   if (surveyGroup) {
     if (hasSurvey) {
       surveyGroup.style.display = 'block';
-      document.getElementById('editRequireSurveyReport').value = 'Both'; // ⭐ เพิ่มบรรทัดนี้
+      document.getElementById('editRequireSurveyReport').value = 'Both';
     } else {
       surveyGroup.style.display = 'none';
       document.getElementById('editRequireSurveyReport').value = 'None';
@@ -778,6 +759,6 @@ function showMessage(text, type, duration) {
     messageDiv.style.display = 'none';
   }, duration);
 }
-</script>
+  </script>
 </body>
 </html>
