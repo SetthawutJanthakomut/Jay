@@ -6587,3 +6587,50 @@ function createInternalInspectionCalendarEvent(data, rfiId) {
     };
   }
 }
+
+
+/**
+ * ========================================
+ * HOLIDAY SYSTEM - API FUNCTIONS
+ * ========================================
+ */
+
+/**
+ * ⭐ API สำหรับ Frontend เรียกใช้
+ */
+function checkDateBookingAllowed(dateStr, inspectionType) {
+  try {
+    console.log('🔍 Checking date booking:', dateStr, 'Type:', inspectionType);
+    
+    return canBookDate(dateStr, inspectionType);
+    
+  } catch (error) {
+    console.error('❌ Error in checkDateBookingAllowed:', error);
+    return {
+      allowed: true,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ดึงรายการวันหยุดสำหรับแสดงใน Frontend
+ */
+function getHolidayList() {
+  try {
+    const holidays = getActiveHolidays();
+    
+    return holidays.map(function(h) {
+      return {
+        date: h.date,
+        dateThai: formatDateThai(h.date),
+        name: h.name
+      };
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting holiday list:', error);
+    return [];
+  }
+}
+
