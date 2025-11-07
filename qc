@@ -350,6 +350,28 @@
         grid-template-columns: 1fr;
       }
     }
+    .work-type-note {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.6;
+  animation: slideDown 0.3s ease-out;
+}
+
+.work-type-note strong {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.work-type-note::before {
+  content: '📌 ';
+  font-size: 16px;
+  margin-right: 4px;
+}
   </style>
 </head>
 <body>
@@ -374,15 +396,15 @@
       <strong>👥 จัดทีม:</strong> เลือกทีมที่ต้องการ (เฉพาะทีมที่ว่าง)
     </div>
     
-<form id="qcRfiForm">
-  <!-- 1. Work Type -->
-  <div class="form-group">
-    <label for="workType">ประเภทงาน (Work Type) <span class="required">*</span></label>
-    <select id="workType" name="workType" required>
-      <option value="">-- กำลังโหลด... --</option>
-    </select>
-    <div class="time-info">เลือกประเภทงาน (RFI Work) - บังคับเลือก</div>
-  </div>
+<div class="form-group">
+  <label for="workType">ประเภทงาน (Work Type) <span class="required">*</span></label>
+  <select id="workType" name="workType" required>
+    <option value="">-- กำลังโหลด... --</option>
+  </select>
+  <div class="time-info">เลือกประเภทงาน (RFI Work) - บังคับเลือก</div>
+  <!-- ✅ เพิ่มส่วนแสดง Note -->
+  <div id="workTypeNote" class="work-type-note" style="display: none;"></div>
+</div>
 
   <!-- 2. Description -->
   <div class="form-group">
@@ -619,44 +641,70 @@
   // ========== Data Loading Functions ==========
   
   function loadWorkTypeList() {
-    var workTypeSelect = document.getElementById('workType');
-    
-    if (!workTypeSelect) {
-      console.log('⚠️ workType select not found');
-      return;
-    }
-    
-    workTypeSelect.innerHTML = '<option value="">-- กำลังโหลด... --</option>';
-    workTypeSelect.disabled = true;
-    
-    google.script.run
-      .withSuccessHandler(function(workTypes) {
+  var workTypeSelect = document.getElementById('workType');
+  var workTypeNote = document.getElementById('workTypeNote');
+  
+  workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
+  workTypeSelect.disabled = true;
+  
+  if (workTypeNote) {
+    workTypeNote.style.display = 'none';
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(workTypes) {
+      workTypeSelect.innerHTML = '';
+      
+      if (!workTypes || workTypes.length === 0) {
+        workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน --</option>';
+      } else {
         workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
         
-        if (workTypes && workTypes.length > 0) {
-          for (var i = 0; i < workTypes.length; i++) {
-            var option = document.createElement('option');
-            option.value = workTypes[i].name;
-            option.textContent = workTypes[i].name;
-            option.setAttribute('data-sequence', workTypes[i].sequence || '010');
-            option.setAttribute('data-qctype', workTypes[i].qcType || '999');
-            option.setAttribute('data-duration', workTypes[i].duration || 60);
-            workTypeSelect.appendChild(option);
-          }
-          workTypeSelect.disabled = false;
-          console.log('✅ Loaded', workTypes.length, 'work types');
-        } else {
-          console.log('⚠️ No work types found');
-          workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน --</option>';
+        for (var i = 0; i < workTypes.length; i++) {
+          var option = document.createElement('option');
+          option.value = workTypes[i].name;
+          
+          // ✅ Format: "QC_Type Name_Work (Duration นาที)"
+          option.textContent = workTypes[i].qcType + ' ' + workTypes[i].name + ' (' + workTypes[i].duration + ' นาที)';
+          
+          option.setAttribute('data-sequence', workTypes[i].sequence || '010');
+          option.setAttribute('data-qctype', workTypes[i].qcType || '999');
+          option.setAttribute('data-duration', workTypes[i].duration || 60);
+          option.setAttribute('data-note', workTypes[i].note || '');
+          
+          workTypeSelect.appendChild(option);
         }
-      })
-      .withFailureHandler(function(error) {
-        console.error('❌ Error loading work types:', error);
-        workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+        
         workTypeSelect.disabled = false;
-      })
-      .getWorkTypeList('RFI Work');
-  }
+        
+        // ✅ Event Listener สำหรับแสดง Note
+        workTypeSelect.addEventListener('change', function() {
+          var selectedOption = this.options[this.selectedIndex];
+          var note = selectedOption.getAttribute('data-note');
+          
+          if (workTypeNote) {
+            if (note && note.trim() !== '') {
+              workTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + note;
+              workTypeNote.style.display = 'block';
+            } else {
+              workTypeNote.style.display = 'none';
+            }
+          }
+          
+          resetEndTimeSelect();
+          updateEndTimeFromDuration();
+        });
+        
+        console.log('✅ Loaded', workTypes.length, 'work types');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading work types:', error);
+      workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+      workTypeSelect.disabled = false;
+    })
+    .getWorkTypeList('RFI Work');
+}
 
   function loadRequesterList() {
     var requesterSelect = document.getElementById('requester');
