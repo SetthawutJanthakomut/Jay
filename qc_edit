@@ -80,6 +80,29 @@
       margin-top: 5px;
       font-style: italic;
     }
+
+    .work-type-note {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.6;
+  animation: slideDown 0.3s ease-out;
+}
+
+.work-type-note strong {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.work-type-note::before {
+  content: '📌 ';
+  font-size: 16px;
+  margin-right: 4px;
+}
   </style>
 </head>
 <body>
@@ -134,14 +157,15 @@
         <input type="hidden" id="editRfiId">
         <input type="hidden" id="editOriginalStatus">
         
-        <!-- ✅ เปลี่ยนจาก Code เป็น Work Type -->
-        <div style="margin-bottom: 20px;">
-          <label class="form-label">ประเภทงาน (Work Type) <span class="required">*</span></label>
-          <select id="editWorkType" disabled>
-            <option value="">-- กำลังโหลด... --</option>
-          </select>
-          <div class="info-note" id="workTypeNote">ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)</div>
-        </div>
+<div style="margin-bottom: 20px;">
+  <label class="form-label">ประเภทงาน (Work Type) <span class="required">*</span></label>
+  <select id="editWorkType" disabled>
+    <option value="">-- กำลังโหลด... --</option>
+  </select>
+  <div class="info-note" id="workTypeNote">ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)</div>
+  <!-- ✅ เพิ่มส่วนแสดง Note -->
+  <div id="editWorkTypeNote" class="work-type-note" style="display: none;"></div>
+</div>
 
         <div style="margin-bottom: 20px;">
           <label class="form-label">รายละเอียด RFI <span class="required">*</span></label>
@@ -387,6 +411,7 @@ function loadWorkTypeList() {
     .getWorkTypeList('RFI Work');
 }
 
+
 function setupEditFormListeners() {
   var editDateInput = document.getElementById('editRequestDate');
   var editStartInput = document.getElementById('editStartTime');
@@ -577,42 +602,83 @@ function editRFI(rfiId) {
       document.getElementById('editRequireLabReport').value = rfi.requireLabReport || 'None';
       
       // ✅ จัดการ Work Type Dropdown
-      var workTypeSelect = document.getElementById('editWorkType');
-      var workTypeNote = document.getElementById('workTypeNote');
-      var editInfoNote = document.getElementById('editInfoNote');
+var workTypeSelect = document.getElementById('editWorkType');
+var workTypeNote = document.getElementById('workTypeNote');
+var editWorkTypeNote = document.getElementById('editWorkTypeNote');
+var editInfoNote = document.getElementById('editInfoNote');
+
+if (rfi.status === 'RFI Request Submitted') {
+  workTypeSelect.disabled = false;
+  workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+  
+  for (var i = 0; i < allWorkTypes.length; i++) {
+    var option = document.createElement('option');
+    option.value = allWorkTypes[i].name;
+    
+    // ✅ Format: "QC_Type Name_Work (Duration นาที)"
+    option.textContent = allWorkTypes[i].qcType + ' ' + allWorkTypes[i].name + ' (' + allWorkTypes[i].duration + ' นาที)';
+    
+    option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
+    option.setAttribute('data-qctype', allWorkTypes[i].qcType || '999');
+    option.setAttribute('data-duration', allWorkTypes[i].duration || 60);
+    option.setAttribute('data-note', allWorkTypes[i].note || '');
+    
+    if (allWorkTypes[i].name === rfi.workType) {
+      option.selected = true;
       
-      if (rfi.status === 'RFI Request Submitted') {
-        workTypeSelect.disabled = false;
-        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
-        
-        for (var i = 0; i < allWorkTypes.length; i++) {
-          var option = document.createElement('option');
-          option.value = allWorkTypes[i].name;
-          option.textContent = allWorkTypes[i].name;
-          option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
-          option.setAttribute('data-qctype', allWorkTypes[i].qcType || '999');
-          option.setAttribute('data-duration', allWorkTypes[i].duration || 60);
-          
-          if (allWorkTypes[i].name === rfi.workType) {
-            option.selected = true;
-          }
-          
-          workTypeSelect.appendChild(option);
-        }
-        
-        workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้ (Status: RFI Request Submitted)';
-        workTypeNote.style.color = '#28a745';
-        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้:</strong> เมื่อเปลี่ยน Work Type ระบบจะสร้าง RFI NO ใหม่อัตโนมัติ';
-        editInfoNote.style.color = '#28a745';
-      } else {
-        workTypeSelect.disabled = true;
-        workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
-        
-        workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)';
-        workTypeNote.style.color = '#856404';
-        editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ:</strong> ไม่สามารถแก้ไข Work Type ได้เมื่อ Status = Draft';
-        editInfoNote.style.color = '#856404';
+      // ✅ แสดง Note ของ Work Type ที่เลือก
+      var currentNote = allWorkTypes[i].note || '';
+      if (editWorkTypeNote && currentNote.trim() !== '') {
+        editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + currentNote;
+        editWorkTypeNote.style.display = 'block';
       }
+    }
+    
+    workTypeSelect.appendChild(option);
+  }
+  
+  // ✅ Event Listener สำหรับเปลี่ยน Work Type
+  workTypeSelect.addEventListener('change', function() {
+    var selectedOption = this.options[this.selectedIndex];
+    var note = selectedOption.getAttribute('data-note');
+    
+    if (editWorkTypeNote) {
+      if (note && note.trim() !== '') {
+        editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + note;
+        editWorkTypeNote.style.display = 'block';
+      } else {
+        editWorkTypeNote.style.display = 'none';
+      }
+    }
+  });
+  
+  workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้ (Status: RFI Request Submitted)';
+  workTypeNote.style.color = '#28a745';
+  editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้:</strong> เมื่อเปลี่ยน Work Type ระบบจะสร้าง RFI NO ใหม่อัตโนมัติ';
+  editInfoNote.style.color = '#28a745';
+  
+} else {
+  // Status = Draft - ไม่สามารถแก้ไข
+  workTypeSelect.disabled = true;
+  workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
+  
+  // ✅ แสดง Note แม้ไม่สามารถแก้ไขได้
+  for (var j = 0; j < allWorkTypes.length; j++) {
+    if (allWorkTypes[j].name === rfi.workType) {
+      var draftNote = allWorkTypes[j].note || '';
+      if (editWorkTypeNote && draftNote.trim() !== '') {
+        editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + draftNote;
+        editWorkTypeNote.style.display = 'block';
+      }
+      break;
+    }
+  }
+  
+  workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)';
+  workTypeNote.style.color = '#856404';
+  editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ:</strong> ไม่สามารถแก้ไข Work Type ได้เมื่อ Status = Draft';
+  editInfoNote.style.color = '#856404';
+}
       
       if (rfi.requestDate && rfi.startTime) {
         loadAvailableTeamsForEdit(rfi.requestDate, rfi.startTime, rfi.endTime, rfi.id);
