@@ -2284,6 +2284,122 @@ function resetForm() {
   
   showMessage('✅ รีเซ็ตฟอร์มเรียบร้อยแล้ว - กรุณาเลือกประเภทการตรวจใหม่', 'info', 3000);
 }
+
+function setupHolidayCheck() {
+  var dateInput = document.getElementById('requestDate');
+  
+  dateInput.addEventListener('change', function() {
+    var selectedDate = this.value;
+    var inspectionType = document.getElementById('inspectionType').value;
+    
+    if (selectedDate && inspectionType) {
+      checkHolidayRestrictions(selectedDate, inspectionType);
+    }
+  });
+}
+
+/**
+ * ⭐ เช็คข้อจำกัดวันหยุด
+ */
+function checkHolidayRestrictions(dateStr, inspectionType) {
+  if (!dateStr || !inspectionType) return;
+  
+  console.log('🔍 Checking holiday restrictions:', dateStr);
+  
+  // แสดง loading
+  showToast('กำลังตรวจสอบ', 'กำลังเช็ควันหยุด...', 'info', 2000);
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      console.log('📥 Holiday check result:', result);
+      
+      if (!result.allowed) {
+        // ❌ ไม่สามารถจองได้
+        console.log('❌ Cannot book:', result.reason);
+        
+        // แสดง Toast แจ้งเตือน
+        showToast(
+          result.title || '❌ ไม่สามารถจองวันนี้ได้',
+          result.message,
+          'error',
+          12000
+        );
+        
+        // แสดง Message Box
+        showMessage(result.message, 'error', 12000);
+        
+        // ล้างค่าวันที่
+        document.getElementById('requestDate').value = '';
+        
+        // Reset Time Slots
+        document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+        document.getElementById('startTime').disabled = true;
+        resetEndTimeSelect();
+        
+      } else if (result.warning) {
+        // ⚠️ มีคำเตือน (แต่จองได้)
+        console.log('⚠️ Warning:', result.message);
+        
+        showToast(
+          result.title || '⚠️ คำเตือน',
+          result.message,
+          'warning',
+          10000
+        );
+        
+      } else {
+        // ✅ จองได้ปกติ
+        console.log('✅ Date is available for booking');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error checking holiday:', error);
+      showToast(
+        '⚠️ เกิดข้อผิดพลาด',
+        'ไม่สามารถตรวจสอบวันหยุดได้: ' + error.message,
+        'error',
+        5000
+      );
+    })
+    .checkDateBookingAllowed(dateStr, inspectionType);
+}
+
+// ⭐ เรียกใช้ใน window.onload
+var originalOnLoad = window.onload;
+window.onload = function() {
+  if (originalOnLoad) originalOnLoad();
+  setupHolidayCheck(); // ⭐ เพิ่มบรรทัดนี้
+};
+
+// ⭐ แก้ไขฟังก์ชัน updateAvailableSlots ให้เช็ควันหยุดก่อน
+var originalUpdateAvailableSlots = updateAvailableSlots;
+
+updateAvailableSlots = function() {
+  var date = document.getElementById('requestDate').value;
+  var inspectionType = document.getElementById('inspectionType').value;
+  
+  if (!date || !inspectionType) {
+    originalUpdateAvailableSlots();
+    return;
+  }
+  
+  // เช็ควันหยุดก่อน load time slots
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.allowed) {
+        // ถ้าจองได้ ให้ load time slots
+        originalUpdateAvailableSlots();
+      } else {
+        // ถ้าจองไม่ได้ จะถูกจัดการใน checkHolidayRestrictions แล้ว
+        console.log('❌ Date not allowed, slots not loaded');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error:', error);
+      originalUpdateAvailableSlots();
+    })
+    .checkDateBookingAllowed(date, inspectionType);
+}
   </script>
 </body>
 </html>
