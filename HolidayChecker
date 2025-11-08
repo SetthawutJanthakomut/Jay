@@ -1,9 +1,11 @@
 /**
  * ========================================
- * HOLIDAY MANAGEMENT SYSTEM
+ * HOLIDAY MANAGEMENT SYSTEM (FIXED)
  * ========================================
  * ระบบจัดการวันหยุด - วันทำการ จันทร์-เสาร์
  * วันอาทิตย์และวันหยุดนักขัตฤกษ์อยู่ใน Sheet Holiday
+ * 
+ * 🔧 FIXED: External ในวันหยุด → จองได้ตั้งแต่วันทำการ +2
  */
 
 /**
@@ -420,11 +422,22 @@ if (targetHoliday) {
       
       const holidayToday = isHoliday(today);
       
-      // 🚫 Rule 1: วันนี้หยุด 00:00-13:00 → ห้ามจองเลย
-      if (holidayToday && currentHour < 13) {
-        console.log('❌ External: Currently in holiday (before 13:00)');
+      // 🚫 Rule 1: วันนี้หยุด → ห้ามจองเลย (ทั้งวัน)
+      // 🔧 FIXED: แนะนำวันทำการ +2 แทน +1
+      if (holidayToday) {
+        console.log('❌ External: Currently in holiday (any time)');
         
-        const nextWorkday = getNextWorkday(today);
+        // หาวันทำการแรก
+        const firstWorkday = getNextWorkday(today);
+        
+        // 🔧 FIXED: External ต้อง +1 วันจากวันทำการแรก
+        const nextBookableDate = new Date(firstWorkday.date + 'T00:00:00');
+        nextBookableDate.setDate(nextBookableDate.getDate() + 1);
+        const nextBookableDateStr = formatDate(nextBookableDate);
+        
+        // หาวันทำการที่จองได้
+        const nextBookable = getNextWorkday(formatDate(new Date(nextBookableDate.getTime() - 24*60*60*1000)));
+        
         const consecutiveCount = getConsecutiveHolidayCount(today);
         let consecutiveMessage = '';
         
@@ -434,58 +447,24 @@ if (targetHoliday) {
         
         return {
           allowed: false,
-          reason: 'holiday_morning_external',
+          reason: 'holiday_today_external',
           title: '🎉 วันนี้เป็นวันหยุด (External)',
           message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
                   '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                  '❌ ไม่สามารถจอง External ได้ในช่วง 00:00-13:00 น.\n' +
-                  '📋 External Lead Time: ≥1 วัน (ต้องจองล่วงหน้า)\n\n' +
-                  '💡 แนะนำ:\n' +
-                  '• รอจนถึง 13:00 น. วันนี้\n' +
-                  '• แล้วจอง' + nextWorkday.suggest + ' ← วันทำการถัดไป',
+                  '❌ ไม่สามารถจอง External ได้ในวันหยุด\n' +
+                  '📋 External Lead Time: ≥1 วัน (นับจากวันทำการ)\n\n' +
+                  '💡 แนะนำ: จอง' + nextBookable.suggest + ' ← วันที่จองได้เร็วที่สุด\n\n' +
+                  '📌 เหตุผล:\n' +
+                  '   • วันทำการถัดไป: ' + firstWorkday.dateThai + '\n' +
+                  '   • ต้อง Lead Time +1 วัน → จองได้ตั้งแต่ ' + nextBookable.dateThai,
           holidayName: holidayToday.name,
-          nextWorkday: nextWorkday.date,
-          nextWorkdayThai: nextWorkday.dateThai,
-          canBookFrom: today + ' 13:00',
+          nextWorkday: nextBookable.date,
+          nextWorkdayThai: nextBookable.dateThai,
           consecutiveDays: consecutiveCount
         };
       }
       
-      // 🚫 Rule 2: วันนี้หยุด 13:00+ → ห้ามจองพรุ่งนี้
-      if (holidayToday && currentHour >= 13) {
-        const tomorrow = new Date(todayDate);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = formatDate(tomorrow);
-        
-        if (targetDateStr === tomorrowStr) {
-          console.log('❌ External: Holiday 13:00+ cannot book tomorrow');
-          
-          const nextWorkday = getNextWorkday(tomorrowStr);
-          const consecutiveCount = getConsecutiveHolidayCount(today);
-          let consecutiveMessage = '';
-          
-          if (consecutiveCount > 1) {
-            consecutiveMessage = '\n🎉 หยุดติดต่อกัน ' + consecutiveCount + ' วัน';
-          }
-          
-          return {
-            allowed: false,
-            reason: 'holiday_afternoon_tomorrow_external',
-            title: '🎉 วันนี้เป็นวันหยุด (หลัง 13:00)',
-            message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
-                    '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                    '❌ ไม่สามารถจองวันพรุ่งนี้ได้ (External)\n' +
-                    '📋 External Lead Time: ≥1 วัน (ต้องจองล่วงหน้า)\n\n' +
-                    '💡 แนะนำ: จอง' + nextWorkday.suggest + ' ← วันทำการถัดไป',
-            holidayName: holidayToday.name,
-            canBookFrom: nextWorkday.date,
-            canBookFromThai: nextWorkday.dateThai,
-            consecutiveDays: consecutiveCount
-          };
-        }
-      }
-      
-      // 🚫 Rule 3: วันก่อนหยุด 13:00+ → ห้ามจอง 2 วันถัดไป (External เท่านั้น!)
+      // 🚫 Rule 2: วันก่อนหยุด 13:00+ → ห้ามจอง 2 วันถัดไป (External เท่านั้น!)
       const dayBeforeCheck = isDayBeforeHoliday(today);
       
       if (dayBeforeCheck.isDayBefore && currentHour >= 13) {
