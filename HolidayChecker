@@ -383,8 +383,30 @@ if (targetHoliday) {
       const holidayToday = isHoliday(today);
       
       // 🚫 Rule 1: วันนี้หยุด → ห้ามจองเลย (ทั้งวัน 00:00-23:59)
-      if (holidayToday) {
-        console.log('❌ Internal: Today is holiday - cannot book at all');
+if (holidayToday) {
+      // 🔧 เช็คว่าอยู่ในเวลาทำการ (09:00-17:00) หรือไม่
+      const isWorkingHours = (currentHour >= 9 && currentHour < 17);
+      
+      if (isWorkingHours && targetDateStr === today) {
+        // ✅ วันนี้เป็นวันหยุด + ในเวลาทำการ + จองวันนี้ → อนุญาต!
+        console.log('✅ Internal: Today is holiday but within working hours (09:00-17:00), same-day booking allowed');
+        
+        return {
+          allowed: true,
+          warning: true,
+          title: '✅ จองได้ (Internal - เวลาทำการ)',
+          message: '📅 วันหยุด: ' + holidayToday.name + ' (' + formatDateThai(today) + ')\n' +
+                  '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
+                  '✅ อยู่ในเวลาทำการ (09:00-17:00) → จองได้ทันที!\n\n' +
+                  '💡 Internal Inspection:\n' +
+                  '   • Same-day booking ในวันหยุด (09:00-17:00) ✓\n' +
+                  '   • Calendar จะถูกสร้างทันที',
+          holidayName: holidayToday.name
+        };
+        
+      } else if (!isWorkingHours) {
+        // ❌ นอกเวลาทำการ → ห้ามจอง
+        console.log('❌ Internal: Today is holiday but outside working hours');
         
         const nextWorkday = getNextWorkday(today);
         const consecutiveCount = getConsecutiveHolidayCount(today);
@@ -396,21 +418,23 @@ if (targetHoliday) {
         
         return {
           allowed: false,
-          reason: 'holiday_today_internal',
-          title: '🎉 วันนี้เป็นวันหยุด (Internal)',
+          reason: 'today_holiday_outside_hours',
+          title: '⏰ นอกเวลาทำการ (Internal)',
           message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
                   '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                  '❌ ไม่สามารถจองในวันหยุดได้ (Internal)\n\n' +
+                  '❌ นอกเวลาทำการ (09:00-17:00)\n\n' +
                   '💡 แนะนำ: จอง' + nextWorkday.suggest + ' ← วันทำการถัดไป\n\n' +
                   '📌 Internal:\n' +
-                  '   • ห้ามจองในวันหยุด (ทั้งวัน)\n' +
-                  '   • สามารถจองวันทำการถัดไปได้ทันที',
+                  '   • จองได้ในวันหยุด เฉพาะ 09:00-17:00 น.\n' +
+                  '   • ตอนนี้นอกเวลาทำการแล้ว',
           holidayName: holidayToday.name,
           nextWorkday: nextWorkday.date,
           nextWorkdayThai: nextWorkday.dateThai,
           consecutiveDays: consecutiveCount
         };
       }
+      // else: จองวันอื่น (ไม่ใช่วันนี้) ในขณะที่วันนี้เป็นวันหยุดนอกเวลา → ดำเนินการต่อด้านล่าง
+    }
       
       // ✅ วันนี้ไม่ใช่วันหยุด → ไม่มี Rule อื่นสำหรับ Internal
       console.log('✅ Internal: Today is workday, no additional restrictions');
