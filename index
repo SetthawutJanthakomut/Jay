@@ -1133,16 +1133,17 @@ input[type="file"]::file-selector-button:hover {
     var selectedInspectionType = null; // ⭐ ใหม่
     
 window.onload = function() {
-      setMinDate();
-      loadWorkTypes();
-      initInspectionTypeButtons();
-      initTeamCategoryButtons();
-      initCheckboxes();
-      loadUserEmailAndName();
-      loadManualLink();
-      setupFormChangeDetection(); // ⭐ เพิ่มบรรทัดนี้
-      showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
-    };
+  setMinDate();
+  loadWorkTypes();
+  initInspectionTypeButtons();
+  initTeamCategoryButtons();
+  initCheckboxes();
+  loadUserEmailAndName();
+  loadManualLink();
+  setupFormChangeDetection();
+  checkTodayHolidayStatus(); // ⭐ เพิ่มบรรทัดนี้
+  showMessage('กรุณาเลือกประเภทการตรวจ (Internal หรือ External) ก่อน', 'info');
+};
 
     // ⭐ Prevent Page Exit - ป้องกันการออกจากหน้าเว็บขณะกรอกฟอร์ม
     var formChanged = false;
@@ -2399,6 +2400,162 @@ updateAvailableSlots = function() {
       originalUpdateAvailableSlots();
     })
     .checkDateBookingAllowed(date, inspectionType);
+}
+
+/**
+ * ⭐ เช็ควันหยุดอัตโนมัติเมื่อโหลดหน้าเว็บ
+ */
+function checkTodayHolidayStatus() {
+  console.log('🔍 Checking today holiday status...');
+  
+  google.script.run
+    .withSuccessHandler(function(holidays) {
+      if (!holidays || holidays.length === 0) {
+        console.log('✅ No holidays data');
+        return;
+      }
+      
+      var now = new Date();
+      var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var currentHour = now.getHours();
+      
+      // 🔍 หาวันหยุดพรุ่งนี้
+      var tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      var tomorrowStr = formatDateYYYYMMDD(tomorrow);
+      
+      var tomorrowHoliday = null;
+      var consecutiveDays = 0;
+      
+      holidays.forEach(function(holiday) {
+        if (holiday.date === tomorrowStr) {
+          tomorrowHoliday = holiday;
+        }
+      });
+      
+      // 📊 นับวันหยุดติดต่อกัน
+      if (tomorrowHoliday) {
+        var checkDate = new Date(tomorrow);
+        
+        while (true) {
+          var checkDateStr = formatDateYYYYMMDD(checkDate);
+          var isHoliday = holidays.some(function(h) {
+            return h.date === checkDateStr;
+          });
+          
+          if (isHoliday) {
+            consecutiveDays++;
+            checkDate.setDate(checkDate.getDate() + 1);
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // 🔍 หาวันหยุดวันนี้
+      var todayStr = formatDateYYYYMMDD(today);
+      var todayHoliday = null;
+      
+      holidays.forEach(function(holiday) {
+        if (holiday.date === todayStr) {
+          todayHoliday = holiday;
+        }
+      });
+      
+      // ========================================
+      // ⭐ กรณีที่ 1: วันนี้เป็นวันหยุด
+      // ========================================
+      if (todayHoliday) {
+        var holidayMsg = '';
+        var holidayType = 'info';
+        
+        if (currentHour < 13) {
+          holidayMsg = '📋 External: ไม่สามารถจองได้ในช่วง 00:00-13:00 น.\n' +
+                      '🏢 Internal: ไม่สามารถจองได้ตลอดทั้งวัน\n\n' +
+                      '💡 รอจนถึง 13:00 น. เพื่อจองวันทำการถัดไป (External เท่านั้น)';
+          holidayType = 'warning';
+        } else {
+          holidayMsg = '📋 External: สามารถจองวันทำการถัดไปได้แล้ว (Lead Time +2 วัน)\n' +
+                      '🏢 Internal: ไม่สามารถจองได้';
+          holidayType = 'info';
+        }
+        
+        showToast(
+          '🎉 วันนี้เป็นวันหยุด: ' + todayHoliday.name,
+          holidayMsg,
+          holidayType,
+          15000
+        );
+        
+        return;
+      }
+      
+      // ========================================
+      // ⭐ กรณีที่ 2: พรุ่งนี้เป็นวันหยุด (วันก่อนหยุด)
+      // ========================================
+      if (tomorrowHoliday) {
+        var warningMsg = '';
+        var warningType = 'warning';
+        var warningTitle = '⚠️ พรุ่งนี้เป็นวันหยุด!';
+        
+        // 🏢 Internal: จองวันหยุดได้ แต่ต้องจองก่อน 13:00 น.
+        if (currentHour < 13) {
+          warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
+          
+          if (consecutiveDays > 1) {
+            warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
+          }
+          
+          warningMsg += '\n\n' +
+                       '🏢 Internal Inspection:\n' +
+                       '✅ ยังจองวันหยุดได้! แต่ต้องจองก่อน 13:00 น.\n' +
+                       '⏳ เหลือเวลาอีก ' + (13 - currentHour) + ' ชั่วโมง ' + (60 - now.getMinutes()) + ' นาที\n\n' +
+                       '📋 External Inspection:\n' +
+                       '⚠️ ห้ามจองวันหยุด และต้องจองก่อน 13:00 น.';
+          
+          warningType = 'warning';
+          warningTitle = '⏰ พรุ่งนี้เป็นวันหยุด - รีบจอง!';
+          
+        } else {
+          // หลัง 13:00 น. แล้ว
+          warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
+          
+          if (consecutiveDays > 1) {
+            warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
+          }
+          
+          warningMsg += '\n\n' +
+                       '❌ เลยเวลาจองแล้ว (ต้องจองก่อน 13:00 น.)\n\n' +
+                       '🏢 Internal: ห้ามจองวันหยุด\n' +
+                       '📋 External: ห้ามจองจนถึงวันทำการถัดไป';
+          
+          warningType = 'error';
+          warningTitle = '❌ เลยเวลาจองวันหยุดแล้ว';
+        }
+        
+        showToast(
+          warningTitle,
+          warningMsg,
+          warningType,
+          20000 // แสดง 20 วินาที
+        );
+      }
+      
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error checking holiday status:', error);
+    })
+    .getHolidayList();
+}
+
+/**
+ * ⭐ Helper: แปลง Date เป็น YYYY-MM-DD
+ */
+function formatDateYYYYMMDD(date) {
+  var year = date.getFullYear();
+  var month = String(date.getMonth() + 1).padStart(2, '0');
+  var day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
   </script>
 </body>
