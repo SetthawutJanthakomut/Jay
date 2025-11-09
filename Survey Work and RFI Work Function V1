@@ -296,10 +296,15 @@ function timeToMinutes(timeString) {
 
 
 /**
- * ✅ UPDATED: โหลด Work Types พร้อม QC Type, Note และ Sort
+ * ✅ FINAL: โหลด Work Types พร้อมกรองตาม Category (Default = RFI Work)
  */
 function getWorkTypeList(category) {
   try {
+    // ✅ ถ้าไม่ส่ง category มา = RFI Work (default)
+    if (!category || category.trim() === '') {
+      category = 'RFI Work';
+    }
+    
     console.log('========== getWorkTypeList ==========');
     console.log('Category filter:', category);
     
@@ -327,32 +332,35 @@ function getWorkTypeList(category) {
       const duration = parseInt(data[i][4]) || 60;          // Column E
       const sequence = String(data[i][5] || '').trim();     // Column F
       const qcType = String(data[i][6] || '').trim();       // Column G
-      const note = String(data[i][7] || '').trim();         // Column H - ✅ เพิ่มใหม่
+      const note = String(data[i][7] || '').trim();         // Column H
       
-      // ✅ กรองเฉพาะ "RFI Work"
-      if (workCategory === 'RFI Work' && nameWork) {
+      // ✅ กรองตาม Category
+      if (workCategory === category && nameWork) {
         workTypes.push({
           name: nameWork,
           duration: duration,
           sequence: sequence,
           qcType: qcType,
-          note: note,              // ✅ เพิ่ม note
-          qcTypeNumeric: parseInt(qcType) || 999  // ✅ สำหรับ sorting
+          note: note,
+          workCategory: workCategory,
+          qcTypeNumeric: parseInt(qcType) || 999
         });
-        console.log('✅ Found RFI Work:', nameWork, '(QC Type:', qcType, ', Duration:', duration, 'min, Note:', note ? 'Yes' : 'No' + ')');
+        console.log('✅ Found Work:', nameWork, 
+                   '(Category:', workCategory, 
+                   ', QC Type:', qcType, 
+                   ', Duration:', duration, 'min)');
       }
     }
     
-    // ✅ Sort ตาม QC Type (Column G) จากน้อยไปมาก
+    // ✅ Sort ตาม QC Type จากน้อยไปมาก
     workTypes.sort(function(a, b) {
       if (a.qcTypeNumeric !== b.qcTypeNumeric) {
         return a.qcTypeNumeric - b.qcTypeNumeric;
       }
-      // ถ้า QC Type เท่ากัน ให้เรียงตามชื่อ
       return a.name.localeCompare(b.name);
     });
     
-    console.log('📊 Total RFI Work Types:', workTypes.length);
+    console.log('📊 Total Work Types Found:', workTypes.length);
     console.log('======================================');
     
     return workTypes;
