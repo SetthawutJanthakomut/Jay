@@ -4505,7 +4505,6 @@ function saveSurveyWorkRequirement(data) {
       };
     }
     
-    // ⭐ เพิ่ม: Progress Array
     var progressSteps = [];
 
     // Validate User
@@ -4524,6 +4523,36 @@ function saveSurveyWorkRequirement(data) {
     
     const validatedEmail = userValidation.email;
     const validatedName = userValidation.name;
+    
+    // ⭐ ดึงข้อมูลคนที่บันทึก (Recorded By)
+    const currentUserEmail = Session.getActiveUser().getEmail();
+    let recordedByEmail = currentUserEmail;
+    let recordedByName = '';
+    
+    // ⭐ ดึงชื่อของคนที่บันทึก
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    if (userSheet) {
+      const lastRow = userSheet.getLastRow();
+      if (lastRow > 1) {
+        const userData = userSheet.getRange(2, 2, lastRow - 1, 3).getValues();
+        
+        for (let i = 0; i < userData.length; i++) {
+          const email = String(userData[i][0] || '').trim().toLowerCase();
+          const name = String(userData[i][1] || '').trim();
+          
+          if (email === currentUserEmail.toLowerCase()) {
+            recordedByName = name;
+            console.log('✅ Recorded By:', recordedByName, '(', recordedByEmail, ')');
+            break;
+          }
+        }
+      }
+    }
+    
+    // ถ้าไม่เจอชื่อ ให้ใช้อีเมล
+    if (!recordedByName) {
+      recordedByName = currentUserEmail;
+    }
     
     // จัดทีม Survey อัตโนมัติ
     progressSteps.push('จัดทีม Survey');
@@ -4554,13 +4583,13 @@ function saveSurveyWorkRequirement(data) {
     const surveyNo = 'SW-' + String(orderSurvey).padStart(4, '0');
     console.log('Survey NO:', surveyNo);
     
-    // ⭐ อัปโหลดไฟล์ไปยัง Google Drive (ถ้ามี)
+    // อัปโหลดไฟล์ไปยัง Google Drive (ถ้ามี)
     let uploadResult = null;
     
     if (data.locationLayoutFile) {
-    progressSteps.push('อัปโหลดไฟล์'); // ✅ เพิ่มบรรทัดนี้
-    console.log('Uploading file to Drive...');
-    uploadResult = uploadSurveyLocationLayout(data.locationLayoutFile, surveyNo);
+      progressSteps.push('อัปโหลดไฟล์');
+      console.log('Uploading file to Drive...');
+      uploadResult = uploadSurveyLocationLayout(data.locationLayoutFile, surveyNo);
       
       if (!uploadResult.success) {
         console.error('File upload failed:', uploadResult.message);
@@ -4592,30 +4621,32 @@ function saveSurveyWorkRequirement(data) {
     const dateParts = data.requestDate.split('-');
     const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
     
-    // ⭐ เตรียมข้อมูล 41 columns
+    // เตรียมข้อมูล 41 columns
     const rowData = [];
     for (let i = 0; i < 41; i++) {
       rowData.push('');
     }
     
-    rowData[0] = rfiId;
-    rowData[1] = surveyNo;
-    rowData[2] = combinedDescription;
-    rowData[3] = data.location;
-    rowData[4] = formattedDate;
-    rowData[5] = data.startTime;
-    rowData[6] = data.endTime;
-    rowData[7] = orderSurvey;
-    rowData[9] = validatedEmail;
-    rowData[10] = validatedName;
-    rowData[11] = teamAssignment.teamName;
-    rowData[14] = 'Survey Work Request Submitted';
-    rowData[15] = currentTime;
-    rowData[39] = 'Survey Work';
-    rowData[40] = uploadResult ? uploadResult.fileUrl : '';
+    rowData[0] = rfiId;                               // A - ID
+    rowData[1] = surveyNo;                            // B - Survey_NO
+    rowData[2] = combinedDescription;                 // C - Description
+    rowData[3] = data.location;                       // D - Location
+    rowData[4] = formattedDate;                       // E - Request_Date
+    rowData[5] = data.startTime;                      // F - Start_Time
+    rowData[6] = data.endTime;                        // G - End_Time
+    rowData[7] = orderSurvey;                         // H - Order_Survey
+    rowData[9] = validatedEmail;                      // J - Requester_Email
+    rowData[10] = validatedName;                      // K - Requester_Name
+    rowData[11] = teamAssignment.teamName;            // L - Assigned_Team
+    rowData[14] = 'Survey Work Request Submitted';    // O - Status
+    rowData[15] = currentTime;                        // P - Created_Timestamp
+    rowData[16] = recordedByEmail;                    // Q - Recorded_By (Email) ⭐ เพิ่ม
+    rowData[39] = 'Survey Work';                      // AN - Type
+    rowData[40] = uploadResult ? uploadResult.fileUrl : '';  // AO - Location_Layout_URL
     
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
-    console.log('Data added to sheet successfully');
+    console.log('✅ Data added to sheet successfully');
+    console.log('   Recorded By:', recordedByName, '(', recordedByEmail, ')');
     
     // เรียก Calendar Service
     progressSteps.push('สร้าง Calendar Event');
@@ -4681,7 +4712,9 @@ function saveSurveyWorkRequirement(data) {
         requesterEmail: validatedEmail,
         assignedTeam: teamAssignment.teamName,
         teamCategory: 'Survey Work',
-        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null
+        locationLayoutUrl: uploadResult ? uploadResult.fileUrl : null,
+        recordedBy: recordedByName,  // ⭐ เพิ่มข้อมูล Recorded By
+        recordedByEmail: recordedByEmail
       };
       emailSent = sendSurveyWorkNotificationEmail(emailData, rfiId, surveyNo);
     } catch (emailError) {
@@ -4692,6 +4725,7 @@ function saveSurveyWorkRequirement(data) {
     message += '\n📋 Survey NO: ' + surveyNo;
     message += '\nงาน: ' + data.workType;
     message += '\n👥 ทีมงาน: ' + teamAssignment.teamName;
+    message += '\n📝 บันทึกโดย: ' + recordedByName;  // ⭐ เพิ่มข้อมูล
     
     if (uploadResult && uploadResult.fileName) {
       message += '\n📎 ไฟล์: ' + uploadResult.fileName;
@@ -4713,7 +4747,6 @@ function saveSurveyWorkRequirement(data) {
     
     console.log('========== saveSurveyWorkRequirement SUCCESS ==========');
     
-    // ⭐ ส่ง progress กลับไปด้วย
     return {
       success: true,
       message: message,
@@ -4726,7 +4759,8 @@ function saveSurveyWorkRequirement(data) {
       workType: data.workType,
       fileUrl: uploadResult ? uploadResult.fileUrl : null,
       fileName: uploadResult ? uploadResult.fileName : null,
-      progress: progressSteps // ⭐ ส่ง progress steps กลับไป
+      progress: progressSteps,
+      recordedBy: recordedByName  // ⭐ ส่งกลับไปด้วย
     };
     
   } catch (error) {
@@ -5055,14 +5089,24 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {
   }
 }
 
-/**
- * ⭐ อัปเดต: สร้าง HTML สำหรับอีเมล Survey Work (เพิ่ม Location Layout Link)
- */
 function createSurveyWorkEmailHTML(data, rfiId, surveyNo) {
-  // ⭐ เพิ่มส่วนแสดง Location Layout File
+  // เพิ่มส่วนแสดง Location Layout File
   var fileInfo = '';
   if (data.locationLayoutUrl) {
     fileInfo = '<tr><th>📎 Location Layout</th><td><a href="' + data.locationLayoutUrl + '" target="_blank" style="color: #16a34a; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #ecfdf5; border-radius: 6px; border: 1px solid #16a34a;">📄 ดูไฟล์ Location Layout ↗</a></td></tr>';
+  }
+  
+  // ⭐ เพิ่มส่วนแสดง Recorded By
+  var recordedByInfo = '';
+  if (data.recordedBy && data.recordedByEmail) {
+    recordedByInfo = '<tr><th>📝 บันทึกโดย</th><td>' + data.recordedBy;
+    
+    // ถ้า Requester ไม่ใช่คนที่บันทึก ให้แสดงว่า Survey Role บันทึกให้
+    if (data.recordedByEmail !== data.requesterEmail) {
+      recordedByInfo += ' <span style="color: #f59e0b; font-weight: 600;">(Survey Role)</span>';
+    }
+    
+    recordedByInfo += '</td></tr>';
   }
   
   const emailBody = `<!DOCTYPE html>
@@ -5126,6 +5170,7 @@ th { background-color: #ecfdf5; }
 ${fileInfo}
 <tr><th>ผู้ขอ</th><td>${data.requesterName}</td></tr>
 ${data.requesterEmail ? '<tr><th>อีเมลผู้ขอ</th><td>' + data.requesterEmail + '</td></tr>' : ''}
+${recordedByInfo}
 <tr><th>สถานะ</th><td><span class="status-badge">Survey Work Request Submitted</span></td></tr>
 </table>
 
@@ -6642,3 +6687,204 @@ function getHolidayList() {
   }
 }
 
+/**
+ * ⭐ ตรวจสอบว่า User เป็น Survey Role หรือไม่
+ */
+function validateSurveyRole() {
+  try {
+    const userEmail = Session.getActiveUser().getEmail();
+    console.log('Validating Survey role for:', userEmail);
+    
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      return {
+        success: false,
+        message: 'ไม่พบตาราง User'
+      };
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        success: false,
+        message: 'ไม่พบข้อมูลผู้ใช้'
+      };
+    }
+    
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim().toLowerCase();
+      const name = String(data[i][1] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      if (email === userEmail.toLowerCase()) {
+        if ((role === 'Survey' || role === 'Survey Reviewer') && status === 'Activated') {
+          console.log('✅ Survey role validated:', name, role);
+          return {
+            success: true,
+            name: name,
+            role: role,
+            email: email,
+            isSurveyRole: true
+          };
+        } else {
+          return {
+            success: false,
+            message: 'คุณไม่มีสิทธิ์ Survey Role (Role: ' + role + ', Status: ' + status + ')',
+            isSurveyRole: false
+          };
+        }
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'ไม่พบข้อมูลผู้ใช้ในระบบ',
+      isSurveyRole: false
+    };
+    
+  } catch (error) {
+    console.error('Error validating Survey role:', error);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString(),
+      isSurveyRole: false
+    };
+  }
+}
+
+/**
+ * ⭐ ดึงรายชื่อ Requester ทั้งหมด (Role = "Requester", Status = "Activated")
+ */
+function getAllRequesters() {
+  try {
+    console.log('========== Getting All Requesters ==========');
+    
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+    
+    if (!userSheet) {
+      console.log('❌ User sheet not found');
+      return [];
+    }
+    
+    const lastRow = userSheet.getLastRow();
+    if (lastRow <= 1) {
+      console.log('⚠️ No users found');
+      return [];
+    }
+    
+    // ดึง Column B (Email), C (DisplayName), D (Role), E (Status)
+    const data = userSheet.getRange(2, 2, lastRow - 1, 4).getValues();
+    const requesters = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const email = String(data[i][0] || '').trim();
+      const name = String(data[i][1] || '').trim();
+      const role = String(data[i][2] || '').trim();
+      const status = String(data[i][3] || '').trim();
+      
+      if (role === 'Requester' && status === 'Activated' && email && name) {
+        requesters.push({
+          email: email,
+          name: name,
+          displayText: name + ' (' + email + ')'
+        });
+        console.log('✅ Found Requester:', name, '-', email);
+      }
+    }
+    
+    // เรียงตามชื่อ
+    requesters.sort(function(a, b) {
+      return a.name.localeCompare(b.name, 'th');
+    });
+    
+    console.log('📊 Total Requesters:', requesters.length);
+    console.log('==========================================');
+    
+    return requesters;
+    
+  } catch (error) {
+    console.error('❌ Error getting requesters:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ Survey Available Time Slots (สำหรับ Survey Role - ไม่มีข้อจำกัด 30 นาที)
+ */
+function getSurveyRoleAvailableTimeSlots(date) {
+  try {
+    if (!date) return [];
+    
+    console.log('⭐ Getting time slots for Survey Role (no 30-min restriction)');
+    
+    // สร้าง all slots (09:00 - 19:30)
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      return [];
+    }
+    
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    const availableSlots = [];
+    
+    for (let i = 0; i < allSlots.length; i++) {
+      const startSlot = allSlots[i];
+      
+      const startParts = startSlot.split(':');
+      const startHour = parseInt(startParts[0]);
+      const startMin = parseInt(startParts[1]);
+      const endHour = startMin === 30 ? startHour + 1 : startHour;
+      const endMin = startMin === 30 ? 0 : 30;
+      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
+      
+      const requestStartMinutes = timeToMinutes(startSlot);
+      const requestEndMinutes = timeToMinutes(endSlot);
+      
+      let hasAvailableTeam = false;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          hasAvailableTeam = true;
+          break;
+        }
+      }
+      
+      if (hasAvailableTeam) {
+        availableSlots.push(startSlot);
+      }
+    }
+    
+    console.log('✅ Survey Role - Available slots:', availableSlots.length);
+    return availableSlots;
+    
+  } catch (error) {
+    console.error('Error in getSurveyRoleAvailableTimeSlots:', error);
+    return [];
+  }
+}
