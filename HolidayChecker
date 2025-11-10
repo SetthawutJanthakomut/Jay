@@ -382,69 +382,113 @@ function canBookDate(targetDateStr, inspectionType) {
     // ========================================
     
     if (inspectionType === 'internal' || inspectionType === 'survey') {
-      // ========================================
-      // 🏢 INTERNAL & 🗺️ SURVEY (Lead Time: 30 นาที)
-      // ========================================
+  // ========================================
+  // 🏢 INTERNAL & 🗺️ SURVEY
+  // ========================================
+  
+  const holidayToday = isHoliday(today);
+  const typeLabel = inspectionType === 'survey' ? 'Survey Work' : 'Internal';
+  const typeIcon = inspectionType === 'survey' ? '🗺️' : '🏢';
+  
+  // 🚫 Rule 1: วันนี้หยุด → เช็คเวลาทำการ (09:00-17:00)
+  if (holidayToday) {
+    const isWorkingHours = (currentHour >= 9 && currentHour < 17);
+    
+    if (isWorkingHours && targetDateStr === today) {
+      // ✅ วันนี้เป็นวันหยุด + ในเวลาทำการ + จองวันนี้ → อนุญาต!
+      console.log('✅ ' + inspectionType + ': Today is holiday but within working hours (09:00-17:00), same-day booking allowed');
       
-      const holidayToday = isHoliday(today);
+      return {
+        allowed: true,
+        warning: true,
+        title: '✅ จองได้ (' + typeLabel + ' - เวลาทำการ)',
+        message: '📅 วันหยุด: ' + holidayToday.name + ' (' + formatDateThai(today) + ')\n' +
+                '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
+                '✅ อยู่ในเวลาทำการ (09:00-17:00) → จองได้ทันที!\n\n' +
+                '💡 ' + typeIcon + ' ' + typeLabel + ':\n' +
+                '   • Same-day booking ในวันหยุด (09:00-17:00) ✓\n' +
+                '   • Calendar จะถูกสร้างทันที',
+        holidayName: holidayToday.name
+      };
       
-      // 🚫 Rule 1: วันนี้หยุด → เช็คเวลาทำการ (09:00-17:00)
-      if (holidayToday) {
-        const isWorkingHours = (currentHour >= 9 && currentHour < 17);
-        
-        const typeLabel = inspectionType === 'survey' ? 'Survey Work' : 'Internal';
-        const typeIcon = inspectionType === 'survey' ? '🗺️' : '🏢';
-        
-        if (isWorkingHours && targetDateStr === today) {
-          // ✅ วันนี้เป็นวันหยุด + ในเวลาทำการ + จองวันนี้ → อนุญาต!
-          console.log('✅ ' + inspectionType + ': Today is holiday but within working hours (09:00-17:00), same-day booking allowed');
-          
-          return {
-            allowed: true,
-            warning: true,
-            title: '✅ จองได้ (' + typeLabel + ' - เวลาทำการ)',
-            message: '📅 วันหยุด: ' + holidayToday.name + ' (' + formatDateThai(today) + ')\n' +
-                    '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                    '✅ อยู่ในเวลาทำการ (09:00-17:00) → จองได้ทันที!\n\n' +
-                    '💡 ' + typeIcon + ' ' + typeLabel + ':\n' +
-                    '   • Same-day booking ในวันหยุด (09:00-17:00) ✓\n' +
-                    '   • Calendar จะถูกสร้างทันที',
-            holidayName: holidayToday.name
-          };
-          
-        } else if (!isWorkingHours) {
-          // ❌ นอกเวลาทำการ → ห้ามจอง
-          console.log('❌ ' + inspectionType + ': Today is holiday but outside working hours');
-          
-          const nextWorkday = getNextWorkday(today);
-          const consecutiveCount = getConsecutiveHolidayCount(today);
-          let consecutiveMessage = '';
-          
-          if (consecutiveCount > 1) {
-            consecutiveMessage = '\n🎉 หยุดติดต่อกัน ' + consecutiveCount + ' วัน';
-          }
-          
-          return {
-            allowed: false,
-            reason: 'today_holiday_outside_hours',
-            title: '⏰ นอกเวลาทำการ (' + typeLabel + ')',
-            message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
-                    '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                    '❌ นอกเวลาทำการ (09:00-17:00)\n\n' +
-                    '💡 แนะนำ: จอง' + nextWorkday.suggest + ' ← วันทำการถัดไป\n\n' +
-                    '📌 ' + typeIcon + ' ' + typeLabel + ':\n' +
-                    '   • จองได้ในวันหยุด เฉพาะ 09:00-17:00 น.\n' +
-                    '   • ตอนนี้นอกเวลาทำการแล้ว',
-            holidayName: holidayToday.name,
-            nextWorkday: nextWorkday.date,
-            nextWorkdayThai: nextWorkday.dateThai,
-            consecutiveDays: consecutiveCount
-          };
-        }
+    } else if (!isWorkingHours) {
+      // ❌ นอกเวลาทำการ → ห้ามจอง
+      console.log('❌ ' + inspectionType + ': Today is holiday but outside working hours');
+      
+      const nextWorkday = getNextWorkday(today);
+      const consecutiveCount = getConsecutiveHolidayCount(today);
+      let consecutiveMessage = '';
+      
+      if (consecutiveCount > 1) {
+        consecutiveMessage = '\n🎉 หยุดติดต่อกัน ' + consecutiveCount + ' วัน';
       }
       
-      // ✅ วันนี้ไม่ใช่วันหยุด → ไม่มี Rule อื่น
-      console.log('✅ ' + inspectionType + ': Today is workday, no additional restrictions');
+      return {
+        allowed: false,
+        reason: 'today_holiday_outside_hours',
+        title: '⏰ นอกเวลาทำการ (' + typeLabel + ')',
+        message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
+                '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
+                '❌ นอกเวลาทำการ (09:00-17:00)\n\n' +
+                '💡 แนะนำ: จอง' + nextWorkday.suggest + ' ← วันทำการถัดไป\n\n' +
+                '📌 ' + typeIcon + ' ' + typeLabel + ':\n' +
+                '   • จองได้ในวันหยุด เฉพาะ 09:00-17:00 น.\n' +
+                '   • ตอนนี้นอกเวลาทำการแล้ว',
+        holidayName: holidayToday.name,
+        nextWorkday: nextWorkday.date,
+        nextWorkdayThai: nextWorkday.dateThai,
+        consecutiveDays: consecutiveCount
+      };
+    }
+  }
+  
+  // ⭐ NEW Rule 2: จองวันนี้ (วันทำการปกติ) → ต้องก่อน 16:00 น.
+  if (targetDateStr === today) {
+    if (currentHour >= 16) {
+      // ❌ หลัง 16:00 น. แล้ว → ห้ามจองวันนี้
+      console.log('❌ ' + inspectionType + ': Same-day booking after 16:00 not allowed');
+      
+      const nextWorkday = getNextWorkday(today);
+      
+      return {
+        allowed: false,
+        reason: 'same_day_after_cutoff',
+        title: '⏰ เลยเวลาจองวันนี้แล้ว',
+        message: '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
+                '❌ ไม่สามารถจองวันนี้ได้แล้ว (ต้องจองก่อน 16:00 น.)\n\n' +
+                '💡 ' + typeIcon + ' ' + typeLabel + ' - จองวันนี้:\n' +
+                '   • ต้องจองก่อน 16:00 น.\n' +
+                '   • เพื่อให้ทีมงานเตรียมการ + ขออนุมัติ OT ก่อน 17:00 น.\n\n' +
+                '📅 แนะนำ: จอง' + nextWorkday.suggest + ' (วันทำการถัดไป)',
+        nextWorkday: nextWorkday.date,
+        nextWorkdayThai: nextWorkday.dateThai
+      };
+    }
+    
+    // ✅ จองวันนี้ก่อน 16:00 น. → อนุญาต!
+    console.log('✅ ' + inspectionType + ': Same-day booking before 16:00, allowed');
+    
+    let timeLeftMsg = '';
+    if (currentHour >= 14 && currentHour < 16) {
+      const timeLeft = 16 - currentHour;
+      timeLeftMsg = '\n⏳ เหลือเวลาจองวันนี้อีก ' + timeLeft + ' ชั่วโมง';
+    }
+    
+    return {
+      allowed: true,
+      warning: true,
+      title: '✅ จองวันนี้ได้',
+      message: '📅 วันที่เลือก: ' + formatDateThai(targetDateStr) + ' (วันนี้)\n' +
+              '⏰ เวลาจอง: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น. (ก่อน 16:00 น. ✓)' + timeLeftMsg + '\n\n' +
+              '✅ สามารถจองวันนี้ได้ (' + typeIcon + ' ' + typeLabel + ')\n\n' +
+              '💡 หมายเหตุ:\n' +
+              '   • ทีมงานจะได้เตรียมการ + ขออนุมัติ OT\n' +
+              '   • Calendar จะถูกสร้างทันที'
+    };
+  }
+  
+  // ✅ จองพรุ่งนี้ขึ้นไป → อนุญาตตามเดิม
+  console.log('✅ ' + inspectionType + ': Advanced booking (tomorrow or later), no restrictions');
       
     } else {
       // ========================================
@@ -453,15 +497,13 @@ function canBookDate(targetDateStr, inspectionType) {
       
       const holidayToday = isHoliday(today);
       
-      if (holidayToday) {
-        console.log('❌ External: Currently in holiday (any time)');
-        
-        const firstWorkday = getNextWorkday(today);
-        const nextBookableDate = new Date(firstWorkday.date + 'T00:00:00');
-        nextBookableDate.setDate(nextBookableDate.getDate() + 1);
-        const nextBookable = getNextWorkday(formatDate(new Date(nextBookableDate.getTime() - 24*60*60*1000)));
-        
-        const consecutiveCount = getConsecutiveHolidayCount(today);
+if (holidayToday) {
+  console.log('❌ External: Currently in holiday (any time)');
+  
+  const firstWorkday = getNextWorkday(today);
+  const nextBookable = getNextWorkday(firstWorkday.date); // ⭐ บรรทัดใหม่
+  
+  const consecutiveCount = getConsecutiveHolidayCount(today);
         let consecutiveMessage = '';
         
         if (consecutiveCount > 1) {
@@ -830,4 +872,66 @@ function testSundaySystem() {
     'ดูรายละเอียดเพิ่มใน Logs',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+/**
+ * 🧪 ฟังก์ชันทดสอบระบบวันหยุด (มี Time Override)
+ */
+function testHolidaySystemWithTime(testHour, testMinute) {
+  try {
+    console.log('========== 🧪 TEST MODE: Holiday System Test ==========');
+    console.log('⏰ Override Time:', testHour + ':' + testMinute);
+    
+    // Override getCurrentTime ชั่วคราว
+    const originalGetTime = Date.prototype.getHours;
+    Date.prototype.getHours = function() { return testHour; };
+    Date.prototype.getMinutes = function() { return testMinute; };
+    
+    const today = formatDate(new Date());
+    
+    console.log('Test 1: Internal - จองวันนี้');
+    const test1 = canBookDate(today, 'internal');
+    console.log('Result:', test1.allowed ? '✅ อนุญาต' : '❌ ไม่อนุญาต');
+    console.log('Title:', test1.title);
+    console.log('Message:', test1.message);
+    
+    console.log('\nTest 2: Survey - จองวันนี้');
+    const test2 = canBookDate(today, 'survey');
+    console.log('Result:', test2.allowed ? '✅ อนุญาต' : '❌ ไม่อนุญาต');
+    console.log('Title:', test2.title);
+    
+    console.log('\nTest 3: External - จองวันนี้');
+    const test3 = canBookDate(today, 'external');
+    console.log('Result:', test3.allowed ? '✅ อนุญาต' : '❌ ไม่อนุญาต');
+    console.log('Title:', test3.title);
+    
+    // Restore original function
+    Date.prototype.getHours = originalGetTime;
+    
+    console.log('========== 🧪 TEST COMPLETE ==========');
+    
+    return {
+      internal: test1,
+      survey: test2,
+      external: test3
+    };
+    
+  } catch (error) {
+    console.error('❌ Test Error:', error);
+    return null;
+  }
+}
+
+/**
+ * 🚀 รันทดสอบง่ายๆ
+ */
+function runQuickTests() {
+  console.log('🧪 Testing at 15:30 (ก่อน 16:00)');
+  testHolidaySystemWithTime(15, 30);
+  
+  console.log('\n🧪 Testing at 16:00 (พอดี 16:00)');
+  testHolidaySystemWithTime(16, 0);
+  
+  console.log('\n🧪 Testing at 17:00 (หลัง 16:00)');
+  testHolidaySystemWithTime(17, 0);
 }
