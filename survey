@@ -610,6 +610,7 @@
     
     <div class="info-box">
       <strong>📌 ข้อกำหนด:</strong> จองล่วงหน้าอย่างน้อย 30 นาที<br>
+      <strong>📅 จองวันนี้:</strong> ได้ ถ้าจองก่อน 16:00 น. ⭐<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>
       <strong>👥 ทีมงาน:</strong> Survey Teams เท่านั้น
     </div>
@@ -962,7 +963,7 @@ function setMinDate() {
   document.getElementById('requestDate').setAttribute('min', dateString);
 }
     
-    function loadWorkTypes() {
+function loadWorkTypes() {
   const workTypeSelect = document.getElementById('workType');
   workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
   workTypeSelect.disabled = true;
@@ -993,7 +994,7 @@ function setMinDate() {
       workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
       showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
     })
-    .getWorkTypeList('Survey Work'); // ✅ ส่ง 'Survey Work'
+    .getWorkTypeList('Survey Work'); // ✅ ส่ง 'Survey Work' ← ⚠️ ตรงนี้ถูกแล้ว!
 }
     
 function loadUserEmailAndName() {
