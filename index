@@ -933,8 +933,9 @@ input[type="file"]::file-selector-button:hover {
     <!-- ⭐ Info Box - Internal -->
     <div class="info-box internal" id="infoBoxInternal">
       <strong>📌 ข้อกำหนด (Internal):</strong><br>
-      <strong>⚡ Lead Time:</strong> 30 นาที (จองวันนี้ก็ได้)<br>
-      <strong>📅 วันที่จอง:</strong> วันนี้หรือวันถัดไป<br>
+      <strong>📅 จองวันนี้:</strong> ได้ ถ้าจองก่อน 16:00 น. ⭐<br>
+      <strong>📅 จองพรุ่งนี้:</strong> ได้ (ไม่มีข้อจำกัด)<br>
+      <strong>⚡ Lead Time:</strong> 30 นาที<br>
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
       <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
       <strong>📅 Calendar:</strong> สร้างทันที + ส่ง invitation<br>
@@ -2299,15 +2300,11 @@ function setupHolidayCheck() {
   });
 }
 
-/**
- * ⭐ เช็คข้อจำกัดวันหยุด
- */
 function checkHolidayRestrictions(dateStr, inspectionType) {
   if (!dateStr || !inspectionType) return;
   
   console.log('🔍 Checking holiday restrictions:', dateStr);
   
-  // แสดง loading
   showToast('กำลังตรวจสอบ', 'กำลังเช็ควันหยุด...', 'info', 2000);
   
   google.script.run
@@ -2315,10 +2312,16 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
       console.log('📥 Holiday check result:', result);
       
       if (!result.allowed) {
+        // ⭐ FIX: ถ้าวันที่ตรงกับวันที่แนะนำ → อนุญาต
+        var selectedDate = document.getElementById('requestDate').value;
+        if (result.nextWorkday && selectedDate === result.nextWorkday) {
+          console.log('✅ Selected date matches recommended date, allowing');
+          return; // ออกจาก function
+        }
+        
         // ❌ ไม่สามารถจองได้
         console.log('❌ Cannot book:', result.reason);
         
-        // แสดง Toast แจ้งเตือน
         showToast(
           result.title || '❌ ไม่สามารถจองวันนี้ได้',
           result.message,
@@ -2326,7 +2329,6 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
           12000
         );
         
-        // แสดง Message Box
         showMessage(result.message, 'error', 12000);
         
         // ล้างค่าวันที่
@@ -2384,22 +2386,9 @@ updateAvailableSlots = function() {
     return;
   }
   
-  // เช็ควันหยุดก่อน load time slots
-  google.script.run
-    .withSuccessHandler(function(result) {
-      if (result.allowed) {
-        // ถ้าจองได้ ให้ load time slots
-        originalUpdateAvailableSlots();
-      } else {
-        // ถ้าจองไม่ได้ จะถูกจัดการใน checkHolidayRestrictions แล้ว
-        console.log('❌ Date not allowed, slots not loaded');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error:', error);
-      originalUpdateAvailableSlots();
-    })
-    .checkDateBookingAllowed(date, inspectionType);
+  // ⭐ FIX: ไม่เช็ควันหยุดซ้ำ - ให้ checkHolidayRestrictions() จัดการเองตอนเลือกวันที่
+  // แค่ load time slots ไปเลย
+  originalUpdateAvailableSlots();
 }
 
 /**
