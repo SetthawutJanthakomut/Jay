@@ -1045,7 +1045,6 @@ function updateInfoBoxForSurveyRole() {
     infoBox.innerHTML = 
       '<strong>👨‍💼 Survey Role Mode:</strong> จองได้ทุกเวลา ไม่มีข้อจำกัด<br>' +
       '<strong>📅 จองวันหยุด:</strong> ได้ ✅<br>' +
-      '<strong>📅 จองย้อนหลัง:</strong> ได้ ✅<br>' +
       '<strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>' +
       '<strong>👥 ทีมงาน:</strong> ต้องมีทีมว่าง (เช็คเหมือนเดิม)';
     infoBox.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
