@@ -26,6 +26,9 @@ function doGet(e) {
     }else if (page === 'survey_manual') {
   return HtmlService.createHtmlOutputFromFile('survey_manual')
     .setTitle('คู่มือการใช้งาน RFI System');
+        }else if (page === 'Codition') {
+  return HtmlService.createHtmlOutputFromFile('Codition')
+    .setTitle('เงื่อนไขการจอง RFI System');
 
   } else {
     return HtmlService.createHtmlOutputFromFile('index')
