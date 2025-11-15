@@ -3020,13 +3020,27 @@ function saveQCRFI(data) {
     
     console.log('QC Role validated:', roleValidation.name, roleValidation.role);
     
-    // ✅ Validation - บังคับ Work Type
+    // ✅ FIXED: Validation - บังคับ Work Type
     if (!data.workType || !data.requestDate || !data.startTime || 
         !data.description || !data.location || !data.assignedInspector || 
         !data.requesterEmail || !data.requesterName) {
+      
+      // Debug: แสดงข้อมูลที่ขาด
+      const missing = [];
+      if (!data.workType) missing.push('Work Type');
+      if (!data.requestDate) missing.push('Request Date');
+      if (!data.startTime) missing.push('Start Time');
+      if (!data.description) missing.push('Description');
+      if (!data.location) missing.push('Location');
+      if (!data.assignedInspector) missing.push('Assigned Inspector');
+      if (!data.requesterEmail) missing.push('Requester Email');
+      if (!data.requesterName) missing.push('Requester Name');
+      
+      console.log('❌ Missing fields:', missing);
+      
       return {
         success: false,
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน (รวมประเภทงาน)'
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน (รวมประเภทงาน)\nขาดข้อมูล: ' + missing.join(', ')
       };
     }
     
@@ -3061,7 +3075,8 @@ function saveQCRFI(data) {
     if (!sequence || !qcType) {
       return {
         success: false,
-        message: 'Work Type ที่เลือกไม่มีข้อมูล Sequence หรือ QC_Type\nกรุณาตรวจสอบ Sheet "Work"'
+        message: 'Work Type "' + data.workType + '" ไม่มีข้อมูล Sequence หรือ QC_Type\n' +
+                'กรุณาตรวจสอบ Sheet "Work"'
       };
     }
     
@@ -3118,6 +3133,9 @@ function saveQCRFI(data) {
     
     console.log('Adding data to sheet at row:', nextRow);
     
+    // ✅ สร้าง Combined Description (Work Type + Description)
+    const combinedDescription = data.workType + ' - ' + data.description;
+    
     // เตรียมข้อมูล 41 columns
     const rowData = [];
     for (let i = 0; i < 41; i++) {
@@ -3126,7 +3144,7 @@ function saveQCRFI(data) {
     
     rowData[0] = rfiId;                          // A - ID
     rowData[1] = rfiNo;                          // B - RFI_NO
-    rowData[2] = data.description;               // C - description
+    rowData[2] = combinedDescription;            // C - description (✅ รวม Work Type)
     rowData[3] = data.location;                  // D - Location
     rowData[4] = formattedDate;                  // E - Request_Date
     rowData[5] = data.startTime;                 // F - Start_Time
@@ -3150,13 +3168,14 @@ function saveQCRFI(data) {
     sheet.getRange(nextRow, 1, 1, 41).setValues([rowData]);
     console.log('Data added to sheet successfully');
     
-    let message = 'สร้าง RFI เรียบร้อยแล้ว\n';
-    message += 'RFI NO: ' + rfiNo + '\n';
-    message += 'Work Type: ' + data.workType + ' (Duration: ' + duration + ' นาที)\n';
-    message += 'เวลา: ' + data.startTime + ' - ' + endTime + ' น.\n';
-    message += 'ทีมงาน: ' + data.assignedInspector + '\n';
-    message += 'ผู้ขอ: ' + data.requesterName + '\n';
-    message += 'บันทึกโดย: ' + roleValidation.name;
+    let message = 'สร้าง RFI เรียบร้อยแล้ว ✅\n\n';
+    message += '📋 RFI NO: ' + rfiNo + '\n';
+    message += '🔧 Work Type: ' + data.workType + '\n';
+    message += '⏱️ Duration: ' + duration + ' นาที\n';
+    message += '🕐 เวลา: ' + data.startTime + ' - ' + endTime + ' น.\n';
+    message += '👥 ทีมงาน: ' + data.assignedInspector + '\n';
+    message += '👤 ผู้ขอ: ' + data.requesterName + '\n';
+    message += '✍️ บันทึกโดย: ' + roleValidation.name;
     
     console.log('========== saveQCRFI SUCCESS ==========');
     
