@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <base target="_top">
     <meta charset="UTF-8">
@@ -369,6 +370,44 @@
                     <!-- ✅ เพิ่มส่วนแสดง Note -->
                     <div id="editWorkTypeNote" class="work-type-note" style="display: none;"></div>
                 </div>
+                <!-- ✅ ⭐ ITP Selection + Auto-populate QC/ITEM/Description -->
+                <div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border-left: 4px solid #0ea5e9;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                        <span style="font-size: 18px;">📋</span>
+                        <strong style="font-size: 16px; color: #0369a1;">ข้อมูล ITP / QC Code</strong>
+                    </div>
+
+                    <!-- ITP Dropdown (เลือกได้) -->
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">เลือก ITP <span class="required">*</span></label>
+                        <select id="editITPSelect" required style="font-size: 14px;">
+                            <option value="">-- เลือก Work Type ก่อน --</option>
+                        </select>
+                        <div class="info-note">💡 รูปแบบ: ITP - QC Code - ITEM</div>
+                    </div>
+
+                    <!-- Hidden field เก็บ ITP จริง -->
+                    <input type="hidden" id="editITP" required>
+
+                    <!-- QC Code (Read-only) -->
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">QC Code <span class="required">*</span></label>
+                        <input type="text" id="editQCCode" required readonly placeholder="เลือก ITP ด้านบนก่อน" style="background: #f5f6f7; cursor: not-allowed; font-weight: 600; color: #0ea5e9;">
+                    </div>
+
+                    <!-- ITEM (Read-only) -->
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">ITEM <span class="required">*</span></label>
+                        <input type="text" id="editITEM" required readonly placeholder="เลือก ITP ด้านบนก่อน" style="background: #f5f6f7; cursor: not-allowed; font-weight: 600; color: #0ea5e9;">
+                    </div>
+
+                    <!-- Description Code (Read-only) -->
+                    <div>
+                        <label class="form-label">Description Code <span class="required">*</span></label>
+                        <textarea id="editDescriptionCode" required readonly placeholder="เลือก ITP ด้านบนก่อน" style="background: #f5f6f7; cursor: not-allowed; height: 100px; font-size: 13px; color: #333;"></textarea>
+                        <div class="info-note">✅ อัปเดตอัตโนมัติเมื่อเลือก ITP</div>
+                    </div>
+                </div>
 
                 <div style="margin-bottom: 20px;">
                     <label class="form-label">รายละเอียด RFI <span class="required">*</span></label>
@@ -480,6 +519,8 @@
         var availableTeams = [];
         var originalAssignedTeams = [];
         var allWorkTypes = [];
+        // ✅ ⭐ เพิ่มบรรทัดนี้
+        var codeListByWorkType = [];
 
         function generateTimeSlots(isEndTime) {
             var slots = [];
@@ -557,7 +598,6 @@
             var parts = time.split(':');
             return parseInt(parts[0]) * 60 + parseInt(parts[1]);
         }
-
         window.onload = function() {
             loadRFIList();
             loadWorkTypeList();
@@ -566,6 +606,12 @@
 
             populateTimeDropdown('editStartTime', '', false);
             populateTimeDropdown('editEndTime', '', true);
+
+            // ✅ ⭐ Add ITP Select Event Listener
+            var itpSelect = document.getElementById('editITPSelect');
+            if (itpSelect) {
+                itpSelect.addEventListener('change', onITPSelectChange);
+            }
 
             setTimeout(function() {
                 setupEditFormListeners();
@@ -679,11 +725,22 @@
                         requesterEmail: document.getElementById('editRequesterEmail').value,
                         requesterName: document.getElementById('editRequesterName').value,
                         requireSurveyReport: document.getElementById('editRequireSurveyReport').value || 'None',
-                        requireLabReport: document.getElementById('editRequireLabReport').value || 'None'
+                        requireLabReport: document.getElementById('editRequireLabReport').value || 'None',
+                        // ✅ ⭐ ข้อมูล Code
+                        itp: document.getElementById('editITP').value,
+                        qcCode: document.getElementById('editQCCode').value,
+                        item: document.getElementById('editITEM').value,
+                        descriptionCode: document.getElementById('editDescriptionCode').value
                     };
 
+                    // ✅ Validation
+                    if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+                        showMessage('❌ กรุณาเลือก ITP', 'error');
+                        return;
+                    }
+
                     if (!formData.assignedInspector) {
-                        showMessage('กรุณาเลือกทีมงาน', 'error');
+                        showMessage('❌ กรุณาเลือกทีมงาน', 'error');
                         return;
                     }
 
@@ -804,7 +861,7 @@
                     document.getElementById('editRequireSurveyReport').value = rfi.requireSurveyReport || 'None';
                     document.getElementById('editRequireLabReport').value = rfi.requireLabReport || 'None';
 
-                    // ✅ จัดการ Work Type Dropdown
+                    // ✅ ⭐ วางโค้ดใหม่ตรงนี้ (Work Type + ITP Loading)
                     var workTypeSelect = document.getElementById('editWorkType');
                     var workTypeNote = document.getElementById('workTypeNote');
                     var editWorkTypeNote = document.getElementById('editWorkTypeNote');
@@ -817,8 +874,6 @@
                         for (var i = 0; i < allWorkTypes.length; i++) {
                             var option = document.createElement('option');
                             option.value = allWorkTypes[i].name;
-
-                            // ✅ Format: "QC_Type Name_Work (Duration นาที)"
                             option.textContent = allWorkTypes[i].qcType + ' ' + allWorkTypes[i].name + ' (' + allWorkTypes[i].duration + ' นาที)';
 
                             option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
@@ -829,7 +884,6 @@
                             if (allWorkTypes[i].name === rfi.workType) {
                                 option.selected = true;
 
-                                // ✅ แสดง Note ของ Work Type ที่เลือก
                                 var currentNote = allWorkTypes[i].note || '';
                                 if (editWorkTypeNote && currentNote.trim() !== '') {
                                     editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + currentNote;
@@ -840,7 +894,6 @@
                             workTypeSelect.appendChild(option);
                         }
 
-                        // ✅ Event Listener สำหรับเปลี่ยน Work Type
                         workTypeSelect.addEventListener('change', function() {
                             var selectedOption = this.options[this.selectedIndex];
                             var note = selectedOption.getAttribute('data-note');
@@ -853,19 +906,27 @@
                                     editWorkTypeNote.style.display = 'none';
                                 }
                             }
+
+                            var selectedWorkType = this.value;
+                            if (selectedWorkType) {
+                                console.log('🔄 Work Type changed:', selectedWorkType);
+                                loadCodeListForWorkType(selectedWorkType);
+                            } else {
+                                document.getElementById('editITPSelect').innerHTML = '<option value="">-- เลือก Work Type ก่อน --</option>';
+                                document.getElementById('editITPSelect').disabled = true;
+                                clearCodeFields();
+                            }
                         });
 
-                        workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้ (Status: RFI Request Submitted)';
+                        workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้';
                         workTypeNote.style.color = '#28a745';
-                        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้:</strong> เมื่อเปลี่ยน Work Type ระบบจะสร้าง RFI NO ใหม่อัตโนมัติ';
+                        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้</strong>';
                         editInfoNote.style.color = '#28a745';
 
                     } else {
-                        // Status = Draft - ไม่สามารถแก้ไข
                         workTypeSelect.disabled = true;
                         workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
 
-                        // ✅ แสดง Note แม้ไม่สามารถแก้ไขได้
                         for (var j = 0; j < allWorkTypes.length; j++) {
                             if (allWorkTypes[j].name === rfi.workType) {
                                 var draftNote = allWorkTypes[j].note || '';
@@ -877,10 +938,54 @@
                             }
                         }
 
-                        workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้ (Status: Draft)';
+                        workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้';
                         workTypeNote.style.color = '#856404';
-                        editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ:</strong> ไม่สามารถแก้ไข Work Type ได้เมื่อ Status = Draft';
+                        editInfoNote.innerHTML = '<strong>⚠️ ไม่สามารถแก้ไข Work Type ได้</strong>';
                         editInfoNote.style.color = '#856404';
+                    }
+
+                    // ✅ ⭐ โหลด ITP ทันที
+                    if (rfi.workType) {
+                        console.log('📋 Auto-loading ITP for:', rfi.workType);
+
+                        google.script.run
+                            .withSuccessHandler(function(codes) {
+                                codeListByWorkType = codes || [];
+                                console.log('✅ Loaded', codeListByWorkType.length, 'codes');
+
+                                var itpSelect = document.getElementById('editITPSelect');
+
+                                if (codeListByWorkType.length === 0) {
+                                    itpSelect.innerHTML = '<option value="">-- ไม่พบข้อมูล ITP --</option>';
+                                    itpSelect.disabled = true;
+                                    return;
+                                }
+
+                                itpSelect.innerHTML = '<option value="">-- เลือก ITP --</option>';
+
+                                codeListByWorkType.forEach(function(code, index) {
+                                    var option = document.createElement('option');
+                                    option.value = index;
+                                    option.textContent = code.displayText;
+                                    option.setAttribute('data-itp', code.itp);
+                                    option.setAttribute('data-qccode', code.qcCode);
+                                    option.setAttribute('data-item', code.item);
+                                    option.setAttribute('data-description', code.descriptionCode);
+                                    itpSelect.appendChild(option);
+                                });
+
+                                itpSelect.disabled = false;
+
+                                setTimeout(function() {
+                                    if (rfi.itp && rfi.qcCode && rfi.item) {
+                                        setITPFromSavedData(rfi.itp, rfi.qcCode, rfi.item);
+                                    }
+                                }, 100);
+                            })
+                            .withFailureHandler(function(error) {
+                                console.error('Error:', error);
+                            })
+                            .getCodeListByWorkType(rfi.workType);
                     }
 
                     if (rfi.requestDate && rfi.startTime) {
@@ -905,6 +1010,15 @@
 
             populateTimeDropdown('editStartTime', '', false);
             populateTimeDropdown('editEndTime', '', true);
+
+            // ✅ ⭐ Clear Code Fields
+            var itpSelect = document.getElementById('editITPSelect');
+            if (itpSelect) {
+                itpSelect.innerHTML = '<option value="">-- เลือก Work Type ก่อน --</option>';
+                itpSelect.disabled = true;
+            }
+            clearCodeFields();
+            codeListByWorkType = [];
 
             originalAssignedTeams = [];
             availableTeams = [];
@@ -1027,6 +1141,129 @@
             setTimeout(function() {
                 messageDiv.style.display = 'none';
             }, duration);
+        }
+        // ✅ ⭐ Global variable
+        var codeListByWorkType = [];
+
+        /**
+         * ✅ โหลด Code List และ Populate ITP Dropdown
+         */
+        function loadCodeListForWorkType(workType) {
+            if (!workType) {
+                clearCodeFields();
+                return;
+            }
+
+            console.log('📋 Loading Code List for Work Type:', workType);
+
+            // Reset
+            var itpSelect = document.getElementById('editITPSelect');
+            itpSelect.innerHTML = '<option value="">-- กำลังโหลด... --</option>';
+            itpSelect.disabled = true;
+
+            clearCodeFields();
+
+            google.script.run
+                .withSuccessHandler(function(codes) {
+                    codeListByWorkType = codes || [];
+                    console.log('✅ Loaded', codeListByWorkType.length, 'codes');
+
+                    if (codeListByWorkType.length === 0) {
+                        itpSelect.innerHTML = '<option value="">-- ไม่พบข้อมูล ITP --</option>';
+                        itpSelect.disabled = true;
+                        showMessage('⚠️ ไม่พบข้อมูล ITP สำหรับ Work Type นี้', 'warning', 3000);
+                        return;
+                    }
+
+                    // ✅ Populate ITP Dropdown
+                    itpSelect.innerHTML = '<option value="">-- เลือก ITP --</option>';
+
+                    codeListByWorkType.forEach(function(code, index) {
+                        var option = document.createElement('option');
+                        option.value = index; // ใช้ index เป็น value
+                        option.textContent = code.displayText; // ITP - QC Code - ITEM
+                        option.setAttribute('data-itp', code.itp);
+                        option.setAttribute('data-qccode', code.qcCode);
+                        option.setAttribute('data-item', code.item);
+                        option.setAttribute('data-description', code.descriptionCode);
+                        itpSelect.appendChild(option);
+                    });
+
+                    itpSelect.disabled = false;
+
+                    console.log('✅ ITP Dropdown populated with', codeListByWorkType.length, 'options');
+                })
+                .withFailureHandler(function(error) {
+                    console.error('❌ Error loading codes:', error);
+                    itpSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+                    itpSelect.disabled = true;
+                    showMessage('เกิดข้อผิดพลาดในการโหลด Code', 'error');
+                })
+                .getCodeListByWorkType(workType);
+        }
+
+        /**
+         * ✅ เมื่อเลือก ITP → Auto-fill ข้อมูล
+         */
+        function onITPSelectChange() {
+            var itpSelect = document.getElementById('editITPSelect');
+            var selectedIndex = itpSelect.value;
+
+            if (!selectedIndex || selectedIndex === '') {
+                clearCodeFields();
+                return;
+            }
+
+            var selectedOption = itpSelect.options[itpSelect.selectedIndex];
+
+            var itp = selectedOption.getAttribute('data-itp');
+            var qcCode = selectedOption.getAttribute('data-qccode');
+            var item = selectedOption.getAttribute('data-item');
+            var description = selectedOption.getAttribute('data-description');
+
+            // ✅ Fill ข้อมูล
+            document.getElementById('editITP').value = itp;
+            document.getElementById('editQCCode').value = qcCode;
+            document.getElementById('editITEM').value = item;
+            document.getElementById('editDescriptionCode').value = description;
+
+            console.log('✅ Auto-filled:', itp, qcCode, item);
+            showMessage('✅ เลือก ITP สำเร็จ: ' + itp, 'success', 2000);
+        }
+        /**
+         * ✅ Clear Code Fields
+         */
+        function clearCodeFields() {
+            document.getElementById('editITP').value = '';
+            document.getElementById('editQCCode').value = '';
+            document.getElementById('editITEM').value = '';
+            document.getElementById('editDescriptionCode').value = '';
+        }
+        /**
+         * ✅ Set ITP ที่บันทึกไว้ (เมื่อแก้ไข)
+         */
+        function setITPFromSavedData(savedITP, savedQCCode, savedITEM) {
+            if (!savedITP) return;
+
+            console.log('🔍 Setting saved ITP:', savedITP, savedQCCode, savedITEM);
+
+            var itpSelect = document.getElementById('editITPSelect');
+
+            for (var i = 0; i < itpSelect.options.length; i++) {
+                var option = itpSelect.options[i];
+                var itp = option.getAttribute('data-itp');
+                var qcCode = option.getAttribute('data-qccode');
+                var item = option.getAttribute('data-item');
+
+                if (itp === savedITP && qcCode === savedQCCode && item === savedITEM) {
+                    itpSelect.selectedIndex = i;
+                    onITPSelectChange();
+                    console.log('✅ ITP selected:', savedITP);
+                    return;
+                }
+            }
+
+            console.log('⚠️ Saved ITP not found');
         }
     </script>
 </body>
