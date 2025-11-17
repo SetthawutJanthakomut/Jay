@@ -333,6 +333,75 @@ textarea:disabled {
     cursor: not-allowed !important;
     opacity: 0.7;
 }
+/* ปุ่มลบ ITP */
+.btn-delete-itp {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-delete-itp:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: scale(1.05);
+}
+
+.itp-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.itp-select-wrapper select {
+    flex: 1;
+}
+
+/* ⭐ Status Badge สำหรับ Status ใหม่ */
+.status-waiting {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-pending {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+/* ⭐ แสดง Warning สำหรับ Limited Edit Mode */
+.limited-edit-warning {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-left: 4px solid #f59e0b;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    font-size: 14px;
+    color: #92400e;
+    line-height: 1.6;
+}
+
+.limited-edit-warning strong {
+    color: #f59e0b;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.limited-edit-warning ul {
+    margin: 10px 0 0 20px;
+    padding: 0;
+}
+
+.limited-edit-warning li {
+    margin: 5px 0;
+}
     </style>
 </head>
 
@@ -474,15 +543,30 @@ textarea:disabled {
 
                     <!-- ITP Dropdown (เลือกได้) -->
                    <div style="margin-bottom: 15px;">
+<div style="margin-bottom: 15px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <label class="form-label" style="margin: 0;">เลือก ITP <span class="required">*</span></label>
         <button type="button" onclick="openAddITPModal()" class="btn-add-itp" style="padding: 6px 12px; font-size: 13px;">
             ➕ เพิ่ม ITP ใหม่
         </button>
     </div>
-    <select id="editITPSelect" required style="font-size: 14px;">
-        <option value="">-- เลือก Work Type ก่อน --</option>
-    </select>
+    
+    <!-- ⭐ เพิ่ม Wrapper สำหรับ Select + ปุ่มลบ -->
+    <div class="itp-select-wrapper">
+        <select id="editITPSelect" required style="font-size: 14px;">
+            <option value="">-- เลือก Work Type ก่อน --</option>
+        </select>
+        
+        <!-- ⭐ ปุ่มลบ ITP -->
+        <button type="button" 
+                id="btnDeleteITP" 
+                class="btn-delete-itp" 
+                onclick="deleteSelectedITP()"
+                style="display: none;">
+            🗑️ ลบ
+        </button>
+    </div>
+    
     <div class="info-note">💡 รูปแบบ: ITP - QC Code - ITEM</div>
 </div>
 
@@ -508,6 +592,17 @@ textarea:disabled {
                         <div class="info-note">✅ อัปเดตอัตโนมัติเมื่อเลือก ITP</div>
                     </div>
                 </div>
+
+                <!-- ⭐ TAG NUMBER -->
+<div style="margin-top: 15px;">
+    <label class="form-label">TAG NUMBER <span class="required">*</span></label>
+    <input type="text" 
+           id="editTagNumber" 
+           required 
+           placeholder="เช่น TAG-001, TAG-A01"
+           style="font-size: 14px;">
+    <div class="info-note">💡 ระบุหมายเลข TAG ของอุปกรณ์/จุดตรวจ</div>
+</div>
 
                 <div style="margin-bottom: 20px;">
                     <label class="form-label">รายละเอียด RFI <span class="required">*</span></label>
@@ -814,24 +909,75 @@ textarea:disabled {
                     var rfiId = document.getElementById('editRfiId').value;
                     var loading = document.getElementById('editLoading');
 
-                    var formData = {
-                        workType: document.getElementById('editWorkType').value,
-                        description: document.getElementById('editDescription').value.trim(),
-                        location: document.getElementById('editLocation').value.trim(),
-                        requestDate: document.getElementById('editRequestDate').value,
-                        startTime: document.getElementById('editStartTime').value,
-                        endTime: document.getElementById('editEndTime').value,
-                        assignedInspector: document.getElementById('editAssignedInspector').value,
-                        requesterEmail: document.getElementById('editRequesterEmail').value,
-                        requesterName: document.getElementById('editRequesterName').value,
-                        requireSurveyReport: document.getElementById('editRequireSurveyReport').value || 'None',
-                        requireLabReport: document.getElementById('editRequireLabReport').value || 'None',
-                        // ✅ ⭐ ข้อมูล Code
-                        itp: document.getElementById('editITP').value,
-                        qcCode: document.getElementById('editQCCode').value,
-                        item: document.getElementById('editITEM').value,
-                        descriptionCode: document.getElementById('editDescriptionCode').value
-                    };
+var formData = {
+    workType: document.getElementById('editWorkType').value,
+    description: document.getElementById('editDescription').value.trim(),
+    location: document.getElementById('editLocation').value.trim(),
+    requestDate: document.getElementById('editRequestDate').value,
+    startTime: document.getElementById('editStartTime').value,
+    endTime: document.getElementById('editEndTime').value,
+    assignedInspector: document.getElementById('editAssignedInspector').value,
+    requesterEmail: document.getElementById('editRequesterEmail').value,
+    requesterName: document.getElementById('editRequesterName').value,
+    requireSurveyReport: document.getElementById('editRequireSurveyReport').value || 'None',
+    requireLabReport: document.getElementById('editRequireLabReport').value || 'None',
+    // ✅ ⭐ ข้อมูล Code
+    itp: document.getElementById('editITP').value,
+    qcCode: document.getElementById('editQCCode').value,
+    item: document.getElementById('editITEM').value,
+    descriptionCode: document.getElementById('editDescriptionCode').value,
+    tagNumber: document.getElementById('editTagNumber').value.trim() // ⭐ เพิ่ม TAG NUMBER
+};
+var originalStatus = document.getElementById('editOriginalStatus').value;
+    var isLimitedEdit = (originalStatus === 'Waiting for Revised Attachment' || 
+                        originalStatus === 'Pending QC Review');
+    
+    if (isLimitedEdit) {
+        console.log('📝 Limited Edit Mode - validating editable fields only');
+        
+        // ✅ Validation เฉพาะฟิลด์ที่แก้ไขได้
+        if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+            showMessage('❌ กรุณาเลือก ITP', 'error');
+            return;
+        }
+        
+        if (!formData.tagNumber) {
+            showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
+            return;
+        }
+        
+        if (!formData.description) {
+            showMessage('❌ กรุณากรอกรายละเอียด RFI', 'error');
+            return;
+        }
+        
+        if (!formData.location) {
+            showMessage('❌ กรุณากรอกสถานที่', 'error');
+            return;
+        }
+        
+        // ⭐ ส่ง flag ไปบอก Backend ว่าเป็น Limited Edit
+        formData.isLimitedEdit = true;
+        
+    } else {
+        // ✅ Validation ปกติ (ทุกฟิลด์)
+        if (!formData.tagNumber) {
+            showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
+            return;
+        }
+
+        if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+            showMessage('❌ กรุณาเลือก ITP', 'error');
+            return;
+        }
+
+        if (!formData.assignedInspector) {
+            showMessage('❌ กรุณาเลือกทีมงาน', 'error');
+            return;
+        }
+        
+        formData.isLimitedEdit = false;
+    }
 
                     // ✅ Validation
                     if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
@@ -843,6 +989,15 @@ textarea:disabled {
                         showMessage('❌ กรุณาเลือกทีมงาน', 'error');
                         return;
                     }
+                    if (!formData.tagNumber) {
+    showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
+    return;
+}
+
+if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+    showMessage('❌ กรุณาเลือก ITP', 'error');
+    return;
+}
 
                     loading.style.display = 'block';
 
@@ -887,7 +1042,14 @@ textarea:disabled {
 
                     for (var i = 0; i < rfiList.length; i++) {
                         var rfi = rfiList[i];
-                        var statusClass = rfi.status === 'Draft' ? 'status-draft' : 'status-submitted';
+                        var statusClass = 'status-submitted'; // default
+if (rfi.status === 'Draft') {
+    statusClass = 'status-draft';
+} else if (rfi.status === 'Waiting for Revised Attachment') {
+    statusClass = 'status-waiting';
+} else if (rfi.status === 'Pending QC Review') {
+    statusClass = 'status-pending';
+}
                         var desc = rfi.description || '';
 
                         html += '<tr>';
@@ -934,7 +1096,15 @@ textarea:disabled {
 
                     document.getElementById('editRFINo').textContent = rfi.rfiNo || 'N/A';
                     document.getElementById('editRfiId').value = rfi.id;
-                    document.getElementById('editOriginalStatus').value = rfi.status;
+                            // ⭐ เช็ค Limited Edit Mode
+        var isLimitedEdit = (rfi.status === 'Waiting for Revised Attachment' || 
+                            rfi.status === 'Pending QC Review');
+        
+        if (isLimitedEdit) {
+            enableLimitedEditMode(rfi.status);
+        } else {
+            disableLimitedEditMode();
+        }
                     document.getElementById('editDescription').value = rfi.description || '';
                     document.getElementById('editLocation').value = rfi.location || '';
                     document.getElementById('editRequestDate').value = rfi.requestDate || '';
@@ -1080,7 +1250,9 @@ textarea:disabled {
                                     if (rfi.itp && rfi.qcCode && rfi.item) {
                                         setITPFromSavedData(rfi.itp, rfi.qcCode, rfi.item);
                                     }
+                                    document.getElementById('editTagNumber').value = rfi.tagNumber || '';
                                 }, 100);
+                                
                             })
                             .withFailureHandler(function(error) {
                                 console.error('Error:', error);
@@ -1302,43 +1474,52 @@ textarea:disabled {
                 .getCodeListByWorkType(workType);
         }
 
-        /**
-         * ✅ เมื่อเลือก ITP → Auto-fill ข้อมูล
-         */
-        function onITPSelectChange() {
-            var itpSelect = document.getElementById('editITPSelect');
-            var selectedIndex = itpSelect.value;
+/**
+ * ✅ เมื่อเลือก ITP → Auto-fill ข้อมูล + แสดงปุ่มลบ
+ */
+function onITPSelectChange() {
+    var itpSelect = document.getElementById('editITPSelect');
+    var selectedIndex = itpSelect.value;
+    var deleteBtn = document.getElementById('btnDeleteITP');
 
-            if (!selectedIndex || selectedIndex === '') {
-                clearCodeFields();
-                return;
-            }
+    if (!selectedIndex || selectedIndex === '') {
+        clearCodeFields();
+        if (deleteBtn) deleteBtn.style.display = 'none'; // ซ่อนปุ่มลบ
+        return;
+    }
 
-            var selectedOption = itpSelect.options[itpSelect.selectedIndex];
+    var selectedOption = itpSelect.options[itpSelect.selectedIndex];
 
-            var itp = selectedOption.getAttribute('data-itp');
-            var qcCode = selectedOption.getAttribute('data-qccode');
-            var item = selectedOption.getAttribute('data-item');
-            var description = selectedOption.getAttribute('data-description');
+    var itp = selectedOption.getAttribute('data-itp');
+    var qcCode = selectedOption.getAttribute('data-qccode');
+    var item = selectedOption.getAttribute('data-item');
+    var description = selectedOption.getAttribute('data-description');
 
-            // ✅ Fill ข้อมูล
-            document.getElementById('editITP').value = itp;
-            document.getElementById('editQCCode').value = qcCode;
-            document.getElementById('editITEM').value = item;
-            document.getElementById('editDescriptionCode').value = description;
+    // ✅ Fill ข้อมูล
+    document.getElementById('editITP').value = itp;
+    document.getElementById('editQCCode').value = qcCode;
+    document.getElementById('editITEM').value = item;
+    document.getElementById('editDescriptionCode').value = description;
 
-            console.log('✅ Auto-filled:', itp, qcCode, item);
-            showMessage('✅ เลือก ITP สำเร็จ: ' + itp, 'success', 2000);
-        }
+    // ✅ แสดงปุ่มลบ
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+
+    console.log('✅ Auto-filled:', itp, qcCode, item);
+    showMessage('✅ เลือก ITP สำเร็จ: ' + itp, 'success', 2000);
+}
         /**
          * ✅ Clear Code Fields
          */
-        function clearCodeFields() {
-            document.getElementById('editITP').value = '';
-            document.getElementById('editQCCode').value = '';
-            document.getElementById('editITEM').value = '';
-            document.getElementById('editDescriptionCode').value = '';
-        }
+function clearCodeFields() {
+    document.getElementById('editITP').value = '';
+    document.getElementById('editQCCode').value = '';
+    document.getElementById('editITEM').value = '';
+    document.getElementById('editDescriptionCode').value = '';
+    document.getElementById('editTagNumber').value = ''; // ⭐ เพิ่ม
+    
+    var deleteBtn = document.getElementById('btnDeleteITP');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+}
         /**
          * ✅ Set ITP ที่บันทึกไว้ (เมื่อแก้ไข)
          */
@@ -1465,6 +1646,161 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+/**
+ * ✅ ลบ ITP ที่เลือก
+ */
+function deleteSelectedITP() {
+    var itpSelect = document.getElementById('editITPSelect');
+    var selectedIndex = itpSelect.value;
+    
+    if (!selectedIndex || selectedIndex === '') {
+        showMessage('❌ กรุณาเลือก ITP ที่ต้องการลบ', 'error');
+        return;
+    }
+    
+    var selectedOption = itpSelect.options[itpSelect.selectedIndex];
+    var itp = selectedOption.getAttribute('data-itp');
+    var qcCode = selectedOption.getAttribute('data-qccode');
+    var item = selectedOption.getAttribute('data-item');
+    var workType = document.getElementById('editWorkType').value;
+    
+    // ✅ Confirm
+    var confirmMsg = 'ยืนยันการลบ ITP?\n\n' +
+                    'ITP: ' + itp + '\n' +
+                    'QC Code: ' + qcCode + '\n' +
+                    'ITEM: ' + item + '\n\n' +
+                    '⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้';
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    // ✅ แสดง Loading
+    var deleteBtn = document.getElementById('btnDeleteITP');
+    var originalHTML = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '⏳ กำลังลบ...';
+    deleteBtn.disabled = true;
+    
+    google.script.run
+        .withSuccessHandler(function(result) {
+            deleteBtn.innerHTML = originalHTML;
+            deleteBtn.disabled = false;
+            
+            if (result && result.success) {
+                showMessage(result.message || 'ลบ ITP สำเร็จ', 'success', 5000);
+                
+                // ✅ Clear fields
+                clearCodeFields();
+                deleteBtn.style.display = 'none';
+                
+                // ✅ Reload ITP list
+                loadCodeListForWorkType(workType);
+            } else {
+                showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+        })
+        .withFailureHandler(function(error) {
+            deleteBtn.innerHTML = originalHTML;
+            deleteBtn.disabled = false;
+            showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+        })
+        .deleteITPCode(workType, itp, qcCode, item);
+}
+
+/**
+ * ⭐ เปิดใช้งาน Limited Edit Mode
+ */
+function enableLimitedEditMode(status) {
+    console.log('🔒 Enabling Limited Edit Mode for status:', status);
+    
+    // ✅ แสดง Warning
+    var editInfoNote = document.getElementById('editInfoNote');
+    if (editInfoNote) {
+        editInfoNote.innerHTML = '<div class="limited-edit-warning">' +
+            '<strong>⚠️ โหมดแก้ไขแบบจำกัด (Limited Edit Mode)</strong><br>' +
+            'Status: <strong>' + status + '</strong><br><br>' +
+            '✅ สามารถแก้ไขได้เฉพาะ:<br>' +
+            '<ul>' +
+            '<li>ข้อมูล ITP / QC Code / TAG NUMBER</li>' +
+            '<li>รายละเอียด RFI</li>' +
+            '<li>สถานที่</li>' +
+            '</ul>' +
+            '🔒 ไม่สามารถแก้ไข: Work Type, วันที่, เวลา, ทีมงาน, ผู้ขอ' +
+            '</div>';
+    }
+    
+    // 🔒 Disable ฟิลด์ที่แก้ไขไม่ได้
+    document.getElementById('editWorkType').disabled = true;
+    document.getElementById('editRequestDate').disabled = true;
+    document.getElementById('editStartTime').disabled = true;
+    document.getElementById('editEndTime').disabled = true;
+    
+    // 🔒 Disable ส่วน Team Selection
+    var teamContainer = document.getElementById('editAssignedInspectorContainer');
+    if (teamContainer) {
+        teamContainer.style.opacity = '0.5';
+        teamContainer.style.pointerEvents = 'none';
+        var checkboxes = teamContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(function(cb) {
+            cb.disabled = true;
+        });
+    }
+    
+    // 🔒 Disable Survey/Lab Report
+    var surveyReport = document.getElementById('editRequireSurveyReport');
+    var labReport = document.getElementById('editRequireLabReport');
+    if (surveyReport) surveyReport.disabled = true;
+    if (labReport) labReport.disabled = true;
+    
+    // ✅ Enable ฟิลด์ที่แก้ไขได้
+    // ITP/QC Code (เลือกได้)
+    document.getElementById('editITPSelect').disabled = false;
+    
+    // TAG NUMBER, Description, Location (กรอกได้)
+    document.getElementById('editTagNumber').disabled = false;
+    document.getElementById('editDescription').disabled = false;
+    document.getElementById('editLocation').disabled = false;
+    
+    console.log('✅ Limited Edit Mode enabled');
+}
+
+/**
+ * ⭐ ปิด Limited Edit Mode (โหมดปกติ)
+ */
+function disableLimitedEditMode() {
+    console.log('🔓 Disabling Limited Edit Mode (Normal mode)');
+    
+    // ✅ ซ่อน Warning
+    var editInfoNote = document.getElementById('editInfoNote');
+    if (editInfoNote) {
+        editInfoNote.innerHTML = '<strong>⚠️ หมายเหตุ: ไม่สามารถแก้ไข RFI NO และ Work Type ได้</strong>';
+    }
+    
+    // ✅ Enable ทุกฟิลด์ (ตามสถานะปกติ)
+    document.getElementById('editRequestDate').disabled = false;
+    document.getElementById('editStartTime').disabled = false;
+    document.getElementById('editEndTime').disabled = false;
+    
+    // ✅ Enable ส่วน Team Selection
+    var teamContainer = document.getElementById('editAssignedInspectorContainer');
+    if (teamContainer) {
+        teamContainer.style.opacity = '1';
+        teamContainer.style.pointerEvents = 'auto';
+        var checkboxes = teamContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(function(cb) {
+            cb.disabled = false;
+        });
+    }
+    
+    // ✅ Enable Survey/Lab Report
+    var surveyReport = document.getElementById('editRequireSurveyReport');
+    var labReport = document.getElementById('editRequireLabReport');
+    if (surveyReport) surveyReport.disabled = false;
+    if (labReport) labReport.disabled = false;
+    
+    console.log('✅ Normal Edit Mode enabled');
+}
     </script>
 </body>
 
