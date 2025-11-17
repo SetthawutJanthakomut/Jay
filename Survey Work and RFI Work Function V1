@@ -6992,3 +6992,93 @@ function getCodeListByWorkType(workType) {
     return [];
   }
 }
+
+/**
+ * ⭐ เพิ่ม ITP Code ใหม่เข้า Sheet "Code"
+ */
+function addNewITPCode(data) {
+  try {
+    console.log('========== addNewITPCode START ==========');
+    console.log('Data:', JSON.stringify(data));
+    
+    // Validation
+    if (!data.nameWork || !data.itp || !data.qcCode || !data.item || !data.descriptionCode) {
+      return {
+        success: false,
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      };
+    }
+    
+    const codeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Code');
+    
+    if (!codeSheet) {
+      return {
+        success: false,
+        message: 'ไม่พบ Sheet "Code"'
+      };
+    }
+    
+    // ✅ เช็คว่ามี Code ซ้ำหรือไม่
+    const lastRow = codeSheet.getLastRow();
+    if (lastRow > 1) {
+      const existingData = codeSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      
+      for (let i = 0; i < existingData.length; i++) {
+        const existingNameWork = String(existingData[i][0] || '').trim();
+        const existingITP = String(existingData[i][1] || '').trim();
+        const existingQCCode = String(existingData[i][2] || '').trim();
+        const existingItem = String(existingData[i][3] || '').trim();
+        
+        // เช็คว่า Combo เดียวกันหรือไม่
+        if (existingNameWork === data.nameWork && 
+            existingITP === data.itp && 
+            existingQCCode === data.qcCode && 
+            existingItem === data.item) {
+          return {
+            success: false,
+            message: 'ข้อมูล ITP Code นี้มีอยู่แล้ว\n' +
+                    'Name: ' + data.nameWork + '\n' +
+                    'ITP: ' + data.itp + '\n' +
+                    'QC Code: ' + data.qcCode + '\n' +
+                    'ITEM: ' + data.item
+          };
+        }
+      }
+    }
+    
+    // ✅ เพิ่มข้อมูลใหม่
+    const nextRow = lastRow + 1;
+    
+    const rowData = [
+      data.nameWork,
+      data.itp,
+      data.qcCode,
+      data.item,
+      data.descriptionCode
+    ];
+    
+    codeSheet.getRange(nextRow, 1, 1, 5).setValues([rowData]);
+    
+    console.log('✅ ITP Code added at row', nextRow);
+    console.log('========== addNewITPCode SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: 'เพิ่ม ITP Code สำเร็จ!\n\n' +
+              'Name: ' + data.nameWork + '\n' +
+              'ITP: ' + data.itp + '\n' +
+              'QC Code: ' + data.qcCode + '\n' +
+              'ITEM: ' + data.item,
+      data: rowData
+    };
+    
+  } catch (error) {
+    console.error('========== addNewITPCode FAILED ==========');
+    console.error('Error:', error);
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
