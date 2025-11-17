@@ -306,6 +306,33 @@
             font-size: 16px;
             margin-right: 4px;
         }
+
+        .btn-add-itp {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-add-itp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+input[type="text"]:disabled,
+textarea:disabled {
+    background: #f5f6f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+}
     </style>
 </head>
 
@@ -349,6 +376,74 @@
         </div>
 
         <div id="message" class="message"></div>
+        <!-- ⭐ Add ITP Modal -->
+<div id="addITPModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 20px;">
+    <div style="max-width: 700px; margin: 40px auto; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; margin-bottom: 15px;">
+                <span style="font-size: 36px;">➕</span>
+            </div>
+            <h2 style="font-size: 26px; font-weight: 600; background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">
+                เพิ่ม ITP Code ใหม่
+            </h2>
+            <p style="color: #666; margin-top: 8px; font-size: 14px;">เพิ่มข้อมูล ITP เข้า Sheet "Code"</p>
+        </div>
+
+        <form id="addITPForm">
+            <!-- Name_Work (Work Type Selector) -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">Work Type <span class="required">*</span></label>
+                <select id="addITPWorkType" required style="font-size: 15px;">
+                    <option value="">-- เลือก Work Type --</option>
+                </select>
+                <div class="info-note">💡 เลือก Work Type ที่ต้องการเพิ่ม ITP</div>
+            </div>
+
+            <!-- ITP -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">ITP <span class="required">*</span></label>
+                <input type="text" id="addITPITP" required placeholder="เช่น ITP-CIV-001" style="font-size: 15px; text-transform: uppercase;">
+                <div class="info-note">รูปแบบแนะนำ: ITP-XXX-000</div>
+            </div>
+
+            <!-- QC Code -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">QC Code <span class="required">*</span></label>
+                <input type="text" id="addITPQCCode" required placeholder="เช่น CIV-QC-001" style="font-size: 15px; text-transform: uppercase;">
+                <div class="info-note">รูปแบบแนะนำ: XXX-QC-000</div>
+            </div>
+
+            <!-- ITEM -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">ITEM <span class="required">*</span></label>
+                <input type="text" id="addITPItem" required placeholder="เช่น Concrete Strength Test" style="font-size: 15px;">
+                <div class="info-note">ชื่อรายการตรวจสอบ</div>
+            </div>
+
+            <!-- Description_Code -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">Description Code <span class="required">*</span></label>
+                <textarea id="addITPDescription" required placeholder="รายละเอียดเพิ่มเติม..." style="height: 100px; font-size: 14px;"></textarea>
+                <div class="info-note">รายละเอียดครบถ้วนเกี่ยวกับรายการตรวจสอบ</div>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button type="button" onclick="closeAddITPModal()" style="flex: 1; padding: 14px; background: #e4e6eb; color: #333; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s;">
+                    ยกเลิก
+                </button>
+                <button type="submit" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s;">
+                    ✅ เพิ่ม ITP Code
+                </button>
+            </div>
+        </form>
+
+        <div id="addITPLoading" class="loading" style="display:none;">
+            <div class="spinner"></div>
+            <p>กำลังบันทึกข้อมูล...</p>
+        </div>
+    </div>
+</div>
 
         <!-- Edit View -->
         <div id="editView" style="display:none; margin-top: 30px; border-top: 2px solid #667eea; padding-top: 30px;">
@@ -378,13 +473,18 @@
                     </div>
 
                     <!-- ITP Dropdown (เลือกได้) -->
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">เลือก ITP <span class="required">*</span></label>
-                        <select id="editITPSelect" required style="font-size: 14px;">
-                            <option value="">-- เลือก Work Type ก่อน --</option>
-                        </select>
-                        <div class="info-note">💡 รูปแบบ: ITP - QC Code - ITEM</div>
-                    </div>
+                   <div style="margin-bottom: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label class="form-label" style="margin: 0;">เลือก ITP <span class="required">*</span></label>
+        <button type="button" onclick="openAddITPModal()" class="btn-add-itp" style="padding: 6px 12px; font-size: 13px;">
+            ➕ เพิ่ม ITP ใหม่
+        </button>
+    </div>
+    <select id="editITPSelect" required style="font-size: 14px;">
+        <option value="">-- เลือก Work Type ก่อน --</option>
+    </select>
+    <div class="info-note">💡 รูปแบบ: ITP - QC Code - ITEM</div>
+</div>
 
                     <!-- Hidden field เก็บ ITP จริง -->
                     <input type="hidden" id="editITP" required>
@@ -1265,6 +1365,106 @@
 
             console.log('⚠️ Saved ITP not found');
         }
+
+        /**
+ * ✅ เปิด Add ITP Modal
+ */
+function openAddITPModal() {
+    // โหลด Work Types
+    var workTypeSelect = document.getElementById('addITPWorkType');
+    workTypeSelect.innerHTML = '<option value="">-- เลือก Work Type --</option>';
+    
+    if (allWorkTypes && allWorkTypes.length > 0) {
+        allWorkTypes.forEach(function(wt) {
+            var option = document.createElement('option');
+            option.value = wt.name;
+            option.textContent = wt.qcType + ' ' + wt.name;
+            workTypeSelect.appendChild(option);
+        });
+    } else {
+        // ถ้ายังไม่โหลด ให้โหลดใหม่
+        google.script.run
+            .withSuccessHandler(function(workTypes) {
+                allWorkTypes = workTypes || [];
+                workTypes.forEach(function(wt) {
+                    var option = document.createElement('option');
+                    option.value = wt.name;
+                    option.textContent = wt.qcType + ' ' + wt.name;
+                    workTypeSelect.appendChild(option);
+                });
+            })
+            .getWorkTypeList('RFI Work');
+    }
+    
+    // Reset form
+    document.getElementById('addITPForm').reset();
+    
+    // แสดง Modal
+    document.getElementById('addITPModal').style.display = 'block';
+}
+
+/**
+ * ✅ ปิด Add ITP Modal
+ */
+function closeAddITPModal() {
+    document.getElementById('addITPModal').style.display = 'none';
+    document.getElementById('addITPForm').reset();
+}
+
+/**
+ * ✅ Submit Add ITP Form
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    var addITPForm = document.getElementById('addITPForm');
+    if (addITPForm) {
+        addITPForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var loading = document.getElementById('addITPLoading');
+            
+            var formData = {
+                nameWork: document.getElementById('addITPWorkType').value.trim(),
+                itp: document.getElementById('addITPITP').value.trim().toUpperCase(),
+                qcCode: document.getElementById('addITPQCCode').value.trim().toUpperCase(),
+                item: document.getElementById('addITPItem').value.trim(),
+                descriptionCode: document.getElementById('addITPDescription').value.trim()
+            };
+            
+            // Validation
+            if (!formData.nameWork || !formData.itp || !formData.qcCode || 
+                !formData.item || !formData.descriptionCode) {
+                showMessage('❌ กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    loading.style.display = 'none';
+                    
+                    if (result && result.success) {
+                        showMessage(result.message || 'เพิ่ม ITP Code สำเร็จ', 'success', 5000);
+                        closeAddITPModal();
+                        
+                        // ✅ ถ้ากำลังแก้ไข RFI และ Work Type ตรงกัน → โหลด ITP ใหม่
+                        var currentWorkType = document.getElementById('editWorkType').value;
+                        if (currentWorkType === formData.nameWork) {
+                            console.log('🔄 Reloading ITP list for current Work Type');
+                            loadCodeListForWorkType(currentWorkType);
+                        }
+                    } else {
+                        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    loading.style.display = 'none';
+                    showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+                })
+                .addNewITPCode(formData);
+        });
+    }
+});
     </script>
 </body>
 
