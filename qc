@@ -395,7 +395,7 @@
       <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
       <strong>👥 จัดทีม:</strong> เลือกทีมที่ต้องการ (เฉพาะทีมที่ว่าง)
     </div>
-    
+<form id="qcRfiForm">
 <div class="form-group">
   <label for="workType">ประเภทงาน (Work Type) <span class="required">*</span></label>
   <select id="workType" name="workType" required>
