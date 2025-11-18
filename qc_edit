@@ -910,9 +910,17 @@ textarea:disabled {
                     var loading = document.getElementById('editLoading');
 
 // ✅ FIXED: Validation Logic แยกชัดเจน
-var originalStatus = document.getElementById('editOriginalStatus').value;
+var originalStatus = document.getElementById('editOriginalStatus').value || '';
+
+if (!originalStatus) {
+    console.warn('⚠️ editOriginalStatus is empty! Defaulting to Normal Edit Mode');
+}
+
 var isLimitedEdit = (originalStatus === 'Waiting for Revised Attachment' || 
                     originalStatus === 'Pending QC Review');
+
+console.log('📋 Original Status:', originalStatus);
+console.log('🔒 Is Limited Edit?', isLimitedEdit);
 
 var formData = {
     workType: document.getElementById('editWorkType').value,
@@ -1091,6 +1099,7 @@ if (rfi.status === 'Draft') {
 
                     document.getElementById('editRFINo').textContent = rfi.rfiNo || 'N/A';
                     document.getElementById('editRfiId').value = rfi.id;
+                    document.getElementById('editOriginalStatus').value = rfi.status;
                             // ⭐ เช็ค Limited Edit Mode
         var isLimitedEdit = (rfi.status === 'Waiting for Revised Attachment' || 
                             rfi.status === 'Pending QC Review');
