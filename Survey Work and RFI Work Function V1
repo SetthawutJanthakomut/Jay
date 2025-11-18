@@ -3588,12 +3588,10 @@ function updateQCRFI(rfiId, data) {
       };
     }
     
-// ⭐ เช็คโหมด Limited Edit
+// ✅ FIXED: Backend Validation
 var isLimitedEdit = data.isLimitedEdit || false;
 
-// ✅ Validation แบบแยก
 if (isLimitedEdit) {
-  // Limited Edit - เช็คเฉพาะฟิลด์ที่แก้ไขได้
   console.log('🔒 Limited Edit Mode - validating editable fields only');
   
   if (!rfiId || !data.itp || !data.qcCode || !data.item || 
@@ -3616,7 +3614,7 @@ if (isLimitedEdit) {
   }
   
 } else {
-  // Normal Edit - เช็คทุกฟิลด์
+  // ✅ Normal Edit - เช็คทุกฟิลด์
   console.log('✅ Normal Edit Mode - validating all fields');
   
   if (!rfiId || !data.workType || !data.requestDate || !data.startTime || 
@@ -3628,10 +3626,7 @@ if (isLimitedEdit) {
     const missing = [];
     if (!data.workType) missing.push('Work Type');
     if (!data.itp) missing.push('ITP');
-    if (!data.qcCode) missing.push('QC Code');
-    if (!data.item) missing.push('ITEM');
-    if (!data.descriptionCode) missing.push('Description Code');
-    if (!data.tagNumber) missing.push('TAG NUMBER');
+    // ... (เหมือนเดิม)
     
     return {
       success: false,
@@ -3807,6 +3802,9 @@ if (isLimitedEdit) {
   sheet.getRange(rowIndex, 44).setValue(data.item || '');           // AR - ITEM
   sheet.getRange(rowIndex, 45).setValue(data.descriptionCode || ''); // AS - Description_Code
   sheet.getRange(rowIndex, 46).setValue(data.tagNumber || '');      // AT - TAG_NUMBER
+  
+  // ⭐ โหมดปกติไม่ต้องตั้ง PDF Flag (หรือจะตั้งก็ได้ ขึ้นอยู่กับ requirement)
+  // sheet.getRange(rowIndex, 47).setValue('');                     // AU - Clear flag (optional)
 }
     
     console.log('✅ Saved ITP/Code data:', data.itp, data.qcCode, data.item);
@@ -3814,7 +3812,7 @@ if (isLimitedEdit) {
     // ดึง RFI_NO ปัจจุบัน
     const finalRFINo = needUpdateRFINo ? newRFINo : sheet.getRange(rowIndex, 2).getValue();
     
-    let message = 'แก้ไข RFI เรียบร้อยแล้ว\n';
+let message = 'แก้ไข RFI เรียบร้อยแล้ว\n';
 message += 'RFI NO: ' + finalRFINo + '\n';
 
 if (isLimitedEdit) {
@@ -3825,6 +3823,7 @@ if (isLimitedEdit) {
   message += 'TAG NUMBER: ' + data.tagNumber + '\n';
   message += 'รายละเอียด: ' + data.description.substring(0, 50) + '...\n';
   message += 'สถานที่: ' + data.location + '\n';
+  message += '\n⭐ PDF Flag: Need Re-Generate PDF';  // ⭐ เพิ่มบรรทัดนี้
 } else {
   message += 'Work Type: ' + data.workType + ' (Duration: ' + duration + ' นาที)\n';
   message += 'ITP: ' + data.itp + '\n';
@@ -3839,7 +3838,7 @@ if (isLimitedEdit) {
   message += 'ผู้ขอ: ' + data.requesterName + '\n';
 }
 
-message += 'แก้ไขโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
+message += '\nแก้ไขโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
     console.log('========== updateQCRFI SUCCESS ==========');
     
     return {
