@@ -3573,11 +3573,14 @@ function getRFIById(rfiId) {
   }
 }
 
+/**
+ * ✅ FINAL VERSION: แก้ไข RFI (รองรับ Limited Edit Mode + บันทึก PDF Flag)
+ */
 function updateQCRFI(rfiId, data) {
   try {
     console.log('========== updateQCRFI START ==========');
     console.log('RFI ID:', rfiId);
-    console.log('Update data:', JSON.stringify(data));
+    console.log('isLimitedEdit:', data.isLimitedEdit || false);
     
     // ตรวจสอบ Role ก่อนแก้ไข
     const roleValidation = validateQCRole();
@@ -3588,52 +3591,59 @@ function updateQCRFI(rfiId, data) {
       };
     }
     
-// ✅ FIXED: Backend Validation
-var isLimitedEdit = data.isLimitedEdit || false;
-
-if (isLimitedEdit) {
-  console.log('🔒 Limited Edit Mode - validating editable fields only');
-  
-  if (!rfiId || !data.itp || !data.qcCode || !data.item || 
-      !data.descriptionCode || !data.tagNumber || 
-      !data.description || !data.location) {
+    var isLimitedEdit = data.isLimitedEdit || false;
     
-    const missing = [];
-    if (!data.itp) missing.push('ITP');
-    if (!data.qcCode) missing.push('QC Code');
-    if (!data.item) missing.push('ITEM');
-    if (!data.descriptionCode) missing.push('Description Code');
-    if (!data.tagNumber) missing.push('TAG NUMBER');
-    if (!data.description) missing.push('รายละเอียด RFI');
-    if (!data.location) missing.push('สถานที่');
-    
-    return {
-      success: false,
-      message: 'กรุณากรอกข้อมูลให้ครบถ้วน (Limited Edit Mode)\nขาดข้อมูล: ' + missing.join(', ')
-    };
-  }
-  
-} else {
-  // ✅ Normal Edit - เช็คทุกฟิลด์
-  console.log('✅ Normal Edit Mode - validating all fields');
-  
-  if (!rfiId || !data.workType || !data.requestDate || !data.startTime || 
-      !data.description || !data.location || !data.assignedInspector || 
-      !data.requesterEmail || !data.requesterName ||
-      !data.itp || !data.qcCode || !data.item || !data.descriptionCode ||
-      !data.tagNumber) {
-    
-    const missing = [];
-    if (!data.workType) missing.push('Work Type');
-    if (!data.itp) missing.push('ITP');
-    // ... (เหมือนเดิม)
-    
-    return {
-      success: false,
-      message: 'กรุณากรอกข้อมูลให้ครบถ้วน\nขาดข้อมูล: ' + missing.join(', ')
-    };
-  }
-}
+    // ✅ Validation แยกตามโหมด
+    if (isLimitedEdit) {
+      console.log('🔒 Limited Edit Mode - validating editable fields only');
+      
+      if (!rfiId || !data.itp || !data.qcCode || !data.item || 
+          !data.descriptionCode || !data.tagNumber || 
+          !data.description || !data.location) {
+        
+        const missing = [];
+        if (!data.itp) missing.push('ITP');
+        if (!data.qcCode) missing.push('QC Code');
+        if (!data.item) missing.push('ITEM');
+        if (!data.descriptionCode) missing.push('Description Code');
+        if (!data.tagNumber) missing.push('TAG NUMBER');
+        if (!data.description) missing.push('รายละเอียด RFI');
+        if (!data.location) missing.push('สถานที่');
+        
+        return {
+          success: false,
+          message: 'กรุณากรอกข้อมูลให้ครบถ้วน (Limited Edit Mode)\nขาดข้อมูล: ' + missing.join(', ')
+        };
+      }
+      
+    } else {
+      console.log('✅ Normal Edit Mode - validating all fields');
+      
+      if (!rfiId || !data.workType || !data.requestDate || !data.startTime || 
+          !data.description || !data.location || !data.assignedInspector || 
+          !data.requesterEmail || !data.requesterName ||
+          !data.itp || !data.qcCode || !data.item || !data.descriptionCode ||
+          !data.tagNumber) {
+        
+        const missing = [];
+        if (!data.workType) missing.push('Work Type');
+        if (!data.itp) missing.push('ITP');
+        if (!data.qcCode) missing.push('QC Code');
+        if (!data.item) missing.push('ITEM');
+        if (!data.descriptionCode) missing.push('Description Code');
+        if (!data.tagNumber) missing.push('TAG NUMBER');
+        if (!data.requestDate) missing.push('วันที่');
+        if (!data.startTime) missing.push('เวลาเริ่มต้น');
+        if (!data.assignedInspector) missing.push('ทีมงาน');
+        if (!data.description) missing.push('รายละเอียด');
+        if (!data.location) missing.push('สถานที่');
+        
+        return {
+          success: false,
+          message: 'กรุณากรอกข้อมูลให้ครบถ้วน\nขาดข้อมูล: ' + missing.join(', ')
+        };
+      }
+    }
     
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
@@ -3646,7 +3656,7 @@ if (isLimitedEdit) {
     
     // หา row ที่ต้องอัปเดต
     const lastRow = sheet.getLastRow();
-    const dataRange = sheet.getRange(2, 1, lastRow - 1, 45).getValues(); // ✅ ขยายเป็น 45 columns
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 47).getValues();
     let rowIndex = -1;
     let currentStatus = '';
     let currentCode = '';
@@ -3656,6 +3666,9 @@ if (isLimitedEdit) {
         rowIndex = i + 2;
         currentStatus = String(dataRange[i][14] || '').trim();
         currentCode = String(dataRange[i][8] || '').trim();
+        
+        console.log('📋 Current AU value:', dataRange[i][46] || '(empty)');
+        
         break;
       }
     }
@@ -3666,6 +3679,8 @@ if (isLimitedEdit) {
         message: 'ไม่พบ RFI ที่ต้องการแก้ไข'
       };
     }
+    
+    console.log('✅ Found RFI at row', rowIndex);
     
     // ✅ ดึง Sequence, QC_Type และ Duration จาก Work Type
     const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
@@ -3694,7 +3709,7 @@ if (isLimitedEdit) {
       }
     }
     
-    if (!sequence || !qcType) {
+    if (!isLimitedEdit && (!sequence || !qcType)) {
       return {
         success: false,
         message: 'Work Type ที่เลือกไม่มีข้อมูล Sequence หรือ QC_Type\nกรุณาตรวจสอบ Sheet "Work"'
@@ -3708,7 +3723,7 @@ if (isLimitedEdit) {
     // ✅ คำนวณเวลาสิ้นสุด (ถ้าไม่ได้ระบุ)
     let endTime = data.endTime;
     
-    if (!endTime) {
+    if (!isLimitedEdit && !endTime) {
       const startParts = data.startTime.split(':');
       const startHour = parseInt(startParts[0]);
       const startMinute = parseInt(startParts[1]);
@@ -3723,8 +3738,11 @@ if (isLimitedEdit) {
     }
     
     // Format date
-    const dateParts = data.requestDate.split('-');
-    const formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    let formattedDate = '';
+    if (!isLimitedEdit) {
+      const dateParts = data.requestDate.split('-');
+      formattedDate = dateParts[1] + '/' + dateParts[2] + '/' + dateParts[0];
+    }
     
     const currentTime = new Date();
     
@@ -3736,7 +3754,7 @@ if (isLimitedEdit) {
     let newRFINo = '';
     const newCode = sequence + '-' + qcType;
     
-    if (currentStatus === 'RFI Request Submitted' && newCode !== currentCode) {
+    if (!isLimitedEdit && currentStatus === 'RFI Request Submitted' && newCode !== currentCode) {
       console.log('Code changed from', currentCode, 'to', newCode);
       const orderRFI = getNextOrderRFIBySequenceAndType(sequence, qcType);
       const orderRFIPadded = String(orderRFI).padStart(4, '0');
@@ -3746,99 +3764,117 @@ if (isLimitedEdit) {
       console.log('New RFI_NO:', newRFINo, 'Order:', orderRFI);
     }
     
-    // ✅ อัปเดตข้อมูล (Columns C-AS)
-// ⭐ อัปเดตตามโหมด
-if (isLimitedEdit) {
-  // Limited Edit - อัปเดตเฉพาะฟิลด์ที่แก้ไขได้
-  console.log('🔒 Updating Limited Edit fields only');
-  
-  sheet.getRange(rowIndex, 3).setValue(combinedDescription);         // C - description
-  sheet.getRange(rowIndex, 4).setValue(data.location);              // D - Location
-  
-  // ✅ อัปเดต ITP/Code/TAG
-  sheet.getRange(rowIndex, 42).setValue(data.itp || '');            // AP - ITP
-  sheet.getRange(rowIndex, 43).setValue(data.qcCode || '');         // AQ - QC_Code
-  sheet.getRange(rowIndex, 44).setValue(data.item || '');           // AR - ITEM
-  sheet.getRange(rowIndex, 45).setValue(data.descriptionCode || ''); // AS - Description_Code
-  sheet.getRange(rowIndex, 46).setValue(data.tagNumber || '');      // AT - TAG_NUMBER
-  
-  // ⭐ บันทึก Column AU - Need Re-Generate PDF
-  sheet.getRange(rowIndex, 47).setValue('Need Re-Generate PDF');    // AU - PDF_Regeneration_Flag
-  console.log('✅ Set PDF Regeneration Flag: Need Re-Generate PDF');
-  
-  sheet.getRange(rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
-  
-} else {
-  // Normal Edit - อัปเดตทุกฟิลด์
-  console.log('✅ Updating all fields (Normal Edit)');
-  
-  sheet.getRange(rowIndex, 3).setValue(combinedDescription);         // C - description
-  sheet.getRange(rowIndex, 4).setValue(data.location);              // D - Location
-  sheet.getRange(rowIndex, 5).setValue(formattedDate);              // E - Request_Date
-  sheet.getRange(rowIndex, 6).setValue(data.startTime);             // F - Start_Time
-  sheet.getRange(rowIndex, 7).setValue(endTime);                    // G - End_Time
-  
-  // ✅ อัปเดต Code และ RFI_NO (ถ้าจำเป็น)
-  if (needUpdateRFINo) {
-    const newOrderRFI = getNextOrderRFIBySequenceAndType(sequence, qcType);
-    
-    sheet.getRange(rowIndex, 2).setValue(newRFINo);               // B - RFI_NO ใหม่
-    sheet.getRange(rowIndex, 8).setValue(newOrderRFI);            // H - Order_RFI ใหม่
-    sheet.getRange(rowIndex, 9).setValue(newCode);                // I - Code ใหม่
-    
-    console.log('Updated: RFI_NO =', newRFINo, ', Order_RFI =', newOrderRFI, ', Code =', newCode);
-  }
-  
-  sheet.getRange(rowIndex, 10).setValue(data.requesterEmail);       // J - Requester_Email
-  sheet.getRange(rowIndex, 11).setValue(data.requesterName);        // K - Requester_Name
-  sheet.getRange(rowIndex, 12).setValue(data.assignedInspector);    // L - Assigned_Inspector
-  sheet.getRange(rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
-  sheet.getRange(rowIndex, 20).setValue(data.requireSurveyReport || 'None');  // T
-  sheet.getRange(rowIndex, 21).setValue(data.requireLabReport || 'None');     // U
-  
-  // ✅ อัปเดต ITP/Code/TAG
-  sheet.getRange(rowIndex, 42).setValue(data.itp || '');            // AP - ITP
-  sheet.getRange(rowIndex, 43).setValue(data.qcCode || '');         // AQ - QC_Code
-  sheet.getRange(rowIndex, 44).setValue(data.item || '');           // AR - ITEM
-  sheet.getRange(rowIndex, 45).setValue(data.descriptionCode || ''); // AS - Description_Code
-  sheet.getRange(rowIndex, 46).setValue(data.tagNumber || '');      // AT - TAG_NUMBER
-  
-  // ⭐ โหมดปกติไม่ต้องตั้ง PDF Flag (หรือจะตั้งก็ได้ ขึ้นอยู่กับ requirement)
-  // sheet.getRange(rowIndex, 47).setValue('');                     // AU - Clear flag (optional)
-}
+    // ✅✅✅ อัปเดตข้อมูล
+    if (isLimitedEdit) {
+      // ========== LIMITED EDIT MODE ==========
+      console.log('🔒 Updating Limited Edit fields only');
+      
+      sheet.getRange(rowIndex, 3).setValue(combinedDescription);         // C - description
+      sheet.getRange(rowIndex, 4).setValue(data.location);              // D - Location
+      
+      // ✅ อัปเดต ITP/Code/TAG
+      sheet.getRange(rowIndex, 42).setValue(data.itp || '');            // AP - ITP
+      sheet.getRange(rowIndex, 43).setValue(data.qcCode || '');         // AQ - QC_Code
+      sheet.getRange(rowIndex, 44).setValue(data.item || '');           // AR - ITEM
+      sheet.getRange(rowIndex, 45).setValue(data.descriptionCode || ''); // AS - Description_Code
+      sheet.getRange(rowIndex, 46).setValue(data.tagNumber || '');      // AT - TAG_NUMBER
+      
+      console.log('✅ ITP/Code/TAG saved');
+      
+      // ⭐⭐⭐ CRITICAL: บันทึก Column AU - PDF Flag ⭐⭐⭐
+      console.log('📝 Writing PDF Flag to Column AU (row', rowIndex, ')...');
+      
+      const pdfFlagCell = sheet.getRange(rowIndex, 47); // Column AU
+      pdfFlagCell.setValue('Need Re-Generate PDF');
+      
+      // ✅ บังคับให้เขียนทันที
+      SpreadsheetApp.flush();
+      
+      // ✅ อ่านกลับมาตรวจสอบ
+      const writtenValue = pdfFlagCell.getValue();
+      console.log('✅ Verified AU value:', writtenValue);
+      
+      if (writtenValue === 'Need Re-Generate PDF') {
+        console.log('✅✅✅ PDF Flag written successfully to Column AU');
+      } else {
+        console.error('❌ WARNING: PDF Flag not saved! Got:', writtenValue);
+      }
+      
+      sheet.getRange(rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
+      
+      console.log('✅ Limited Edit complete');
+      
+    } else {
+      // ========== NORMAL EDIT MODE ==========
+      console.log('✅ Updating all fields (Normal Edit)');
+      
+      sheet.getRange(rowIndex, 3).setValue(combinedDescription);
+      sheet.getRange(rowIndex, 4).setValue(data.location);
+      sheet.getRange(rowIndex, 5).setValue(formattedDate);
+      sheet.getRange(rowIndex, 6).setValue(data.startTime);
+      sheet.getRange(rowIndex, 7).setValue(endTime);
+      
+      // ✅ อัปเดต Code และ RFI_NO (ถ้าจำเป็น)
+      if (needUpdateRFINo) {
+        const newOrderRFI = getNextOrderRFIBySequenceAndType(sequence, qcType);
+        
+        sheet.getRange(rowIndex, 2).setValue(newRFINo);
+        sheet.getRange(rowIndex, 8).setValue(newOrderRFI);
+        sheet.getRange(rowIndex, 9).setValue(newCode);
+        
+        console.log('Updated: RFI_NO =', newRFINo, ', Order_RFI =', newOrderRFI, ', Code =', newCode);
+      }
+      
+      sheet.getRange(rowIndex, 10).setValue(data.requesterEmail);
+      sheet.getRange(rowIndex, 11).setValue(data.requesterName);
+      sheet.getRange(rowIndex, 12).setValue(data.assignedInspector);
+      sheet.getRange(rowIndex, 18).setValue(currentTime);
+      sheet.getRange(rowIndex, 20).setValue(data.requireSurveyReport || 'None');
+      sheet.getRange(rowIndex, 21).setValue(data.requireLabReport || 'None');
+      
+      // ✅ อัปเดต ITP/Code/TAG
+      sheet.getRange(rowIndex, 42).setValue(data.itp || '');
+      sheet.getRange(rowIndex, 43).setValue(data.qcCode || '');
+      sheet.getRange(rowIndex, 44).setValue(data.item || '');
+      sheet.getRange(rowIndex, 45).setValue(data.descriptionCode || '');
+      sheet.getRange(rowIndex, 46).setValue(data.tagNumber || '');
+      
+      console.log('✅ All fields updated');
+    }
     
     console.log('✅ Saved ITP/Code data:', data.itp, data.qcCode, data.item);
     
     // ดึง RFI_NO ปัจจุบัน
     const finalRFINo = needUpdateRFINo ? newRFINo : sheet.getRange(rowIndex, 2).getValue();
     
-let message = 'แก้ไข RFI เรียบร้อยแล้ว\n';
-message += 'RFI NO: ' + finalRFINo + '\n';
-
-if (isLimitedEdit) {
-  message += '🔒 โหมด: Limited Edit (แก้ไขบางฟิลด์)\n';
-  message += 'ITP: ' + data.itp + '\n';
-  message += 'QC Code: ' + data.qcCode + '\n';
-  message += 'ITEM: ' + data.item + '\n';
-  message += 'TAG NUMBER: ' + data.tagNumber + '\n';
-  message += 'รายละเอียด: ' + data.description.substring(0, 50) + '...\n';
-  message += 'สถานที่: ' + data.location + '\n';
-  message += '\n⭐ PDF Flag: Need Re-Generate PDF';  // ⭐ เพิ่มบรรทัดนี้
-} else {
-  message += 'Work Type: ' + data.workType + ' (Duration: ' + duration + ' นาที)\n';
-  message += 'ITP: ' + data.itp + '\n';
-  message += 'QC Code: ' + data.qcCode + '\n';
-  message += 'ITEM: ' + data.item + '\n';
-  message += 'TAG NUMBER: ' + data.tagNumber + '\n';
-  if (needUpdateRFINo) {
-    message += '⚠️ เปลี่ยน Work Type จาก ' + currentCode + ' → ' + newCode + '\n';
-    message += '📋 RFI NO ใหม่: ' + finalRFINo + '\n';
-  }
-  message += 'ทีมงาน: ' + data.assignedInspector + '\n';
-  message += 'ผู้ขอ: ' + data.requesterName + '\n';
-}
-
-message += '\nแก้ไขโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
+    let message = 'แก้ไข RFI เรียบร้อยแล้ว\n';
+    message += 'RFI NO: ' + finalRFINo + '\n';
+    
+    if (isLimitedEdit) {
+      message += '🔒 โหมด: Limited Edit (แก้ไขบางฟิลด์)\n';
+      message += 'ITP: ' + data.itp + '\n';
+      message += 'QC Code: ' + data.qcCode + '\n';
+      message += 'ITEM: ' + data.item + '\n';
+      message += 'TAG NUMBER: ' + data.tagNumber + '\n';
+      message += 'รายละเอียด: ' + data.description.substring(0, 50) + '...\n';
+      message += 'สถานที่: ' + data.location + '\n';
+      message += '\n⭐ PDF Flag: Need Re-Generate PDF (Column AU)';
+    } else {
+      message += 'Work Type: ' + data.workType + ' (Duration: ' + duration + ' นาที)\n';
+      message += 'ITP: ' + data.itp + '\n';
+      message += 'QC Code: ' + data.qcCode + '\n';
+      message += 'ITEM: ' + data.item + '\n';
+      message += 'TAG NUMBER: ' + data.tagNumber + '\n';
+      if (needUpdateRFINo) {
+        message += '⚠️ เปลี่ยน Work Type จาก ' + currentCode + ' → ' + newCode + '\n';
+        message += '📋 RFI NO ใหม่: ' + finalRFINo + '\n';
+      }
+      message += 'ทีมงาน: ' + data.assignedInspector + '\n';
+      message += 'ผู้ขอ: ' + data.requesterName + '\n';
+    }
+    
+    message += '\nแก้ไขโดย: ' + roleValidation.name + ' (' + roleValidation.role + ')';
+    
     console.log('========== updateQCRFI SUCCESS ==========');
     
     return {
@@ -3851,6 +3887,7 @@ message += '\nแก้ไขโดย: ' + roleValidation.name + ' (' + roleVal
   } catch (error) {
     console.error('========== updateQCRFI FAILED ==========');
     console.error('Error:', error);
+    console.error('Stack:', error.stack);
     
     return {
       success: false,
@@ -4160,6 +4197,7 @@ function reschedulePostponedRFI(rfiId, data) {
     sheet.getRange(rfiData.rowIndex, 12).setValue(data.assignedInspector);    // L - Assigned_Inspector
     sheet.getRange(rfiData.rowIndex, 15).setValue('Rescheduled – Proceed to Site Inspection');             // O - Status เปลี่ยนเป็น "Rescheduled – Proceed to Site Inspection"
     sheet.getRange(rfiData.rowIndex, 18).setValue(currentTime);               // R - Updated_Timestamp
+    sheet.getRange(rfiData.rowIndex, 47).setValue('Need Re-Generate PDF');
     
     console.log('Updated RFI at row:', rfiData.rowIndex);
     
