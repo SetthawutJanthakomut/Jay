@@ -909,6 +909,11 @@ textarea:disabled {
                     var rfiId = document.getElementById('editRfiId').value;
                     var loading = document.getElementById('editLoading');
 
+// ✅ FIXED: Validation Logic แยกชัดเจน
+var originalStatus = document.getElementById('editOriginalStatus').value;
+var isLimitedEdit = (originalStatus === 'Waiting for Revised Attachment' || 
+                    originalStatus === 'Pending QC Review');
+
 var formData = {
     workType: document.getElementById('editWorkType').value,
     description: document.getElementById('editDescription').value.trim(),
@@ -921,105 +926,95 @@ var formData = {
     requesterName: document.getElementById('editRequesterName').value,
     requireSurveyReport: document.getElementById('editRequireSurveyReport').value || 'None',
     requireLabReport: document.getElementById('editRequireLabReport').value || 'None',
-    // ✅ ⭐ ข้อมูล Code
     itp: document.getElementById('editITP').value,
     qcCode: document.getElementById('editQCCode').value,
     item: document.getElementById('editITEM').value,
     descriptionCode: document.getElementById('editDescriptionCode').value,
-    tagNumber: document.getElementById('editTagNumber').value.trim() // ⭐ เพิ่ม TAG NUMBER
+    tagNumber: document.getElementById('editTagNumber').value.trim(),
+    isLimitedEdit: isLimitedEdit  // ⭐ ส่ง flag ไปที่ Backend
 };
-var originalStatus = document.getElementById('editOriginalStatus').value;
-    var isLimitedEdit = (originalStatus === 'Waiting for Revised Attachment' || 
-                        originalStatus === 'Pending QC Review');
+
+// ✅ Validation แยกตามโหมด
+if (isLimitedEdit) {
+    console.log('🔒 Limited Edit Mode - Validating editable fields only');
     
-    if (isLimitedEdit) {
-        console.log('📝 Limited Edit Mode - validating editable fields only');
-        
-        // ✅ Validation เฉพาะฟิลด์ที่แก้ไขได้
-        if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
-            showMessage('❌ กรุณาเลือก ITP', 'error');
-            return;
-        }
-        
-        if (!formData.tagNumber) {
-            showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
-            return;
-        }
-        
-        if (!formData.description) {
-            showMessage('❌ กรุณากรอกรายละเอียด RFI', 'error');
-            return;
-        }
-        
-        if (!formData.location) {
-            showMessage('❌ กรุณากรอกสถานที่', 'error');
-            return;
-        }
-        
-        // ⭐ ส่ง flag ไปบอก Backend ว่าเป็น Limited Edit
-        formData.isLimitedEdit = true;
-        
-    } else {
-        // ✅ Validation ปกติ (ทุกฟิลด์)
-        if (!formData.tagNumber) {
-            showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
-            return;
-        }
-
-        if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
-            showMessage('❌ กรุณาเลือก ITP', 'error');
-            return;
-        }
-
-        if (!formData.assignedInspector) {
-            showMessage('❌ กรุณาเลือกทีมงาน', 'error');
-            return;
-        }
-        
-        formData.isLimitedEdit = false;
+    // ✅ เช็คเฉพาะฟิลด์ที่แก้ไขได้
+    if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+        showMessage('❌ กรุณาเลือก ITP', 'error');
+        return;
+    }
+    
+    if (!formData.tagNumber) {
+        showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
+        return;
+    }
+    
+    if (!formData.description) {
+        showMessage('❌ กรุณากรอกรายละเอียด RFI', 'error');
+        return;
+    }
+    
+    if (!formData.location) {
+        showMessage('❌ กรุณากรอกสถานที่', 'error');
+        return;
+    }
+    
+    console.log('✅ Limited Edit validation passed');
+    
+} else {
+    console.log('📝 Normal Edit Mode - Validating all fields');
+    
+    // ✅ เช็คทุกฟิลด์ (โหมดปกติ)
+    if (!formData.tagNumber) {
+        showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
+        return;
     }
 
-                    // ✅ Validation
-                    if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
-                        showMessage('❌ กรุณาเลือก ITP', 'error');
-                        return;
-                    }
+    if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
+        showMessage('❌ กรุณาเลือก ITP', 'error');
+        return;
+    }
 
-                    if (!formData.assignedInspector) {
-                        showMessage('❌ กรุณาเลือกทีมงาน', 'error');
-                        return;
-                    }
-                    if (!formData.tagNumber) {
-    showMessage('❌ กรุณากรอก TAG NUMBER', 'error');
-    return;
+    if (!formData.assignedInspector) {
+        showMessage('❌ กรุณาเลือกทีมงาน', 'error');
+        return;
+    }
+    
+    if (!formData.requestDate || !formData.startTime || !formData.endTime) {
+        showMessage('❌ กรุณาเลือกวันที่และเวลา', 'error');
+        return;
+    }
+    
+    if (!formData.description || !formData.location) {
+        showMessage('❌ กรุณากรอกรายละเอียดและสถานที่', 'error');
+        return;
+    }
+    
+    console.log('✅ Normal Edit validation passed');
 }
 
-if (!formData.itp || !formData.qcCode || !formData.item || !formData.descriptionCode) {
-    showMessage('❌ กรุณาเลือก ITP', 'error');
-    return;
-}
+// ✅ ส่งข้อมูลไป Backend
+loading.style.display = 'block';
 
-                    loading.style.display = 'block';
+google.script.run
+    .withSuccessHandler(function(result) {
+        loading.style.display = 'none';
 
-                    google.script.run
-                        .withSuccessHandler(function(result) {
-                            loading.style.display = 'none';
-
-                            if (result && result.success) {
-                                showMessage(result.message || 'แก้ไข RFI สำเร็จ', 'success', 8000);
-                                setTimeout(function() {
-                                    cancelEdit();
-                                    loadRFIList();
-                                }, 2000);
-                            } else {
-                                showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            loading.style.display = 'none';
-                            showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
-                        })
-                        .updateQCRFI(rfiId, formData);
+        if (result && result.success) {
+            showMessage(result.message || 'แก้ไข RFI สำเร็จ', 'success', 8000);
+            setTimeout(function() {
+                cancelEdit();
+                loadRFIList();
+            }, 2000);
+        } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+        }
+    })
+    .withFailureHandler(function(error) {
+        loading.style.display = 'none';
+        showMessage('เกิดข้อผิดพลาด: ' + (error.message || error), 'error');
+    })
+    .updateQCRFI(rfiId, formData);
                 });
             }
         }
