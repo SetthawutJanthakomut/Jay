@@ -1,4 +1,4 @@
-// version 1 18/10/2025 10:12
+<version 1 18/10/2025 10:12>
 <!DOCTYPE html>
 <html>
 <head>
@@ -86,10 +86,6 @@
 
   <!-- Status Info -->
   <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; font-size: 13px; color: #999;">
-    <div style="display: flex; align-items: center; gap: 5px;">
-      <span style="width: 8px; height: 8px; background: #ffc107; border-radius: 50%; display: inline-block;"></span>
-      <span>Pending</span>
-    </div>
     <div style="display: flex; align-items: center; gap: 5px;">
       <span style="width: 8px; height: 8px; background: #17a2b8; border-radius: 50%; display: inline-block;"></span>
       <span>Rescheduled</span>
