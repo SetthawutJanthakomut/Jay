@@ -3374,97 +3374,7 @@ function openQCEditForm() {
   SpreadsheetApp.getUi().showModalDialog(html, 'QC - แก้ไข RFI');
 }
 
-/**
- * ดึงรายการ RFI ที่ Status = Draft หรือ RFI Request Submitted
- */
-/**
- * ดึงรายการ RFI ที่ Status = Draft หรือ RFI Request Submitted
- */
-function getRFIListForQC() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
-    
-    if (!sheet) {
-      console.log('DEBUG: RFI_List sheet not found');
-      return [];
-    }
-    
-    const lastRow = sheet.getLastRow();
-    console.log('DEBUG: lastRow =', lastRow);
-    
-    if (lastRow <= 1) {
-      console.log('DEBUG: No data rows');
-      return [];
-    }
-    
-    const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues();
-    console.log('DEBUG: Total rows =', data.length);
-    
-    const rfiList = [];
-    
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const id = String(row[0] || '').trim();
-      const rfiNo = String(row[1] || '').trim();
-      const status = String(row[14] || '').trim();
-      
-      console.log('DEBUG: Row', i, 'ID:', id, 'RFI_NO:', rfiNo, 'Status:', status);
-      
-      if (status === 'Draft' || status === 'RFI Request Submitted') {
-        console.log('DEBUG: -> MATCHED! Adding to list');
-        
-        // ⭐ แปลง Date object เป็น String
-        const createdTimestamp = row[15];
-        let createdDateStr = '';
-        if (createdTimestamp) {
-          try {
-            const d = new Date(createdTimestamp);
-            createdDateStr = d.toISOString();
-          } catch (e) {
-            createdDateStr = String(createdTimestamp);
-          }
-        }
-        
-        rfiList.push({
-          id: id,
-          rfiNo: rfiNo,
-          description: String(row[2] || '').trim(),
-          location: String(row[3] || '').trim(),
-          requestDate: formatDate(new Date(row[4])),
-          startTime: formatTime(row[5]),
-          endTime: formatTime(row[6]),
-          code: String(row[8] || '').trim(),
-          requesterEmail: String(row[9] || '').trim(),
-          requesterName: String(row[10] || '').trim(),
-          assignedInspector: String(row[11] || '').trim(),
-          status: status,
-          createdTimestamp: createdDateStr,  // ⭐ ใช้ string แทน Date object
-          type: String(row[18] || '').trim(),
-          requireSurveyReport: String(row[19] || '').trim(),
-          requireLabReport: String(row[20] || '').trim()
-        });
-      }
-    }
-    
-    // เรียงตามวันที่สร้าง (ล่าสุดก่อน)
-    rfiList.sort(function(a, b) {
-      if (!a.createdTimestamp || !b.createdTimestamp) return 0;
-      return new Date(b.createdTimestamp).getTime() - new Date(a.createdTimestamp).getTime();
-    });
-    
-    console.log('DEBUG: Final list count =', rfiList.length);
-    
-    // ⭐ ลบ JSON.stringify ออก เพราะอาจทำให้เกิด serialization error
-    // console.log('DEBUG: RFI List =', JSON.stringify(rfiList));
-    
-    return rfiList;
-    
-  } catch (error) {
-    console.error('ERROR in getRFIListForQC:', error);
-    console.error('Error stack:', error.stack);
-    return [];
-  }
-}
+
 
 function getRFIById(rfiId) {
   try {
@@ -3591,60 +3501,6 @@ function updateQCRFI(rfiId, data) {
       };
     }
     
-    var isLimitedEdit = data.isLimitedEdit || false;
-    
-    // ✅ Validation แยกตามโหมด
-    if (isLimitedEdit) {
-      console.log('🔒 Limited Edit Mode - validating editable fields only');
-      
-      if (!rfiId || !data.itp || !data.qcCode || !data.item || 
-          !data.descriptionCode || !data.tagNumber || 
-          !data.description || !data.location) {
-        
-        const missing = [];
-        if (!data.itp) missing.push('ITP');
-        if (!data.qcCode) missing.push('QC Code');
-        if (!data.item) missing.push('ITEM');
-        if (!data.descriptionCode) missing.push('Description Code');
-        if (!data.tagNumber) missing.push('TAG NUMBER');
-        if (!data.description) missing.push('รายละเอียด RFI');
-        if (!data.location) missing.push('สถานที่');
-        
-        return {
-          success: false,
-          message: 'กรุณากรอกข้อมูลให้ครบถ้วน (Limited Edit Mode)\nขาดข้อมูล: ' + missing.join(', ')
-        };
-      }
-      
-    } else {
-      console.log('✅ Normal Edit Mode - validating all fields');
-      
-      if (!rfiId || !data.workType || !data.requestDate || !data.startTime || 
-          !data.description || !data.location || !data.assignedInspector || 
-          !data.requesterEmail || !data.requesterName ||
-          !data.itp || !data.qcCode || !data.item || !data.descriptionCode ||
-          !data.tagNumber) {
-        
-        const missing = [];
-        if (!data.workType) missing.push('Work Type');
-        if (!data.itp) missing.push('ITP');
-        if (!data.qcCode) missing.push('QC Code');
-        if (!data.item) missing.push('ITEM');
-        if (!data.descriptionCode) missing.push('Description Code');
-        if (!data.tagNumber) missing.push('TAG NUMBER');
-        if (!data.requestDate) missing.push('วันที่');
-        if (!data.startTime) missing.push('เวลาเริ่มต้น');
-        if (!data.assignedInspector) missing.push('ทีมงาน');
-        if (!data.description) missing.push('รายละเอียด');
-        if (!data.location) missing.push('สถานที่');
-        
-        return {
-          success: false,
-          message: 'กรุณากรอกข้อมูลให้ครบถ้วน\nขาดข้อมูล: ' + missing.join(', ')
-        };
-      }
-    }
-    
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
     
     if (!sheet) {
@@ -3659,14 +3515,18 @@ function updateQCRFI(rfiId, data) {
     const dataRange = sheet.getRange(2, 1, lastRow - 1, 47).getValues();
     let rowIndex = -1;
     let currentStatus = '';
+    let currentType = '';
     let currentCode = '';
     
     for (let i = 0; i < dataRange.length; i++) {
       if (String(dataRange[i][0]).trim() === rfiId) {
         rowIndex = i + 2;
-        currentStatus = String(dataRange[i][14] || '').trim();
+        currentStatus = String(dataRange[i][14] || '').trim();  // Column O
+        currentType = String(dataRange[i][18] || '').trim();    // Column S ⭐ เพิ่ม
         currentCode = String(dataRange[i][8] || '').trim();
         
+        console.log('📋 Current Type:', currentType);
+        console.log('📋 Current Status:', currentStatus);
         console.log('📋 Current AU value:', dataRange[i][46] || '(empty)');
         
         break;
@@ -3681,6 +3541,101 @@ function updateQCRFI(rfiId, data) {
     }
     
     console.log('✅ Found RFI at row', rowIndex);
+    
+    // ⭐⭐⭐ ตรวจสอบเงื่อนไข Limited Edit ที่ Backend
+    var isLimitedEdit = false;
+    
+    if (currentType === 'Open RFI') {
+      const limitedStatuses = [
+        'Waiting for Revised Attachment',
+        'Pending QC Review',
+        'Rejected by Consult – Revise Required',
+        'Revised Attachment Submitted – Pending QC Review'
+      ];
+      
+      isLimitedEdit = limitedStatuses.indexOf(currentStatus) !== -1;
+    }
+    
+    console.log('🔒 Backend Limited Edit Check:', isLimitedEdit);
+    console.log('   Type:', currentType);
+    console.log('   Status:', currentStatus);
+    // ⭐⭐⭐ จบส่วนที่เพิ่ม
+    
+    // ✅ Validation แยกตามโหมด
+    if (isLimitedEdit) {
+      console.log('🔒 Limited Edit Mode - Validating editable fields only');
+      
+      if (!data.itp || !data.qcCode || !data.item || !data.descriptionCode) {
+        return {
+          success: false,
+          message: 'กรุณาเลือก ITP'
+        };
+      }
+      
+      if (!data.tagNumber) {
+        return {
+          success: false,
+          message: 'กรุณากรอก TAG NUMBER'
+        };
+      }
+      
+      if (!data.description) {
+        return {
+          success: false,
+          message: 'กรุณากรอกรายละเอียด RFI'
+        };
+      }
+      
+      if (!data.location) {
+        return {
+          success: false,
+          message: 'กรุณากรอกสถานที่'
+        };
+      }
+      
+      console.log('✅ Limited Edit validation passed');
+      
+    } else {
+      console.log('📝 Normal Edit Mode - Validating all fields');
+      
+      // Validation ปกติ
+      if (!data.tagNumber) {
+        return {
+          success: false,
+          message: 'กรุณากรอก TAG NUMBER'
+        };
+      }
+
+      if (!data.itp || !data.qcCode || !data.item || !data.descriptionCode) {
+        return {
+          success: false,
+          message: 'กรุณาเลือก ITP'
+        };
+      }
+
+      if (!data.assignedInspector) {
+        return {
+          success: false,
+          message: 'กรุณาเลือกทีมงาน'
+        };
+      }
+      
+      if (!data.requestDate || !data.startTime || !data.endTime) {
+        return {
+          success: false,
+          message: 'กรุณาเลือกวันที่และเวลา'
+        };
+      }
+      
+      if (!data.description || !data.location) {
+        return {
+          success: false,
+          message: 'กรุณากรอกรายละเอียดและสถานที่'
+        };
+      }
+      
+      console.log('✅ Normal Edit validation passed');
+    }
     
     // ✅ ดึง Sequence, QC_Type และ Duration จาก Work Type
     const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
@@ -3906,8 +3861,9 @@ function formatDateForInput(date) {
   const day = String(d.getDate()).padStart(2, '0');
   return year + '-' + month + '-' + day;
 }
-
-
+/**
+ * ✅ FIXED VERSION 2: ดึงรายการ RFI พร้อม Debug Log ละเอียด
+ */
 function getRFIListForQC() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('RFI_List');
@@ -3925,6 +3881,7 @@ function getRFIListForQC() {
       return [];
     }
     
+    // ✅ ดึงข้อมูลรวม Column S (Type) = index 18
     const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues();
     console.log('DEBUG: Total rows =', data.length);
     
@@ -3935,14 +3892,56 @@ function getRFIListForQC() {
       const id = String(row[0] || '').trim();
       const rfiNo = String(row[1] || '').trim();
       const status = String(row[14] || '').trim();
+      const type = String(row[18] || '').trim(); // ✅ Column S - Type
       
-      console.log('DEBUG: Row', i, 'ID:', id, 'RFI_NO:', rfiNo, 'Status:', status);
+      console.log('──────────────────────────────────────');
+      console.log('DEBUG: Row', i);
+      console.log('  ID:', id);
+      console.log('  RFI_NO:', rfiNo);
+      console.log('  Status:', status);
+      console.log('  Type:', type);
       
-          if (status === 'Draft' || 
-          status === 'RFI Request Submitted' ||
-          status === 'Waiting for Revised Attachment' ||
-          status === 'Pending QC Review') {
-        console.log('DEBUG: -> MATCHED! Adding to list');
+      // ✅ เงื่อนไขที่ 1: Draft หรือ RFI Request Submitted
+      const isBasicStatus = (
+        status === 'Draft' || 
+        status === 'RFI Request Submitted'
+      );
+      
+      console.log('  → isBasicStatus:', isBasicStatus);
+      
+      // ✅ เงื่อนไขที่ 2: Limited Edit Status
+      const isLimitedEditStatus = (
+        status === 'Waiting for Revised Attachment' ||
+        status === 'Pending QC Review' ||
+        status === 'Rejected by Consult – Revise Required' ||
+        status === 'Revised Attachment Submitted – Pending QC Review'
+      );
+      
+      console.log('  → isLimitedEditStatus:', isLimitedEditStatus);
+      
+      // ✅ เช็คว่าเป็น Open RFI หรือไม่
+      const isOpenRFI = (type === 'Open RFI');
+      console.log('  → isOpenRFI:', isOpenRFI);
+      
+      // ✅ รวมเงื่อนไข
+      const isLimitedEditAndOpenRFI = isLimitedEditStatus && isOpenRFI;
+      console.log('  → isLimitedEditAndOpenRFI:', isLimitedEditAndOpenRFI);
+      
+      const shouldShow = isBasicStatus || isLimitedEditAndOpenRFI;
+      console.log('  → shouldShow:', shouldShow);
+      
+      if (shouldShow) {
+        console.log('  ✅ MATCHED! Adding to list');
+        
+        let createdTimestamp = '';
+        if (row[15]) {
+          try {
+            createdTimestamp = new Date(row[15]).toISOString();
+          } catch (e) {
+            createdTimestamp = String(row[15]);
+          }
+        }
+        
         rfiList.push({
           id: id,
           rfiNo: rfiNo,
@@ -3956,33 +3955,36 @@ function getRFIListForQC() {
           requesterName: String(row[10] || '').trim(),
           assignedInspector: String(row[11] || '').trim(),
           status: status,
-          type: String(row[18] || '').trim(),
+          createdTimestamp: createdTimestamp,
+          type: type,
           requireSurveyReport: String(row[19] || '').trim(),
           requireLabReport: String(row[20] || '').trim()
         });
+      } else {
+        console.log('  ❌ SKIPPED');
       }
     }
     
-    rfiList.sort(function(a, b) {
-  if (a.id > b.id) return -1;
-  if (a.id < b.id) return 1;
-  return 0;
-});
-    
+    console.log('──────────────────────────────────────');
     console.log('DEBUG: Final list count =', rfiList.length);
-    console.log('DEBUG: RFI List =', JSON.stringify(rfiList));
+    
+    // เรียงตาม ID (ล่าสุดก่อน)
+    rfiList.sort(function(a, b) {
+      if (a.id > b.id) return -1;
+      if (a.id < b.id) return 1;
+      return 0;
+    });
     
     return rfiList;
     
   } catch (error) {
     console.error('ERROR in getRFIListForQC:', error);
+    console.error('Stack:', error.stack);
     return [];
   }
 }
 
-/**
- * ดึงข้อมูลผู้ใช้ปัจจุบัน (อีเมลและชื่อ)
- */
+
 function getCurrentUserInfo() {
   try {
     const user = Session.getActiveUser();
