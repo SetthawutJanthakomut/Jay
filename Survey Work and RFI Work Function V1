@@ -2334,38 +2334,38 @@ function saveRFIRequirement(data) {
     // ⭐ Step 2: บันทึกลงฐานข้อมูล
     progress.push('บันทึกลงฐานข้อมูล');
     
-    // จัดทีมตาม Inspection Type
-    let teamAssignment;
-    
-    if (data.inspectionType === 'internal') {
-      teamAssignment = assignTeamAutomatically(
-        data.teamCategory,
-        data.requestDate,
-        data.startTime,
-        data.endTime,
-        null,
-        false,
-        data.workType
-      );
-    } else {
-      teamAssignment = assignTeamAutomatically(
-        data.teamCategory,
-        data.requestDate,
-        data.startTime,
-        data.endTime,
-        null,
-        false,
-        data.workType
-      );
-    }
-    
-    if (!teamAssignment || !teamAssignment.success) {
-      return {
-        success: false,
-        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้',
-        progress: progress
-      };
-    }
+let teamAssignment;
+
+if (data.selectedTeams) {
+  // ⭐⭐⭐ Survey Role - ใช้ทีมที่เลือก
+  console.log('✅ Using manually selected teams:', data.selectedTeams);
+  
+  teamAssignment = {
+    success: true,
+    teamName: data.selectedTeams,
+    resourceIds: data.selectedTeamIds
+  };
+  
+} else {
+  // ❌ Regular User - Auto Assign
+  console.log('⚙️ Auto-assigning Survey team...');
+  
+  teamAssignment = assignSurveyTeamAutomatically(
+    data.requestDate,
+    data.startTime,
+    data.endTime,
+    false,
+    data.workType
+  );
+}
+
+if (!teamAssignment || !teamAssignment.success) {
+  return {
+    success: false,
+    message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้',
+    progress: progressSteps
+  };
+}
     
     const rfiId = generateUniqueId();
     console.log('Generated ID:', rfiId);
@@ -4480,6 +4480,57 @@ function assignSurveyTeamAutomatically(date, startTime, endTime, useCache, workT
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
     };
+  }
+}
+
+/**
+ * ⭐ ดึงรายการทีม Survey ที่ว่างในช่วงเวลาที่เลือก
+ */
+function getAvailableSurveyTeamsForTime(date, startTime, endTime) {
+  try {
+    console.log('========== getAvailableSurveyTeamsForTime ==========');
+    console.log('Date:', date);
+    console.log('Time:', startTime, '-', endTime);
+    
+    const teams = getSurveyTeams();
+    
+    if (teams.length === 0) {
+      console.log('❌ No Survey teams found');
+      return [];
+    }
+    
+    console.log('Found', teams.length, 'Survey teams');
+    
+    // เรียงทีมตาม workload
+    const sortedTeams = sortTeamsByWorkload(teams, date, false);
+    
+    const availableTeams = [];
+    
+    for (let i = 0; i < sortedTeams.length; i++) {
+      const team = sortedTeams[i];
+      
+      if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        availableTeams.push({
+          resourceId: team.resourceId,
+          resourceName: team.resourceName,
+          teamNo: team.teamNo,
+          workload: team.workload
+        });
+        
+        console.log('✅ Available:', team.resourceName, '(Workload:', team.workload + ')');
+      } else {
+        console.log('❌ Busy:', team.resourceName);
+      }
+    }
+    
+    console.log('Total available teams:', availableTeams.length);
+    console.log('==========================================');
+    
+    return availableTeams;
+    
+  } catch (error) {
+    console.error('Error in getAvailableSurveyTeamsForTime:', error);
+    return [];
   }
 }
 
@@ -7253,92 +7304,7 @@ function getSurveyRoleAllTimeSlots() {
   }
 }
 
-/**
- * ⭐ Survey Role - ดึง ALL Time Slots พร้อมสถานะว่าทีมว่างหรือไม่
- */
-function getSurveyRoleAllTimeSlotsWithStatus(date) {
-  try {
-    if (!date) return [];
-    
-    console.log('⭐ Getting ALL time slots with team status for Survey Role');
-    
-    // สร้าง all slots (09:00 - 19:30)
-    const allSlots = [];
-    for (let hour = 9; hour <= 19; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        if (hour === 19 && minute === 30) break;
-        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
-        allSlots.push(time);
-      }
-    }
-    
-    const availableTeams = getSurveyTeams();
-    
-    if (availableTeams.length === 0) {
-      console.log('⚠️ No Survey teams found');
-      // Return all slots but mark as unavailable
-      return allSlots.map(function(slot) {
-        return {
-          time: slot,
-          available: false,
-          teamCount: 0
-        };
-      });
-    }
-    
-    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
-    const slotsWithStatus = [];
-    
-    for (let i = 0; i < allSlots.length; i++) {
-      const startSlot = allSlots[i];
-      
-      const startParts = startSlot.split(':');
-      const startHour = parseInt(startParts[0]);
-      const startMin = parseInt(startParts[1]);
-      const endHour = startMin === 30 ? startHour + 1 : startHour;
-      const endMin = startMin === 30 ? 0 : 30;
-      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
-      
-      const requestStartMinutes = timeToMinutes(startSlot);
-      const requestEndMinutes = timeToMinutes(endSlot);
-      
-      let availableTeamCount = 0;
-      
-      for (let j = 0; j < availableTeams.length; j++) {
-        const team = availableTeams[j];
-        const blocks = blockedSlots[team.resourceId] || [];
-        
-        let isAvailable = true;
-        
-        for (let k = 0; k < blocks.length; k++) {
-          const block = blocks[k];
-          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
-            isAvailable = false;
-            break;
-          }
-        }
-        
-        if (isAvailable) {
-          availableTeamCount++;
-        }
-      }
-      
-      slotsWithStatus.push({
-        time: startSlot,
-        available: availableTeamCount > 0,
-        teamCount: availableTeamCount,
-        totalTeams: availableTeams.length
-      });
-    }
-    
-    console.log('✅ Generated', slotsWithStatus.length, 'slots with team status');
-    return slotsWithStatus;
-    
-  } catch (error) {
-    console.error('Error in getSurveyRoleAllTimeSlotsWithStatus:', error);
-    return [];
-  }
-}
+
 
 /**
  * ⭐ เช็คว่าทีม Survey ว่างหรือไม่ในช่วงเวลาที่เลือก
