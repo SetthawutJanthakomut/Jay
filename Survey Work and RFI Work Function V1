@@ -2334,38 +2334,38 @@ function saveRFIRequirement(data) {
     // ⭐ Step 2: บันทึกลงฐานข้อมูล
     progress.push('บันทึกลงฐานข้อมูล');
     
-let teamAssignment;
-
-if (data.selectedTeams) {
-  // ⭐⭐⭐ Survey Role - ใช้ทีมที่เลือก
-  console.log('✅ Using manually selected teams:', data.selectedTeams);
-  
-  teamAssignment = {
-    success: true,
-    teamName: data.selectedTeams,
-    resourceIds: data.selectedTeamIds
-  };
-  
-} else {
-  // ❌ Regular User - Auto Assign
-  console.log('⚙️ Auto-assigning Survey team...');
-  
-  teamAssignment = assignSurveyTeamAutomatically(
-    data.requestDate,
-    data.startTime,
-    data.endTime,
-    false,
-    data.workType
-  );
-}
-
-if (!teamAssignment || !teamAssignment.success) {
-  return {
-    success: false,
-    message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้',
-    progress: progressSteps
-  };
-}
+    // จัดทีมตาม Inspection Type
+    let teamAssignment;
+    
+    if (data.inspectionType === 'internal') {
+      teamAssignment = assignTeamAutomatically(
+        data.teamCategory,
+        data.requestDate,
+        data.startTime,
+        data.endTime,
+        null,
+        false,
+        data.workType
+      );
+    } else {
+      teamAssignment = assignTeamAutomatically(
+        data.teamCategory,
+        data.requestDate,
+        data.startTime,
+        data.endTime,
+        null,
+        false,
+        data.workType
+      );
+    }
+    
+    if (!teamAssignment || !teamAssignment.success) {
+      return {
+        success: false,
+        message: teamAssignment ? teamAssignment.message : 'ไม่สามารถจัดทีมได้',
+        progress: progress
+      };
+    }
     
     const rfiId = generateUniqueId();
     console.log('Generated ID:', rfiId);
@@ -4480,57 +4480,6 @@ function assignSurveyTeamAutomatically(date, startTime, endTime, useCache, workT
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
     };
-  }
-}
-
-/**
- * ⭐ ดึงรายการทีม Survey ที่ว่างในช่วงเวลาที่เลือก
- */
-function getAvailableSurveyTeamsForTime(date, startTime, endTime) {
-  try {
-    console.log('========== getAvailableSurveyTeamsForTime ==========');
-    console.log('Date:', date);
-    console.log('Time:', startTime, '-', endTime);
-    
-    const teams = getSurveyTeams();
-    
-    if (teams.length === 0) {
-      console.log('❌ No Survey teams found');
-      return [];
-    }
-    
-    console.log('Found', teams.length, 'Survey teams');
-    
-    // เรียงทีมตาม workload
-    const sortedTeams = sortTeamsByWorkload(teams, date, false);
-    
-    const availableTeams = [];
-    
-    for (let i = 0; i < sortedTeams.length; i++) {
-      const team = sortedTeams[i];
-      
-      if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
-        availableTeams.push({
-          resourceId: team.resourceId,
-          resourceName: team.resourceName,
-          teamNo: team.teamNo,
-          workload: team.workload
-        });
-        
-        console.log('✅ Available:', team.resourceName, '(Workload:', team.workload + ')');
-      } else {
-        console.log('❌ Busy:', team.resourceName);
-      }
-    }
-    
-    console.log('Total available teams:', availableTeams.length);
-    console.log('==========================================');
-    
-    return availableTeams;
-    
-  } catch (error) {
-    console.error('Error in getAvailableSurveyTeamsForTime:', error);
-    return [];
   }
 }
 
