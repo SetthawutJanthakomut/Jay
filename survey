@@ -981,484 +981,88 @@
   <div class="toast-container" id="toastContainer"></div>
   
   <script>
+    // ============================================
+    // 1. ⭐ GLOBAL VARIABLES (ต้องมาก่อนสุด)
+    // ============================================
     var selectedFileData = null;
     var formChanged = false;
     var isSubmitting = false;
+    var isSurveyRole = false;
+    var surveyRoleInfo = null;
+    var availableSurveyTeams = [];
+    var selectedTeamIds = [];
 
-    // ⭐ Prevent Page Exit - ป้องกันการออกจากหน้าเว็บขณะกรอกฟอร์ม
-function setupFormChangeDetection() {
-  var form = document.getElementById('surveyWorkForm');
-  var inputs = form.querySelectorAll('input, select, textarea');
-  
-  inputs.forEach(function(input) {
-    // ข้ามฟิลด์ที่ readonly (เช่น email)
-    if (input.readOnly || input.disabled) return;
+    // ============================================
+    // 2. ⭐ HELPER FUNCTIONS
+    // ============================================
     
-    input.addEventListener('change', function() {
-      formChanged = true;
-      console.log('Form changed detected');
-    });
-    
-    input.addEventListener('input', function() {
-      formChanged = true;
-    });
-  });
-  
-  // ตรวจจับการอัปโหลดไฟล์
-  var fileInput = document.getElementById('locationLayoutFile');
-  if (fileInput) {
-    fileInput.addEventListener('change', function() {
-      if (this.files && this.files.length > 0) {
-        formChanged = true;
-        console.log('File selected - form changed');
-      }
-    });
-  }
-}
-
-// ป้องกันการออกจากหน้าเว็บ
-window.addEventListener('beforeunload', function(e) {
-  // ถ้ากำลัง submit หรือฟอร์มไม่ได้เปลี่ยนแปลง ให้ออกได้เลย
-  if (isSubmitting || !formChanged) {
-    return undefined;
-  }
-  
-  // แสดงข้อความเตือน
-  var confirmationMessage = 'คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?';
-  
-  e.preventDefault();
-  e.returnValue = confirmationMessage;
-  return confirmationMessage;
-});
-
-// รีเซ็ต flag เมื่อ submit สำเร็จ
-function resetFormChangeFlag() {
-  formChanged = false;
-  isSubmitting = false;
-  console.log('Form change flag reset');
-}
-
-// ตั้งค่า flag เมื่อเริ่ม submit
-function setSubmittingFlag() {
-  isSubmitting = true;
-  console.log('Submitting flag set');
-}
-
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
-
-function handleFileSelect(event) {
-  const file = event.target.files[0];
-  const fileInfo = document.getElementById('fileInfo');
-  const fileName = document.getElementById('fileName');
-  const fileSize = document.getElementById('fileSize');
-  
-  if (!file) {
-    clearLocationFile();
-    return;
-  }
-  
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    showMessage('❌ ไฟล์มีขนาดใหญ่เกินไป (เกิน 10 MB)\nกรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
-    event.target.value = '';
-    clearLocationFile();
-    return;
-  }
-  
-  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
-  if (!allowedTypes.includes(file.type)) {
-    showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง\nรองรับเฉพาะ PDF, PNG, JPG, GIF', 'error');
-    event.target.value = '';
-    clearLocationFile();
-    return;
-  }
-  
-  fileName.textContent = file.name;
-  fileSize.textContent = formatFileSize(file.size);
-  fileInfo.style.display = 'block';
-  
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    selectedFileData = {
-      name: file.name,
-      mimeType: file.type,
-      content: e.target.result.split(',')[1]
-    };
-    console.log('✅ File loaded:', file.name, '(', formatFileSize(file.size), ')');
-  };
-  reader.onerror = function(error) {
-    console.error('❌ Error reading file:', error);
-    showMessage('เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
-    clearLocationFile();
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearLocationFile() {
-  document.getElementById('locationLayoutFile').value = '';
-  document.getElementById('fileInfo').style.display = 'none';
-  document.getElementById('fileName').textContent = '';
-  document.getElementById('fileSize').textContent = '';
-  selectedFileData = null;
-  console.log('🗑️ File cleared');
-}
-
-var isSurveyRole = false;
-var surveyRoleInfo = null;
-
-// ⭐ แก้ไข window.onload
-window.onload = function() {
-  setMinDate();
-  loadWorkTypes();
-  checkUserRole(); // ⭐ เช็ค Role ก่อน
-  loadManualLink();
-  setupFormChangeDetection();
-  setupHolidayCheck();
-  checkTodayHolidayStatus();
-  showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
-  
-// ⭐ Event Listeners
-document.getElementById('requestDate').addEventListener('change', function() {
-  updateAvailableSlots();
-});
-
-document.getElementById('startTime').addEventListener('change', function() {
-  updateEndTimeSlots();
-});
-
-document.getElementById('endTime').addEventListener('change', function() {
-  // ⭐ ถ้าเป็น Survey Role → โหลดทีมที่ว่าง
-  if (isSurveyRole) {
-    loadAvailableSurveyTeams();
-  }
-});
-
-document.getElementById('workType').addEventListener('change', function() {
-  resetTimeSelections();
-});
-
-document.getElementById('surveyWorkForm').addEventListener('submit', function(e) {
-  handleSubmit(e);
-});
-
-function checkUserRole() {
-  console.log('🔍 Checking user role...');
-  
-  google.script.run
-    .withSuccessHandler(function(result) {
-      console.log('📥 Role check result:', result);
+    /**
+     * Toast Notification System
+     */
+    function showToast(title, message, type, duration) {
+      if (typeof type === 'undefined') type = 'info';
+      if (typeof duration === 'undefined') duration = 5000;
       
-      if (result.success && result.isSurveyRole) {
-        // ✅ เป็น Survey Role
-        isSurveyRole = true;
-        surveyRoleInfo = result;
-        
-        console.log('✅ Survey Role detected:', result.role);
-        
-        // แสดง Survey Role Indicator
-        document.getElementById('surveyRoleIndicator').style.display = 'block';
-        document.getElementById('surveyRoleText').textContent = 
-          '👨‍💼 ' + result.role + ' Mode - ' + result.name;
-        
-        // แสดง Requester Selection
-        document.getElementById('requesterSelectionGroup').style.display = 'block';
-        
-        // ซ่อน Original Fields
-        document.getElementById('requesterNameGroup').style.display = 'none';
-        document.getElementById('requesterEmailGroup').style.display = 'none';
-        
-        // โหลดรายชื่อ Requester
-        loadRequesterList();
-        
-        // อัปเดต Info Box
-        updateInfoBoxForSurveyRole();
-        
-      } else {
-        // ❌ ไม่ใช่ Survey Role - ใช้ฟังก์ชันเดิม
-        isSurveyRole = false;
-        loadUserEmailAndName();
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error checking role:', error);
-      isSurveyRole = false;
-      loadUserEmailAndName();
-    })
-    .validateSurveyRole();
-}
-
-/**
- * ⭐ โหลดรายชื่อ Requester (สำหรับ Survey Role)
- */
-function loadRequesterList() {
-  const selectElement = document.getElementById('requesterSelection');
-  selectElement.innerHTML = '<option value="">-- กำลังโหลดรายชื่อ... --</option>';
-  selectElement.disabled = true;
-  
-  google.script.run
-    .withSuccessHandler(function(requesters) {
-      selectElement.innerHTML = '';
-      
-      if (!requesters || requesters.length === 0) {
-        selectElement.innerHTML = '<option value="">-- ไม่พบรายชื่อผู้ขอ --</option>';
-        showToast('ไม่พบข้อมูล', 'ไม่พบรายชื่อผู้ขอในระบบ', 'warning', 4000);
-        return;
+      var container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
       }
       
-      // เพิ่มตัวเองเป็นตัวเลือกแรก
-      const selfOption = document.createElement('option');
-      selfOption.value = surveyRoleInfo.email + '|' + surveyRoleInfo.name;
-      selfOption.textContent = '👤 ' + surveyRoleInfo.name + ' (ตัวเอง)';
-      selectElement.appendChild(selfOption);
+      var icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
       
-      // เพิ่ม Divider
-      const divider = document.createElement('option');
-      divider.disabled = true;
-      divider.textContent = '───────────────';
-      selectElement.appendChild(divider);
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          ${message ? '<div class="toast-message">' + message + '</div>' : ''}
+        </div>
+        <button class="toast-close" onclick="removeToast(this)">×</button>
+        <div class="toast-progress"></div>
+      `;
       
-      // เพิ่มรายชื่อ Requester อื่น ๆ
-      requesters.forEach(function(requester) {
-        const option = document.createElement('option');
-        option.value = requester.email + '|' + requester.name;
-        option.textContent = requester.displayText;
-        selectElement.appendChild(option);
-      });
+      container.appendChild(toast);
       
-      selectElement.disabled = false;
+      var progress = toast.querySelector('.toast-progress');
+      var startTime = Date.now();
       
-      // เลือกตัวเองเป็นค่าเริ่มต้น
-      selectElement.value = surveyRoleInfo.email + '|' + surveyRoleInfo.name;
-      document.getElementById('requesterEmail').value = surveyRoleInfo.email;
-      document.getElementById('requesterName').value = surveyRoleInfo.name;
-      
-      console.log('✅ Requester list loaded:', requesters.length, 'users');
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error loading requesters:', error);
-      selectElement.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-      showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อผู้ขอได้', 'error', 4000);
-    })
-    .getAllRequesters();
-}
-
-/**
- * ⭐ อัปเดต Info Box สำหรับ Survey Role
- */
-function updateInfoBoxForSurveyRole() {
-  const infoBox = document.querySelector('.info-box');
-  
-  if (infoBox) {
-    infoBox.innerHTML = 
-      '<strong>👨‍💼 Survey Role Mode:</strong> เลือกเวลาได้ทุกช่วง ⭐<br>' +
-      '<strong>⚠️ หมายเหตุ:</strong> ระบบจะเช็คว่าทีมว่างตอน Submit<br>' +
-      '<strong>📅 จองวันหยุด:</strong> ได้ ✅<br>' +
-      '<strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>' +
-      '<strong>👥 ทีมงาน:</strong> ต้องมีทีมว่าง (เช็คตอน Submit)';
-    infoBox.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
-    infoBox.style.borderColor = '#f59e0b';
-  }
-}
-// ⭐ ฟังก์ชันใหม่: Reset เวลาเมื่อเปลี่ยนประเภทงาน
-function resetTimeSelections() {
-  const startTimeSelect = document.getElementById('startTime');
-  const endTimeSelect = document.getElementById('endTime');
-  const requestDate = document.getElementById('requestDate').value;
-  const workType = document.getElementById('workType').value;
-  
-  console.log('🔄 Work type changed:', workType);
-  
-  // Reset ค่า dropdown
-  startTimeSelect.value = '';
-  endTimeSelect.value = '';
-  
-  // Reset start time options
-  if (requestDate && workType) {
-    startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
-    startTimeSelect.disabled = false;
-    updateAvailableSlots(); // โหลดเวลาใหม่ตาม work type
-  } else if (!requestDate) {
-    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-    startTimeSelect.disabled = true;
-  }
-  
-  // Reset end time
-  resetEndTimeSelect();
-  
-  // แสดงข้อความแจ้งเตือน
-  if (workType) {
-    const selectedOption = document.getElementById('workType').options[document.getElementById('workType').selectedIndex];
-    const duration = selectedOption.getAttribute('data-duration') || '60';
-    showMessage('✅ เลือกงาน: ' + workType + ' (ระยะเวลา ' + duration + ' นาที)\n💡 กรุณาเลือกเวลาเริ่มต้นใหม่', 'info', 3000);
-  }
-}
-
-function loadManualLink() {
-  google.script.run
-    .withSuccessHandler(function(url) {
-      if (url && url.trim() !== '') {
-        var manualBtn = document.getElementById('manualLinkBtn');
-        var fullUrl = url + '?page=survey_manual';
+      var interval = setInterval(function() {
+        var elapsed = Date.now() - startTime;
+        var percentage = (elapsed / duration) * 100;
         
-        if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
-          manualBtn.href = fullUrl;
-          manualBtn.style.display = 'flex';
-          console.log('✅ Manual link loaded:', fullUrl);
+        if (percentage >= 100) {
+          clearInterval(interval);
+          removeToast(toast.querySelector('.toast-close'));
         } else {
-          console.warn('⚠️ Invalid URL format:', fullUrl);
+          progress.style.width = (100 - percentage) + '%';
         }
-      } else {
-        console.warn('⚠️ Manual URL is empty');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error loading manual link:', error);
-    })
-    .getManualUrl();
-}
-    
-function setMinDate() {
-  const today = new Date();
-  const dateString = today.getFullYear() + '-' + 
-                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(today.getDate()).padStart(2, '0');
-  document.getElementById('requestDate').setAttribute('min', dateString);
-}
-    
-function loadWorkTypes() {
-  const workTypeSelect = document.getElementById('workType');
-  workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
-  workTypeSelect.disabled = true;
-  
-  google.script.run
-    .withSuccessHandler(function(workTypes) {
-      workTypeSelect.innerHTML = '';
+      }, 50);
       
-      if (!workTypes || workTypes.length === 0) {
-        workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน Survey --</option>';
-        showMessage('ไม่พบข้อมูลประเภทงาน Survey', 'warning');
-      } else {
-        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
-        
-        workTypes.forEach(function(workType) {
-          const option = document.createElement('option');
-          option.value = workType.name; // ✅ ใช้ .name
-          option.textContent = workType.name + ' (' + workType.duration + ' นาที)'; // ✅ แสดง Duration
-          option.setAttribute('data-duration', workType.duration); // ✅ เก็บ Duration
-          workTypeSelect.appendChild(option);
-        });
-        
-        workTypeSelect.disabled = false;
+      toast._progressInterval = interval;
+    }
+
+    function removeToast(closeBtn) {
+      var toast = closeBtn.parentElement || closeBtn;
+      if (toast._progressInterval) {
+        clearInterval(toast._progressInterval);
       }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error loading work types:', error);
-      workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-      showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
-    })
-    .getWorkTypeList('Survey Work'); // ✅ ส่ง 'Survey Work' ← ⚠️ ตรงนี้ถูกแล้ว!
-}
-    
-function loadUserEmailAndName() {
-  const emailInput = document.getElementById('requesterEmail');
-  const nameInput = document.getElementById('requesterName');
-  const nameInfo = document.getElementById('nameInfo');
-  
-  emailInput.value = 'กำลังโหลด...';
-  emailInput.disabled = true;
-  
-  nameInput.value = '';
-  nameInput.placeholder = 'กำลังโหลด...';
-  nameInput.readOnly = true;
-  nameInput.style.background = '#ecfdf5';
-  nameInput.style.cursor = 'wait';
-  
-  google.script.run
-    .withSuccessHandler(function(email) {
-      if (email) {
-        emailInput.value = email;
-        emailInput.disabled = true;
-        console.log('✅ User email loaded:', email);
-        
-        google.script.run
-          .withSuccessHandler(function(result) {
-            if (result.success && result.name) {
-              nameInput.value = result.name;
-              nameInput.readOnly = false;
-              nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
-              nameInput.style.cursor = 'text';
-              nameInfo.innerHTML = '✅ พบข้อมูลในระบบ - สามารถแก้ไขได้';
-              nameInfo.style.color = '#16a34a';
-              console.log('✅ User name loaded:', result.name);
-            } else if (!result.success && result.message) {
-              nameInput.value = '';
-              nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
-              nameInput.readOnly = true;
-              nameInput.style.background = '#fee2e2';
-              nameInfo.innerHTML = '❌ ' + result.message;
-              nameInfo.style.color = '#dc2626';
-              showMessage(result.message, 'error');
-            } else {
-              nameInput.value = '';
-              nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
-              nameInput.readOnly = false;
-              nameInput.style.background = '#ffffff';
-              nameInput.style.cursor = 'text';
-              nameInfo.innerHTML = '📝 กรอกชื่อผู้ขอ - ระบบจะบันทึกในฐานข้อมูล';
-              nameInfo.style.color = '#16a34a';
-              console.log('⚠️ User not found - manual entry required');
-            }
-          })
-          .withFailureHandler(function(error) {
-            console.error('❌ Error loading name:', error);
-            nameInput.value = '';
-            nameInput.placeholder = 'เกิดข้อผิดพลาด';
-            nameInput.readOnly = false;
-            nameInput.style.background = '#ffffff';
-            nameInput.style.cursor = 'text';
-            nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาด - กรุณากรอกชื่อ';
-            nameInfo.style.color = '#f59e0b';
-          })
-          .getUserNameFromEmail(email);
-        
-      } else {
-        emailInput.value = '';
-        emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
-        emailInput.disabled = false;
-        
-        nameInput.value = '';
-        nameInput.placeholder = 'กรุณา Login ก่อน';
-        nameInput.readOnly = true;
-        nameInput.style.background = '#fee2e2';
-        nameInfo.innerHTML = '⚠️ กรุณา Login ด้วย Google Account';
-        nameInfo.style.color = '#dc2626';
-        
-        showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error loading email:', error);
-      emailInput.value = '';
-      emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
-      emailInput.disabled = false;
       
-      nameInput.value = '';
-      nameInput.placeholder = 'กรุณา Login ก่อน';
-      nameInput.readOnly = true;
-      nameInput.style.background = '#fee2e2';
-      nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาดในการดึงข้อมูล';
-      nameInfo.style.color = '#dc2626';
-      
-      showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
-    })
-    .getCurrentUserEmail();
-}
+      toast.style.animation = 'slideOutRight 0.3s ease-out';
+      setTimeout(function() {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 300);
+    }
 
     function showMessage(text, type, duration) {
       if (typeof duration === 'undefined') duration = 5000;
@@ -1472,11 +1076,455 @@ function loadUserEmailAndName() {
         messageDiv.style.display = 'none';
       }, duration);
     }
+
+    function updateSubmitProgress(step, totalSteps, stepText) {
+      var progressBar = document.getElementById('submitProgressBar');
+      var stepTextDiv = document.getElementById('submitStepText');
+      
+      if (!progressBar || !stepTextDiv) return;
+      
+      var percentage = (step / totalSteps) * 100;
+      progressBar.style.width = percentage + '%';
+      
+      if (stepText) {
+        stepTextDiv.textContent = '⏳ ' + stepText + ' (' + step + '/' + totalSteps + ')';
+        stepTextDiv.classList.add('show');
+      } else {
+        stepTextDiv.classList.remove('show');
+      }
+    }
+
+    function resetSubmitProgress() {
+      var progressBar = document.getElementById('submitProgressBar');
+      var stepTextDiv = document.getElementById('submitStepText');
+      
+      if (progressBar) progressBar.style.width = '0%';
+      if (stepTextDiv) {
+        stepTextDiv.classList.remove('show');
+        stepTextDiv.textContent = '';
+      }
+    }
+
+    function setSelectLoading(selectElement, loadingText) {
+      selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
+      selectElement.className += ' loading-select';
+      selectElement.disabled = true;
+    }
     
-    document.getElementById('requestDate').addEventListener('change', updateAvailableSlots);
-    document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
-    document.getElementById('surveyWorkForm').addEventListener('submit', handleSubmit);
-    
+    function resetEndTimeSelect() {
+      const endTimeSelect = document.getElementById('endTime');
+      endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
+      endTimeSelect.disabled = true;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      const fileInfo = document.getElementById('fileInfo');
+      const fileName = document.getElementById('fileName');
+      const fileSize = document.getElementById('fileSize');
+      
+      if (!file) {
+        clearLocationFile();
+        return;
+      }
+      
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showMessage('❌ ไฟล์มีขนาดใหญ่เกินไป (เกิน 10 MB)\nกรุณาเลือกไฟล์ที่เล็กกว่า', 'error');
+        event.target.value = '';
+        clearLocationFile();
+        return;
+      }
+      
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        showMessage('❌ ประเภทไฟล์ไม่ถูกต้อง\nรองรับเฉพาะ PDF, PNG, JPG, GIF', 'error');
+        event.target.value = '';
+        clearLocationFile();
+        return;
+      }
+      
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileInfo.style.display = 'block';
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        selectedFileData = {
+          name: file.name,
+          mimeType: file.type,
+          content: e.target.result.split(',')[1]
+        };
+        console.log('✅ File loaded:', file.name, '(', formatFileSize(file.size), ')');
+      };
+      reader.onerror = function(error) {
+        console.error('❌ Error reading file:', error);
+        showMessage('เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
+        clearLocationFile();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearLocationFile() {
+      document.getElementById('locationLayoutFile').value = '';
+      document.getElementById('fileInfo').style.display = 'none';
+      document.getElementById('fileName').textContent = '';
+      document.getElementById('fileSize').textContent = '';
+      selectedFileData = null;
+      console.log('🗑️ File cleared');
+    }
+
+    function setupFormChangeDetection() {
+      var form = document.getElementById('surveyWorkForm');
+      var inputs = form.querySelectorAll('input, select, textarea');
+      
+      inputs.forEach(function(input) {
+        if (input.readOnly || input.disabled) return;
+        
+        input.addEventListener('change', function() {
+          formChanged = true;
+          console.log('Form changed detected');
+        });
+        
+        input.addEventListener('input', function() {
+          formChanged = true;
+        });
+      });
+      
+      var fileInput = document.getElementById('locationLayoutFile');
+      if (fileInput) {
+        fileInput.addEventListener('change', function() {
+          if (this.files && this.files.length > 0) {
+            formChanged = true;
+            console.log('File selected - form changed');
+          }
+        });
+      }
+    }
+
+    function resetFormChangeFlag() {
+      formChanged = false;
+      isSubmitting = false;
+      console.log('Form change flag reset');
+    }
+
+    function setSubmittingFlag() {
+      isSubmitting = true;
+      console.log('Submitting flag set');
+    }
+
+    function formatDateYYYYMMDD(date) {
+      var year = date.getFullYear();
+      var month = String(date.getMonth() + 1).padStart(2, '0');
+      var day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    // ============================================
+    // 3. ⭐ MAIN FUNCTIONS
+    // ============================================
+
+    function checkUserRole() {
+      console.log('🔍 Checking user role...');
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('📥 Role check result:', result);
+          
+          if (result.success && result.isSurveyRole) {
+            isSurveyRole = true;
+            surveyRoleInfo = result;
+            
+            console.log('✅ Survey Role detected:', result.role);
+            
+            document.getElementById('surveyRoleIndicator').style.display = 'block';
+            document.getElementById('surveyRoleText').textContent = 
+              '👨‍💼 ' + result.role + ' Mode - ' + result.name;
+            
+            document.getElementById('requesterSelectionGroup').style.display = 'block';
+            document.getElementById('requesterNameGroup').style.display = 'none';
+            document.getElementById('requesterEmailGroup').style.display = 'none';
+            
+            loadRequesterList();
+            updateInfoBoxForSurveyRole();
+            
+          } else {
+            isSurveyRole = false;
+            loadUserEmailAndName();
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error checking role:', error);
+          isSurveyRole = false;
+          loadUserEmailAndName();
+        })
+        .validateSurveyRole();
+    }
+
+    function loadRequesterList() {
+      const selectElement = document.getElementById('requesterSelection');
+      selectElement.innerHTML = '<option value="">-- กำลังโหลดรายชื่อ... --</option>';
+      selectElement.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(requesters) {
+          selectElement.innerHTML = '';
+          
+          if (!requesters || requesters.length === 0) {
+            selectElement.innerHTML = '<option value="">-- ไม่พบรายชื่อผู้ขอ --</option>';
+            showToast('ไม่พบข้อมูล', 'ไม่พบรายชื่อผู้ขอในระบบ', 'warning', 4000);
+            return;
+          }
+          
+          const selfOption = document.createElement('option');
+          selfOption.value = surveyRoleInfo.email + '|' + surveyRoleInfo.name;
+          selfOption.textContent = '👤 ' + surveyRoleInfo.name + ' (ตัวเอง)';
+          selectElement.appendChild(selfOption);
+          
+          const divider = document.createElement('option');
+          divider.disabled = true;
+          divider.textContent = '───────────────';
+          selectElement.appendChild(divider);
+          
+          requesters.forEach(function(requester) {
+            const option = document.createElement('option');
+            option.value = requester.email + '|' + requester.name;
+            option.textContent = requester.displayText;
+            selectElement.appendChild(option);
+          });
+          
+          selectElement.disabled = false;
+          selectElement.value = surveyRoleInfo.email + '|' + surveyRoleInfo.name;
+          document.getElementById('requesterEmail').value = surveyRoleInfo.email;
+          document.getElementById('requesterName').value = surveyRoleInfo.name;
+          
+          console.log('✅ Requester list loaded:', requesters.length, 'users');
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error loading requesters:', error);
+          selectElement.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+          showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อผู้ขอได้', 'error', 4000);
+        })
+        .getAllRequesters();
+    }
+
+    function updateInfoBoxForSurveyRole() {
+      const infoBox = document.querySelector('.info-box');
+      
+      if (infoBox) {
+        infoBox.innerHTML = 
+          '<strong>👨‍💼 Survey Role Mode:</strong> เลือกเวลาได้ทุกช่วง ⭐<br>' +
+          '<strong>⚠️ หมายเหตุ:</strong> ระบบจะเช็คว่าทีมว่างตอน Submit<br>' +
+          '<strong>📅 จองวันหยุด:</strong> ได้ ✅<br>' +
+          '<strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>' +
+          '<strong>👥 ทีมงาน:</strong> ต้องมีทีมว่าง (เช็คตอน Submit)';
+        infoBox.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+        infoBox.style.borderColor = '#f59e0b';
+      }
+    }
+
+    function setMinDate() {
+      const today = new Date();
+      const dateString = today.getFullYear() + '-' + 
+                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(today.getDate()).padStart(2, '0');
+      document.getElementById('requestDate').setAttribute('min', dateString);
+    }
+
+    function loadWorkTypes() {
+      const workTypeSelect = document.getElementById('workType');
+      workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
+      workTypeSelect.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(workTypes) {
+          workTypeSelect.innerHTML = '';
+          
+          if (!workTypes || workTypes.length === 0) {
+            workTypeSelect.innerHTML = '<option value="">-- ไม่พบประเภทงาน Survey --</option>';
+            showMessage('ไม่พบข้อมูลประเภทงาน Survey', 'warning');
+          } else {
+            workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+            
+            workTypes.forEach(function(workType) {
+              const option = document.createElement('option');
+              option.value = workType.name;
+              option.textContent = workType.name + ' (' + workType.duration + ' นาที)';
+              option.setAttribute('data-duration', workType.duration);
+              workTypeSelect.appendChild(option);
+            });
+            
+            workTypeSelect.disabled = false;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error loading work types:', error);
+          workTypeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+          showMessage('เกิดข้อผิดพลาดในการโหลดประเภทงาน', 'error');
+        })
+        .getWorkTypeList('Survey Work');
+    }
+
+    function loadUserEmailAndName() {
+      const emailInput = document.getElementById('requesterEmail');
+      const nameInput = document.getElementById('requesterName');
+      const nameInfo = document.getElementById('nameInfo');
+      
+      emailInput.value = 'กำลังโหลด...';
+      emailInput.disabled = true;
+      
+      nameInput.value = '';
+      nameInput.placeholder = 'กำลังโหลด...';
+      nameInput.readOnly = true;
+      nameInput.style.background = '#ecfdf5';
+      nameInput.style.cursor = 'wait';
+      
+      google.script.run
+        .withSuccessHandler(function(email) {
+          if (email) {
+            emailInput.value = email;
+            emailInput.disabled = true;
+            console.log('✅ User email loaded:', email);
+            
+            google.script.run
+              .withSuccessHandler(function(result) {
+                if (result.success && result.name) {
+                  nameInput.value = result.name;
+                  nameInput.readOnly = false;
+                  nameInput.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+                  nameInput.style.cursor = 'text';
+                  nameInfo.innerHTML = '✅ พบข้อมูลในระบบ - สามารถแก้ไขได้';
+                  nameInfo.style.color = '#16a34a';
+                  console.log('✅ User name loaded:', result.name);
+                } else if (!result.success && result.message) {
+                  nameInput.value = '';
+                  nameInput.placeholder = 'ไม่มีสิทธิ์ใช้งาน';
+                  nameInput.readOnly = true;
+                  nameInput.style.background = '#fee2e2';
+                  nameInfo.innerHTML = '❌ ' + result.message;
+                  nameInfo.style.color = '#dc2626';
+                  showMessage(result.message, 'error');
+                } else {
+                  nameInput.value = '';
+                  nameInput.placeholder = 'กรอกชื่อ-นามสกุล';
+                  nameInput.readOnly = false;
+                  nameInput.style.background = '#ffffff';
+                  nameInput.style.cursor = 'text';
+                  nameInfo.innerHTML = '📝 กรอกชื่อผู้ขอ - ระบบจะบันทึกในฐานข้อมูล';
+                  nameInfo.style.color = '#16a34a';
+                  console.log('⚠️ User not found - manual entry required');
+                }
+              })
+              .withFailureHandler(function(error) {
+                console.error('❌ Error loading name:', error);
+                nameInput.value = '';
+                nameInput.placeholder = 'เกิดข้อผิดพลาด';
+                nameInput.readOnly = false;
+                nameInput.style.background = '#ffffff';
+                nameInput.style.cursor = 'text';
+                nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาด - กรุณากรอกชื่อ';
+                nameInfo.style.color = '#f59e0b';
+              })
+              .getUserNameFromEmail(email);
+            
+          } else {
+            emailInput.value = '';
+            emailInput.placeholder = 'ไม่สามารถดึงอีเมลได้ - กรุณา Login';
+            emailInput.disabled = false;
+            
+            nameInput.value = '';
+            nameInput.placeholder = 'กรุณา Login ก่อน';
+            nameInput.readOnly = true;
+            nameInput.style.background = '#fee2e2';
+            nameInfo.innerHTML = '⚠️ กรุณา Login ด้วย Google Account';
+            nameInfo.style.color = '#dc2626';
+            
+            showMessage('⚠️ กรุณา Login ด้วย Google Account', 'warning');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error loading email:', error);
+          emailInput.value = '';
+          emailInput.placeholder = 'เกิดข้อผิดพลาด - กรุณา Login';
+          emailInput.disabled = false;
+          
+          nameInput.value = '';
+          nameInput.placeholder = 'กรุณา Login ก่อน';
+          nameInput.readOnly = true;
+          nameInput.style.background = '#fee2e2';
+          nameInfo.innerHTML = '⚠️ เกิดข้อผิดพลาดในการดึงข้อมูล';
+          nameInfo.style.color = '#dc2626';
+          
+          showMessage('เกิดข้อผิดพลาดในการดึงอีเมล', 'error');
+        })
+        .getCurrentUserEmail();
+    }
+
+    function resetTimeSelections() {
+      const startTimeSelect = document.getElementById('startTime');
+      const endTimeSelect = document.getElementById('endTime');
+      const requestDate = document.getElementById('requestDate').value;
+      const workType = document.getElementById('workType').value;
+      
+      console.log('🔄 Work type changed:', workType);
+      
+      startTimeSelect.value = '';
+      endTimeSelect.value = '';
+      
+      if (requestDate && workType) {
+        startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+        startTimeSelect.disabled = false;
+        updateAvailableSlots();
+      } else if (!requestDate) {
+        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+        startTimeSelect.disabled = true;
+      }
+      
+      resetEndTimeSelect();
+      
+      if (workType) {
+        const selectedOption = document.getElementById('workType').options[document.getElementById('workType').selectedIndex];
+        const duration = selectedOption.getAttribute('data-duration') || '60';
+        showMessage('✅ เลือกงาน: ' + workType + ' (ระยะเวลา ' + duration + ' นาที)\n💡 กรุณาเลือกเวลาเริ่มต้นใหม่', 'info', 3000);
+      }
+    }
+
+    function loadManualLink() {
+      google.script.run
+        .withSuccessHandler(function(url) {
+          if (url && url.trim() !== '') {
+            var manualBtn = document.getElementById('manualLinkBtn');
+            var fullUrl = url + '?page=survey_manual';
+            
+            if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
+              manualBtn.href = fullUrl;
+              manualBtn.style.display = 'flex';
+              console.log('✅ Manual link loaded:', fullUrl);
+            } else {
+              console.warn('⚠️ Invalid URL format:', fullUrl);
+            }
+          } else {
+            console.warn('⚠️ Manual URL is empty');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error loading manual link:', error);
+        })
+        .getManualUrl();
+    }
+
+    // ============================================
+    // 4. ⭐ TIME SLOT FUNCTIONS
+    // ============================================
+
     function updateAvailableSlots() {
       const date = document.getElementById('requestDate').value;
       const startTimeSelect = document.getElementById('startTime');
@@ -1484,21 +1532,59 @@ function loadUserEmailAndName() {
       
       setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
       resetEndTimeSelect();
+      hideTeamSelection();
       
-      if (date) {
-        const selectedDate = new Date(date + 'T00:00:00');
-        const today = new Date();
-        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      if (!date) {
+        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+        startTimeSelect.disabled = true;
+        return;
+      }
+      
+      const selectedDate = new Date(date + 'T00:00:00');
+      const today = new Date();
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      
+      if (selectedDateOnly < todayDateOnly) {
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
+        startTimeSelect.disabled = true;
+        showMessage('ไม่สามารถเลือกวันที่ผ่านไปแล้ว', 'warning');
+        return;
+      }
+      
+      if (isSurveyRole) {
+        console.log('⭐ Loading ALL time slots for Survey Role');
         
-        if (selectedDateOnly < todayDateOnly) {
-          startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-          startTimeSelect.innerHTML = '<option value="">-- ไม่สามารถเลือกวันที่ผ่านไปแล้ว --</option>';
-          startTimeSelect.disabled = true;
-          showMessage('ไม่สามารถเลือกวันที่ผ่านไปแล้ว', 'warning');
-          return;
+        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+        startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+        
+        var allSlots = [];
+        for (var hour = 9; hour <= 19; hour++) {
+          for (var minute = 0; minute < 60; minute += 30) {
+            if (hour === 19 && minute === 30) break;
+            var time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+            allSlots.push(time);
+          }
         }
         
+        allSlots.forEach(function(slot) {
+          const option = document.createElement('option');
+          option.value = slot;
+          option.textContent = slot + ' น.';
+          startTimeSelect.appendChild(option);
+        });
+        
+        startTimeSelect.disabled = false;
+        
+        showToast(
+          '⭐ Survey Role Mode', 
+          'เลือกเวลาได้ทุกช่วง (' + allSlots.length + ' slots)\n💡 เลือกเวลาสิ้นสุดเพื่อเลือกทีม', 
+          'info', 
+          5000
+        );
+        
+      } else {
         google.script.run
           .withSuccessHandler(function(availableSlots) {            
             startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
@@ -1529,917 +1615,717 @@ function loadUserEmailAndName() {
             showMessage('เกิดข้อผิดพลาดในการโหลดเวลาที่ว่าง: ' + error.message, 'error');
           })
           .getSurveyAvailableTimeSlots(date);
-      } else {
-        startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-        startTimeSelect.disabled = true;
       }
     }
-    
-    // ⚡ OPTIMIZED: Update End Time Slots (ไม่เช็ค availability)
-function updateEndTimeSlots() {
-  const date = document.getElementById('requestDate').value;
-  const startTime = document.getElementById('startTime').value;
-  const endTimeSelect = document.getElementById('endTime');
-  
-  if (!startTime) {
-    resetEndTimeSelect();
-    return;
-  }
-  
-  // ⚡ แสดง loading แบบเร็ว
-  endTimeSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-  endTimeSelect.className += ' loading-select';
-  endTimeSelect.disabled = true;
-  
-  if (date && startTime) {
-    // ดึง Duration
-    const workTypeSelect = document.getElementById('workType');
-    const selectedOption = workTypeSelect.options[workTypeSelect.selectedIndex];
-    const duration = parseInt(selectedOption.getAttribute('data-duration')) || 60;
-    const workType = workTypeSelect.value;
-    
-    const startParts = startTime.split(':');
-    const startHour = parseInt(startParts[0]);
-    const startMinute = parseInt(startParts[1]);
-    
-    // คำนวณ End Time
-    const totalMinutes = (startHour * 60) + startMinute + duration;
-    const endHour = Math.floor(totalMinutes / 60);
-    const endMin = totalMinutes % 60;
-    
-    const defaultEndTime = endHour.toString().padStart(2, '0') + ':' + 
-                          endMin.toString().padStart(2, '0');
-    
-    // ⚡ เรียก backend แบบเร็ว
-    google.script.run
-      .withSuccessHandler(function(availableEndTimes) {
-        // ⚡ ลด class loading ทันที
-        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-        endTimeSelect.innerHTML = '';
-        
-        if (!availableEndTimes || availableEndTimes.length === 0) {
-          endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุด --</option>';
-          endTimeSelect.disabled = true;
-          showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
-        } else {
-          endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
-          
-          // ⚡ ใช้ DocumentFragment เพื่อความเร็ว
-          const fragment = document.createDocumentFragment();
-          
-          availableEndTimes.forEach(function(time) {
-            const option = document.createElement('option');
-            option.value = time;
-            option.textContent = time + ' น.';
-            if (time === defaultEndTime) {
-              option.selected = true;
-            }
-            fragment.appendChild(option);
-          });
-          
-          endTimeSelect.appendChild(fragment);
-          endTimeSelect.disabled = false;
-          
-          if (availableEndTimes.includes(defaultEndTime)) {
-            showMessage('✅ เวลาสิ้นสุด: ' + defaultEndTime + ' น.', 'info', 2000);
-          }
-        }
-      })
-      .withFailureHandler(function(error) {
-        endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
-        endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-        endTimeSelect.disabled = true;
-        showMessage('เกิดข้อผิดพลาด', 'error');
-      })
-      .getSurveyAvailableEndTimes(date, startTime, workType);
-  }
-}
-    
-    function setSelectLoading(selectElement, loadingText) {
-      selectElement.innerHTML = '<option value="">' + loadingText + '</option>';
-      selectElement.className += ' loading-select';
-      selectElement.disabled = true;
-    }
-    
-    function resetEndTimeSelect() {
+
+    function updateEndTimeSlots() {
+      const date = document.getElementById('requestDate').value;
+      const startTime = document.getElementById('startTime').value;
       const endTimeSelect = document.getElementById('endTime');
-      endTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>';
-      endTimeSelect.disabled = true;
-    }
-
-    // ⭐ Toast Notification System
-function showToast(title, message, type, duration) {
-  if (typeof type === 'undefined') type = 'info';
-  if (typeof duration === 'undefined') duration = 5000;
-  
-  var container = document.getElementById('toastContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toastContainer';
-    container.className = 'toast-container';
-    document.body.appendChild(container);
-  }
-  
-  var icons = {
-    success: '✅',
-    error: '❌',
-    warning: '⚠️',
-    info: 'ℹ️'
-  };
-  
-  var toast = document.createElement('div');
-  toast.className = 'toast ' + type;
-  toast.innerHTML = `
-    <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
-    <div class="toast-content">
-      <div class="toast-title">${title}</div>
-      ${message ? '<div class="toast-message">' + message + '</div>' : ''}
-    </div>
-    <button class="toast-close" onclick="removeToast(this)">×</button>
-    <div class="toast-progress"></div>
-  `;
-  
-  container.appendChild(toast);
-  
-  var progress = toast.querySelector('.toast-progress');
-  var startTime = Date.now();
-  
-  var interval = setInterval(function() {
-    var elapsed = Date.now() - startTime;
-    var percentage = (elapsed / duration) * 100;
-    
-    if (percentage >= 100) {
-      clearInterval(interval);
-      removeToast(toast.querySelector('.toast-close'));
-    } else {
-      progress.style.width = (100 - percentage) + '%';
-    }
-  }, 50);
-  
-  toast._progressInterval = interval;
-}
-
-function removeToast(closeBtn) {
-  var toast = closeBtn.parentElement || closeBtn;
-  if (toast._progressInterval) {
-    clearInterval(toast._progressInterval);
-  }
-  
-  toast.style.animation = 'slideOutRight 0.3s ease-out';
-  setTimeout(function() {
-    if (toast.parentElement) {
-      toast.parentElement.removeChild(toast);
-    }
-  }, 300);
-}
-
-// ⭐ Progress Bar in Submit Button
-function updateSubmitProgress(step, totalSteps, stepText) {
-  var progressBar = document.getElementById('submitProgressBar');
-  var stepTextDiv = document.getElementById('submitStepText');
-  
-  if (!progressBar || !stepTextDiv) return;
-  
-  var percentage = (step / totalSteps) * 100;
-  progressBar.style.width = percentage + '%';
-  
-  if (stepText) {
-    stepTextDiv.textContent = '⏳ ' + stepText + ' (' + step + '/' + totalSteps + ')';
-    stepTextDiv.classList.add('show');
-  } else {
-    stepTextDiv.classList.remove('show');
-  }
-}
-
-function resetSubmitProgress() {
-  var progressBar = document.getElementById('submitProgressBar');
-  var stepTextDiv = document.getElementById('submitStepText');
-  
-  if (progressBar) progressBar.style.width = '0%';
-  if (stepTextDiv) {
-    stepTextDiv.classList.remove('show');
-    stepTextDiv.textContent = '';
-  }
-}
-
-/**
- * ⭐ Global Variable สำหรับเก็บข้อมูลทีม
- */
-var availableSurveyTeams = [];
-var selectedTeamIds = [];
-
-/**
- * ⭐ โหลดทีม Survey ที่ว่างในช่วงเวลาที่เลือก
- */
-function loadAvailableSurveyTeams() {
-  if (!isSurveyRole) return;
-  
-  var date = document.getElementById('requestDate').value;
-  var startTime = document.getElementById('startTime').value;
-  var endTime = document.getElementById('endTime').value;
-  
-  if (!date || !startTime || !endTime) {
-    hideTeamSelection();
-    return;
-  }
-  
-  console.log('🔍 Loading available Survey teams for:', date, startTime, '-', endTime);
-  
-  showToast('กำลังโหลด', 'กำลังค้นหาทีม Survey ที่ว่าง...', 'info', 3000);
-  
-  google.script.run
-    .withSuccessHandler(function(teams) {
-      console.log('📥 Received teams:', teams);
       
-      availableSurveyTeams = teams;
-      displayTeamCheckboxes(teams);
-      
-      if (teams && teams.length > 0) {
-        showTeamSelection();
-        showToast('✅ พบทีมว่าง', 'มี ' + teams.length + ' ทีมว่าง - กรุณาเลือกทีม', 'success', 4000);
-      } else {
-        hideTeamSelection();
-        showToast('⚠️ ไม่มีทีมว่าง', 'ไม่มีทีม Survey ว่างในเวลานี้\n💡 ลองเลือกเวลาอื่น', 'warning', 5000);
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error loading teams:', error);
-      hideTeamSelection();
-      showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลทีมได้: ' + error.message, 'error', 5000);
-    })
-    .getAvailableSurveyTeamsForTime(date, startTime, endTime);
-}
-
-/**
- * ⭐ แสดงรายการทีมเป็น Checkbox
- */
-function displayTeamCheckboxes(teams) {
-  var container = document.getElementById('teamCheckboxContainer');
-  
-  if (!container) return;
-  
-  container.innerHTML = '';
-  
-  if (!teams || teams.length === 0) {
-    container.innerHTML = '<div class="no-teams-available">❌ ไม่มีทีม Survey ว่างในเวลานี้</div>';
-    return;
-  }
-  
-  teams.forEach(function(team) {
-    var item = document.createElement('div');
-    item.className = 'team-checkbox-item';
-    item.setAttribute('data-team-id', team.resourceId);
-    
-    var checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = 'team_' + team.resourceId;
-    checkbox.value = team.resourceId;
-    checkbox.onchange = function() {
-      toggleTeamSelection(team.resourceId);
-      updateSelectedItem(this.checked, item);
-    };
-    
-    var label = document.createElement('label');
-    label.className = 'team-checkbox-label';
-    label.htmlFor = 'team_' + team.resourceId;
-    label.style.cursor = 'pointer';
-    
-    var teamName = document.createElement('span');
-    teamName.textContent = team.resourceName;
-    
-    var workloadBadge = document.createElement('span');
-    workloadBadge.className = 'team-workload-badge';
-    
-    if (team.workload === 0) {
-      workloadBadge.textContent = '✅ ว่าง';
-    } else if (team.workload <= 2) {
-      workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
-    } else {
-      workloadBadge.className += ' busy';
-      workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
-    }
-    
-    label.appendChild(teamName);
-    label.appendChild(workloadBadge);
-    
-    item.appendChild(checkbox);
-    item.appendChild(label);
-    
-    // Click ที่ item ก็สามารถเลือกได้
-    item.onclick = function(e) {
-      if (e.target !== checkbox) {
-        checkbox.checked = !checkbox.checked;
-        checkbox.onchange();
-      }
-    };
-    
-    container.appendChild(item);
-  });
-}
-
-/**
- * ⭐ Toggle Team Selection
- */
-function toggleTeamSelection(teamId) {
-  var index = selectedTeamIds.indexOf(teamId);
-  
-  if (index === -1) {
-    selectedTeamIds.push(teamId);
-    console.log('✅ Selected team:', teamId);
-  } else {
-    selectedTeamIds.splice(index, 1);
-    console.log('❌ Deselected team:', teamId);
-  }
-  
-  updateSelectedTeamsSummary();
-}
-
-/**
- * ⭐ อัปเดตสไตล์ของ Item ที่เลือก
- */
-function updateSelectedItem(isSelected, item) {
-  if (isSelected) {
-    item.classList.add('selected');
-  } else {
-    item.classList.remove('selected');
-  }
-}
-
-/**
- * ⭐ Select All Teams
- */
-function selectAllTeams() {
-  selectedTeamIds = [];
-  
-  var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
-  
-  checkboxes.forEach(function(checkbox) {
-    checkbox.checked = true;
-    selectedTeamIds.push(checkbox.value);
-    
-    var item = checkbox.closest('.team-checkbox-item');
-    if (item) {
-      item.classList.add('selected');
-    }
-  });
-  
-  updateSelectedTeamsSummary();
-  showToast('✅ เลือกทั้งหมด', 'เลือกทีมทั้งหมด ' + selectedTeamIds.length + ' ทีม', 'success', 2000);
-}
-
-/**
- * ⭐ Clear Team Selection
- */
-function clearTeamSelection() {
-  selectedTeamIds = [];
-  
-  var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
-  
-  checkboxes.forEach(function(checkbox) {
-    checkbox.checked = false;
-    
-    var item = checkbox.closest('.team-checkbox-item');
-    if (item) {
-      item.classList.remove('selected');
-    }
-  });
-  
-  updateSelectedTeamsSummary();
-  showToast('ℹ️ ล้างแล้ว', 'ล้างการเลือกทีมแล้ว', 'info', 2000);
-}
-
-/**
- * ⭐ อัปเดตสรุปทีมที่เลือก
- */
-function updateSelectedTeamsSummary() {
-  var summary = document.getElementById('selectedTeamsSummary');
-  
-  if (!summary) return;
-  
-  if (selectedTeamIds.length === 0) {
-    summary.classList.remove('show');
-    return;
-  }
-  
-  var selectedTeamNames = availableSurveyTeams
-    .filter(function(team) {
-      return selectedTeamIds.indexOf(team.resourceId) !== -1;
-    })
-    .map(function(team) {
-      return team.resourceName;
-    });
-  
-  summary.innerHTML = 
-    '<strong>✓ เลือกแล้ว:</strong> ' + selectedTeamIds.length + ' ทีม<br>' +
-    '<small>' + selectedTeamNames.join(', ') + '</small>';
-  
-  summary.classList.add('show');
-}
-
-/**
- * ⭐ แสดง Team Selection
- */
-function showTeamSelection() {
-  var selection = document.getElementById('surveyTeamSelection');
-  if (selection) {
-    selection.classList.add('show');
-  }
-}
-
-/**
- * ⭐ ซ่อน Team Selection
- */
-function hideTeamSelection() {
-  var selection = document.getElementById('surveyTeamSelection');
-  if (selection) {
-    selection.classList.remove('show');
-  }
-  selectedTeamIds = [];
-  availableSurveyTeams = [];
-}
-
-function handleSubmit(event) {
-  event.preventDefault();
-  
-  const submitBtn = document.getElementById('submitBtn');
-  const loading = document.querySelector('.loading');
-  
-  const formData = {
-    requestDate: document.getElementById('requestDate').value,
-    workType: document.getElementById('workType').value,
-    startTime: document.getElementById('startTime').value,
-    endTime: document.getElementById('endTime').value,
-    description: document.getElementById('description').value.trim(),
-    location: document.getElementById('location').value.trim(),
-    requesterName: document.getElementById('requesterName').value.trim(),
-    requesterEmail: document.getElementById('requesterEmail').value.trim(),
-    locationLayoutFile: selectedFileData
-  };
-  
-  const requiredFields = ['requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
-  const missingFields = requiredFields.filter(field => !formData[field]);
-  
-  if (missingFields.length > 0) {
-    showToast('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'error', 4000);
-    showMessage('❌ กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-    return;
-  }
-  
-  // ⭐⭐⭐ Survey Role - ต้องเลือกทีมก่อน Submit
-  if (isSurveyRole) {
-    if (selectedTeamIds.length === 0) {
-      showToast('⚠️ ยังไม่เลือกทีม', 'กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'warning', 5000);
-      showMessage('❌ กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'error');
-      
-      // Scroll to team selection
-      var teamSelection = document.getElementById('surveyTeamSelection');
-      if (teamSelection) {
-        teamSelection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      
-      return;
-    }
-    
-    // ⭐ เพิ่มข้อมูลทีมที่เลือกเข้า formData
-    var selectedTeamNames = availableSurveyTeams
-      .filter(function(team) {
-        return selectedTeamIds.indexOf(team.resourceId) !== -1;
-      })
-      .map(function(team) {
-        return team.resourceName;
-      });
-    
-    formData.selectedTeams = selectedTeamNames.join(',');
-    formData.selectedTeamIds = selectedTeamIds.join(',');
-    
-    console.log('✅ Selected teams:', formData.selectedTeams);
-  }
-  
-  // ❌ Regular User - ไม่ต้องเลือกทีม (Auto)
-  const confirmMessage = 
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '📋 ยืนยันการส่ง Survey Work Request\n' +
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-    '📅 วันที่: ' + formData.requestDate + '\n' +
-    '🔧 ประเภทงาน: ' + formData.workType + '\n' +
-    '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime + ' น.\n' +
-    (isSurveyRole ? '👥 ทีม: ' + formData.selectedTeams + '\n' : '') +
-    '📍 สถานที่: ' + formData.location + '\n' +
-    '👤 ผู้ขอ: ' + formData.requesterName + '\n' +
-    '📧 อีเมล: ' + formData.requesterEmail + '\n' +
-    (selectedFileData ? '📎 ไฟล์: ' + selectedFileData.name + '\n' : '📎 ไฟล์: ไม่มีไฟล์แนบ\n') +
-    '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '✅ ต้องการส่งคำขอนี้หรือไม่?';
-  
-  if (!confirm(confirmMessage)) {
-    console.log('❌ User cancelled submission');
-    showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
-    return;
-  }
-  
-  proceedWithSubmit(formData, submitBtn, loading);
-}
-  
-  // ❌ Regular User - Submit เลย (เพราะเลือกได้แค่เวลาที่ว่าง)
-  const confirmMessage = 
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '📋 ยืนยันการส่ง Survey Work Request\n' +
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-    '📅 วันที่: ' + formData.requestDate + '\n' +
-    '🔧 ประเภทงาน: ' + formData.workType + '\n' +
-    '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime + ' น.\n' +
-    '📍 สถานที่: ' + formData.location + '\n' +
-    '👤 ผู้ขอ: ' + formData.requesterName + '\n' +
-    '📧 อีเมล: ' + formData.requesterEmail + '\n' +
-    (selectedFileData ? '📎 ไฟล์: ' + selectedFileData.name + '\n' : '📎 ไฟล์: ไม่มีไฟล์แนบ\n') +
-    '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-    '✅ ต้องการส่งคำขอนี้หรือไม่?';
-  
-  if (!confirm(confirmMessage)) {
-    console.log('❌ User cancelled submission');
-    showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
-    return;
-  }
-  
-  proceedWithSubmit(formData, submitBtn, loading);
-}
-
-/**
- * ⭐ ดำเนินการ Submit จริง
- */
-function proceedWithSubmit(formData, submitBtn, loading) {
-  setSubmittingFlag();
-  submitBtn.disabled = true;
-  loading.style.display = 'block';
-  
-  // ⭐ เริ่ม Progress
-  showToast('กำลังประมวลผล', 'กำลังบันทึก Survey Work Request...', 'info', 3000);
-  updateSubmitProgress(1, 6, 'ตรวจสอบข้อมูล');
-  
-  google.script.run
-    .withSuccessHandler(function(result) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      
-      if (result && result.success) {
-        // ⭐ อัปเดต Progress ตามขั้นตอน
-        setTimeout(function() { updateSubmitProgress(2, 6, 'ตรวจสอบผู้ใช้'); }, 200);
-        setTimeout(function() { updateSubmitProgress(3, 6, 'จัดทีม Survey'); }, 400);
-        setTimeout(function() { updateSubmitProgress(4, 6, 'อัปโหลดไฟล์'); }, 600);
-        setTimeout(function() { updateSubmitProgress(5, 6, 'บันทึกข้อมูล'); }, 800);
-        setTimeout(function() { updateSubmitProgress(6, 6, 'สร้าง Calendar'); }, 1000);
-        
-        setTimeout(function() {
-          updateSubmitProgress(6, 6, '✅ สำเร็จ');
-          
-          setTimeout(function() {
-            resetSubmitProgress();
-          }, 2000);
-          
-          let successMsg = result.message || '✅ บันทึก Survey Work Request เรียบร้อยแล้ว';
-          let toastMsg = 'บันทึกข้อมูลเรียบร้อย';
-
-          if (result.recordedBy) {
-            toastMsg += '\n📝 บันทึกโดย: ' + result.recordedBy;
-          }
-          
-          if (result.fileName) {
-            toastMsg += ' และอัปโหลดไฟล์สำเร็จ';
-          }
-          
-          showToast('✅ สำเร็จ!', toastMsg, 'success', 8000);
-          showMessage('✅ ' + successMsg, 'success', 10000);
-          resetFormChangeFlag();
-          resetForm();
-        }, 1200);
-        
-      } else {
-        resetSubmitProgress();
-        isSubmitting = false;
-        const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-        showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
-        showMessage('❌ ' + errorMessage, 'error');
-      }
-    })
-    .withFailureHandler(function(error) {
-      loading.style.display = 'none';
-      submitBtn.disabled = false;
-      resetSubmitProgress();
-      isSubmitting = false;
-      
-      const errorMessage = error.message || error.toString();
-      showToast('❌ เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้: ' + errorMessage, 'error', 8000);
-      showMessage('❌ เกิดข้อผิดพลาดในการบันทึก:\n' + errorMessage, 'error');
-    })
-    .saveSurveyWorkRequirement(formData);
-}
-    
-function resetForm() {
-  document.getElementById('surveyWorkForm').reset();
-  document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-  document.getElementById('startTime').disabled = true;
-  resetEndTimeSelect();
-  clearLocationFile();
-  loadWorkTypes();
-  loadUserEmailAndName();
-  setMinDate();
-  resetFormChangeFlag(); // ⭐ เพิ่มบรรทัดนี้
-}
-
-/**
- * ⭐ Helper: แปลง Date เป็น YYYY-MM-DD
- */
-function formatDateYYYYMMDD(date) {
-  var year = date.getFullYear();
-  var month = String(date.getMonth() + 1).padStart(2, '0');
-  var day = String(date.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;
-}
-
-function checkTodayHolidayStatus() {
-  console.log('🔍 Checking today holiday status (Survey)...');
-  
-  google.script.run
-    .withSuccessHandler(function(holidays) {
-      if (!holidays || holidays.length === 0) {
-        console.log('✅ No holidays data');
+      if (!startTime) {
+        resetEndTimeSelect();
         return;
       }
       
-      var now = new Date();
-      var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      var currentHour = now.getHours();
+      endTimeSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+      endTimeSelect.className += ' loading-select';
+      endTimeSelect.disabled = true;
       
-      var tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      var tomorrowStr = formatDateYYYYMMDD(tomorrow);
+      if (date && startTime) {
+        const workTypeSelect = document.getElementById('workType');
+        const selectedOption = workTypeSelect.options[workTypeSelect.selectedIndex];
+        const duration = parseInt(selectedOption.getAttribute('data-duration')) || 60;
+        const workType = workTypeSelect.value;
+        
+        const startParts = startTime.split(':');
+        const startHour = parseInt(startParts[0]);
+        const startMinute = parseInt(startParts[1]);
+        
+        const totalMinutes = (startHour * 60) + startMinute + duration;
+        const endHour = Math.floor(totalMinutes / 60);
+        const endMin = totalMinutes % 60;
+        
+        const defaultEndTime = endHour.toString().padStart(2, '0') + ':' + 
+                              endMin.toString().padStart(2, '0');
+        
+        google.script.run
+          .withSuccessHandler(function(availableEndTimes) {
+            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+            endTimeSelect.innerHTML = '';
+            
+            if (!availableEndTimes || availableEndTimes.length === 0) {
+              endTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาสิ้นสุด --</option>';
+              endTimeSelect.disabled = true;
+              showMessage('ไม่มีเวลาสิ้นสุดที่เหมาะสม', 'warning');
+            } else {
+              endTimeSelect.innerHTML = '<option value="">-- เลือกเวลาสิ้นสุด --</option>';
+              
+              const fragment = document.createDocumentFragment();
+              
+              availableEndTimes.forEach(function(time) {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time + ' น.';
+                if (time === defaultEndTime) {
+                  option.selected = true;
+                }
+                fragment.appendChild(option);
+              });
+              
+              endTimeSelect.appendChild(fragment);
+              endTimeSelect.disabled = false;
+              
+              if (availableEndTimes.includes(defaultEndTime)) {
+                showMessage('✅ เวลาสิ้นสุด: ' + defaultEndTime + ' น.', 'info', 2000);
+              }
+            }
+          })
+          .withFailureHandler(function(error) {
+            endTimeSelect.className = endTimeSelect.className.replace(' loading-select', '');
+            endTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+            endTimeSelect.disabled = true;
+            showMessage('เกิดข้อผิดพลาด', 'error');
+          })
+          .getSurveyAvailableEndTimes(date, startTime, workType);
+      }
+    }
+
+    // ============================================
+    // 5. ⭐ TEAM SELECTION FUNCTIONS
+    // ============================================
+
+    function loadAvailableSurveyTeams() {
+      if (!isSurveyRole) return;
       
-      var tomorrowHoliday = null;
-      var consecutiveDays = 0;
+      var date = document.getElementById('requestDate').value;
+      var startTime = document.getElementById('startTime').value;
+      var endTime = document.getElementById('endTime').value;
       
-      holidays.forEach(function(holiday) {
-        if (holiday.date === tomorrowStr) {
-          tomorrowHoliday = holiday;
+      if (!date || !startTime || !endTime) {
+        hideTeamSelection();
+        return;
+      }
+      
+      console.log('🔍 Loading available Survey teams for:', date, startTime, '-', endTime);
+      
+      showToast('กำลังโหลด', 'กำลังค้นหาทีม Survey ที่ว่าง...', 'info', 3000);
+      
+      google.script.run
+        .withSuccessHandler(function(teams) {
+          console.log('📥 Received teams:', teams);
+          
+          availableSurveyTeams = teams;
+          displayTeamCheckboxes(teams);
+          
+          if (teams && teams.length > 0) {
+            showTeamSelection();
+            showToast('✅ พบทีมว่าง', 'มี ' + teams.length + ' ทีมว่าง - กรุณาเลือกทีม', 'success', 4000);
+          } else {
+            hideTeamSelection();
+            showToast('⚠️ ไม่มีทีมว่าง', 'ไม่มีทีม Survey ว่างในเวลานี้\n💡 ลองเลือกเวลาอื่น', 'warning', 5000);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error loading teams:', error);
+          hideTeamSelection();
+          showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลทีมได้: ' + error.message, 'error', 5000);
+        })
+        .getAvailableSurveyTeamsForTime(date, startTime, endTime);
+    }
+
+    function displayTeamCheckboxes(teams) {
+      var container = document.getElementById('teamCheckboxContainer');
+      
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      if (!teams || teams.length === 0) {
+        container.innerHTML = '<div class="no-teams-available">❌ ไม่มีทีม Survey ว่างในเวลานี้</div>';
+        return;
+      }
+      
+      teams.forEach(function(team) {
+        var item = document.createElement('div');
+        item.className = 'team-checkbox-item';
+        item.setAttribute('data-team-id', team.resourceId);
+        
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'team_' + team.resourceId;
+        checkbox.value = team.resourceId;
+        checkbox.onchange = function() {
+          toggleTeamSelection(team.resourceId);
+          updateSelectedItem(this.checked, item);
+        };
+        
+        var label = document.createElement('label');
+        label.className = 'team-checkbox-label';
+        label.htmlFor = 'team_' + team.resourceId;
+        label.style.cursor = 'pointer';
+        
+        var teamName = document.createElement('span');
+        teamName.textContent = team.resourceName;
+        
+        var workloadBadge = document.createElement('span');
+        workloadBadge.className = 'team-workload-badge';
+        
+        if (team.workload === 0) {
+          workloadBadge.textContent = '✅ ว่าง';
+        } else if (team.workload <= 2) {
+          workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
+        } else {
+          workloadBadge.className += ' busy';
+          workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
+        }
+        
+        label.appendChild(teamName);
+        label.appendChild(workloadBadge);
+        
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        
+        item.onclick = function(e) {
+          if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            checkbox.onchange();
+          }
+        };
+        
+        container.appendChild(item);
+      });
+    }
+
+    function toggleTeamSelection(teamId) {
+      var index = selectedTeamIds.indexOf(teamId);
+      
+      if (index === -1) {
+        selectedTeamIds.push(teamId);
+        console.log('✅ Selected team:', teamId);
+      } else {
+        selectedTeamIds.splice(index, 1);
+        console.log('❌ Deselected team:', teamId);
+      }
+      
+      updateSelectedTeamsSummary();
+    }
+
+    function updateSelectedItem(isSelected, item) {
+      if (isSelected) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    }
+
+    function selectAllTeams() {
+      selectedTeamIds = [];
+      
+      var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
+      
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = true;
+        selectedTeamIds.push(checkbox.value);
+        
+        var item = checkbox.closest('.team-checkbox-item');
+        if (item) {
+          item.classList.add('selected');
         }
       });
       
-      if (tomorrowHoliday) {
-        var checkDate = new Date(tomorrow);
+      updateSelectedTeamsSummary();
+      showToast('✅ เลือกทั้งหมด', 'เลือกทีมทั้งหมด ' + selectedTeamIds.length + ' ทีม', 'success', 2000);
+    }
+
+    function clearTeamSelection() {
+      selectedTeamIds = [];
+      
+      var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
+      
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
         
-        while (true) {
-          var checkDateStr = formatDateYYYYMMDD(checkDate);
-          var isHoliday = holidays.some(function(h) {
-            return h.date === checkDateStr;
+        var item = checkbox.closest('.team-checkbox-item');
+        if (item) {
+          item.classList.remove('selected');
+        }
+      });
+      
+      updateSelectedTeamsSummary();
+      showToast('ℹ️ ล้างแล้ว', 'ล้างการเลือกทีมแล้ว', 'info', 2000);
+    }
+
+    function updateSelectedTeamsSummary() {
+      var summary = document.getElementById('selectedTeamsSummary');
+      
+      if (!summary) return;
+      
+      if (selectedTeamIds.length === 0) {
+        summary.classList.remove('show');
+        return;
+      }
+      
+      var selectedTeamNames = availableSurveyTeams
+        .filter(function(team) {
+          return selectedTeamIds.indexOf(team.resourceId) !== -1;
+        })
+        .map(function(team) {
+          return team.resourceName;
+        });
+      
+      summary.innerHTML = 
+        '<strong>✓ เลือกแล้ว:</strong> ' + selectedTeamIds.length + ' ทีม<br>' +
+        '<small>' + selectedTeamNames.join(', ') + '</small>';
+      
+      summary.classList.add('show');
+    }
+
+    function showTeamSelection() {
+      var selection = document.getElementById('surveyTeamSelection');
+      if (selection) {
+        selection.classList.add('show');
+      }
+    }
+
+    function hideTeamSelection() {
+      var selection = document.getElementById('surveyTeamSelection');
+      if (selection) {
+        selection.classList.remove('show');
+      }
+      selectedTeamIds = [];
+      availableSurveyTeams = [];
+    }
+
+    // ============================================
+    // 6. ⭐ SUBMIT FUNCTIONS
+    // ============================================
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const loading = document.querySelector('.loading');
+      
+      const formData = {
+        requestDate: document.getElementById('requestDate').value,
+        workType: document.getElementById('workType').value,
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value,
+        description: document.getElementById('description').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        requesterName: document.getElementById('requesterName').value.trim(),
+        requesterEmail: document.getElementById('requesterEmail').value.trim(),
+        locationLayoutFile: selectedFileData
+      };
+      
+      const requiredFields = ['requestDate', 'workType', 'startTime', 'endTime', 'description', 'location', 'requesterName', 'requesterEmail'];
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      
+      if (missingFields.length > 0) {
+        showToast('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'error', 4000);
+        showMessage('❌ กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+        return;
+      }
+      
+      if (isSurveyRole) {
+        if (selectedTeamIds.length === 0) {
+          showToast('⚠️ ยังไม่เลือกทีม', 'กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'warning', 5000);
+          showMessage('❌ กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'error');
+          
+          var teamSelection = document.getElementById('surveyTeamSelection');
+          if (teamSelection) {
+            teamSelection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          return;
+        }
+        
+        var selectedTeamNames = availableSurveyTeams
+          .filter(function(team) {
+            return selectedTeamIds.indexOf(team.resourceId) !== -1;
+          })
+          .map(function(team) {
+            return team.resourceName;
+          });
+        
+        formData.selectedTeams = selectedTeamNames.join(',');
+        formData.selectedTeamIds = selectedTeamIds.join(',');
+        
+        console.log('✅ Selected teams:', formData.selectedTeams);
+      }
+      
+      const confirmMessage = 
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '📋 ยืนยันการส่ง Survey Work Request\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+        '📅 วันที่: ' + formData.requestDate + '\n' +
+        '🔧 ประเภทงาน: ' + formData.workType + '\n' +
+        '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime + ' น.\n' +
+        (isSurveyRole ? '👥 ทีม: ' + formData.selectedTeams + '\n' : '') +
+        '📍 สถานที่: ' + formData.location + '\n' +
+        '👤 ผู้ขอ: ' + formData.requesterName + '\n' +
+        '📧 อีเมล: ' + formData.requesterEmail + '\n' +
+        (selectedFileData ? '📎 ไฟล์: ' + selectedFileData.name + '\n' : '📎 ไฟล์: ไม่มีไฟล์แนบ\n') +
+        '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '✅ ต้องการส่งคำขอนี้หรือไม่?';
+      
+      if (!confirm(confirmMessage)) {
+        console.log('❌ User cancelled submission');
+        showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
+        return;
+      }
+      
+      proceedWithSubmit(formData, submitBtn, loading);
+    }
+
+    function proceedWithSubmit(formData, submitBtn, loading) {
+      setSubmittingFlag();
+      submitBtn.disabled = true;
+      loading.style.display = 'block';
+      
+      showToast('กำลังประมวลผล', 'กำลังบันทึก Survey Work Request...', 'info', 3000);
+      updateSubmitProgress(1, 6, 'ตรวจสอบข้อมูล');
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          loading.style.display = 'none';
+          submitBtn.disabled = false;
+          
+          if (result && result.success) {
+            setTimeout(function() { updateSubmitProgress(2, 6, 'ตรวจสอบผู้ใช้'); }, 200);
+            setTimeout(function() { updateSubmitProgress(3, 6, 'จัดทีม Survey'); }, 400);
+            setTimeout(function() { updateSubmitProgress(4, 6, 'อัปโหลดไฟล์'); }, 600);
+            setTimeout(function() { updateSubmitProgress(5, 6, 'บันทึกข้อมูล'); }, 800);
+            setTimeout(function() { updateSubmitProgress(6, 6, 'สร้าง Calendar'); }, 1000);
+            
+            setTimeout(function() {
+              updateSubmitProgress(6, 6, '✅ สำเร็จ');
+              
+              setTimeout(function() {
+                resetSubmitProgress();
+              }, 2000);
+              
+              let successMsg = result.message || '✅ บันทึก Survey Work Request เรียบร้อยแล้ว';
+              let toastMsg = 'บันทึกข้อมูลเรียบร้อย';
+
+              if (result.recordedBy) {
+                toastMsg += '\n📝 บันทึกโดย: ' + result.recordedBy;
+              }
+              
+              if (result.fileName) {
+                toastMsg += ' และอัปโหลดไฟล์สำเร็จ';
+              }
+              
+              showToast('✅ สำเร็จ!', toastMsg, 'success', 8000);
+              showMessage('✅ ' + successMsg, 'success', 10000);
+              resetFormChangeFlag();
+              resetForm();
+            }, 1200);
+            
+          } else {
+            resetSubmitProgress();
+            isSubmitting = false;
+            const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+            showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
+            showMessage('❌ ' + errorMessage, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          loading.style.display = 'none';
+          submitBtn.disabled = false;
+          resetSubmitProgress();
+          isSubmitting = false;
+          
+          const errorMessage = error.message || error.toString();
+          showToast('❌ เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้: ' + errorMessage, 'error', 8000);
+          showMessage('❌ เกิดข้อผิดพลาดในการบันทึก:\n' + errorMessage, 'error');
+        })
+        .saveSurveyWorkRequirement(formData);
+    }
+
+    function resetForm() {
+      document.getElementById('surveyWorkForm').reset();
+      document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+      document.getElementById('startTime').disabled = true;
+      resetEndTimeSelect();
+      clearLocationFile();
+      loadWorkTypes();
+      loadUserEmailAndName();
+      setMinDate();
+      resetFormChangeFlag();
+      hideTeamSelection();
+    }
+
+    // ============================================
+    // 7. ⭐ HOLIDAY FUNCTIONS
+    // ============================================
+
+    function checkTodayHolidayStatus() {
+      if (isSurveyRole) {
+        console.log('⭐ Survey Role - Today holiday check skipped');
+        return;
+      }
+      
+      console.log('🔍 Checking today holiday status (Survey)...');
+      
+      google.script.run
+        .withSuccessHandler(function(holidays) {
+          if (!holidays || holidays.length === 0) {
+            console.log('✅ No holidays data');
+            return;
+          }
+          
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          var currentHour = now.getHours();
+          
+          var tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          var tomorrowStr = formatDateYYYYMMDD(tomorrow);
+          
+          var tomorrowHoliday = null;
+          var consecutiveDays = 0;
+          
+          holidays.forEach(function(holiday) {
+            if (holiday.date === tomorrowStr) {
+              tomorrowHoliday = holiday;
+            }
           });
           
-          if (isHoliday) {
-            consecutiveDays++;
-            checkDate.setDate(checkDate.getDate() + 1);
-          } else {
-            break;
+          if (tomorrowHoliday) {
+            var checkDate = new Date(tomorrow);
+            
+            while (true) {
+              var checkDateStr = formatDateYYYYMMDD(checkDate);
+              var isHoliday = holidays.some(function(h) {
+                return h.date === checkDateStr;
+              });
+              
+              if (isHoliday) {
+                consecutiveDays++;
+                checkDate.setDate(checkDate.getDate() + 1);
+              } else {
+                break;
+              }
+            }
           }
-        }
-      }
+          
+          var todayStr = formatDateYYYYMMDD(today);
+          var todayHoliday = null;
+          
+          holidays.forEach(function(holiday) {
+            if (holiday.date === todayStr) {
+              todayHoliday = holiday;
+            }
+          });
+          
+          if (todayHoliday) {
+            var holidayMsg = '🗺️ Survey Work: ไม่สามารถจองได้ตลอดทั้งวัน\n\n' +
+                            '💡 กรุณารอจนถึงวันทำการถัดไป';
+            
+            showToast(
+              '🎉 วันนี้เป็นวันหยุด: ' + todayHoliday.name,
+              holidayMsg,
+              'warning',
+              15000
+            );
+            
+            return;
+          }
+          
+          if (tomorrowHoliday) {
+            var warningMsg = '';
+            var warningType = 'warning';
+            var warningTitle = '⚠️ พรุ่งนี้เป็นวันหยุด!';
+            
+            if (currentHour < 13) {
+              warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
+              
+              if (consecutiveDays > 1) {
+                warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
+              }
+              
+              warningMsg += '\n\n' +
+                           '🗺️ Survey Work:\n' +
+                           '✅ ยังจองวันหยุดได้! แต่ต้องจองก่อน 13:00 น.\n' +
+                           '⏳ เหลือเวลาอีก ' + (13 - currentHour) + ' ชั่วโมง ' + (60 - now.getMinutes()) + ' นาที\n\n' +
+                           '📌 หมายเหตุ:\n' +
+                           '   • วันนี้เป็นวันทำการ ✓\n' +
+                           '   • จองล่วงหน้า ≥1 วัน ✓\n' +
+                           '   • จองก่อน 13:00 น. ✓';
+              
+              warningType = 'warning';
+              warningTitle = '⏰ พรุ่งนี้เป็นวันหยุด - รีบจอง!';
+              
+            } else {
+              warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
+              
+              if (consecutiveDays > 1) {
+                warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
+              }
+              
+              warningMsg += '\n\n' +
+                           '❌ เลยเวลาจองแล้ว (ต้องจองก่อน 13:00 น.)\n\n' +
+                           '🗺️ Survey Work: ห้ามจองวันหยุด\n' +
+                           '💡 กรุณารอจนถึงวันทำการถัดไป';
+              
+              warningType = 'error';
+              warningTitle = '❌ เลยเวลาจองวันหยุดแล้ว';
+            }
+            
+            showToast(
+              warningTitle,
+              warningMsg,
+              warningType,
+              20000
+            );
+          }
+          
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error checking holiday status:', error);
+        })
+        .getHolidayList();
+    }
+
+    function setupHolidayCheck() {
+      var dateInput = document.getElementById('requestDate');
       
-      var todayStr = formatDateYYYYMMDD(today);
-      var todayHoliday = null;
-      
-      holidays.forEach(function(holiday) {
-        if (holiday.date === todayStr) {
-          todayHoliday = holiday;
+      dateInput.addEventListener('change', function() {
+        var selectedDate = this.value;
+        
+        if (selectedDate && !isSurveyRole) {
+          checkHolidayRestrictions(selectedDate, 'survey');
+        } else if (selectedDate && isSurveyRole) {
+          console.log('⭐ Survey Role - Holiday check skipped');
+          showToast('Survey Role', 'ไม่มีข้อจำกัดวันหยุด ✅', 'info', 2000);
         }
       });
-      
-      // ========================================
-      // ⭐ กรณีที่ 1: วันนี้เป็นวันหยุด (Survey)
-      // ========================================
-      if (todayHoliday) {
-        var holidayMsg = '🗺️ Survey Work: ไม่สามารถจองได้ตลอดทั้งวัน\n\n' +
-                        '💡 กรุณารอจนถึงวันทำการถัดไป';
-        
-        showToast(
-          '🎉 วันนี้เป็นวันหยุด: ' + todayHoliday.name,
-          holidayMsg,
-          'warning',
-          15000
-        );
-        
-        return;
-      }
-      
-      // ========================================
-      // ⭐ กรณีที่ 2: พรุ่งนี้เป็นวันหยุด (Survey)
-      // ========================================
-      if (tomorrowHoliday) {
-        var warningMsg = '';
-        var warningType = 'warning';
-        var warningTitle = '⚠️ พรุ่งนี้เป็นวันหยุด!';
-        
-        // 🗺️ Survey: จองวันหยุดได้ แต่ต้องจองก่อน 13:00 น.
-        if (currentHour < 13) {
-          warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
-          
-          if (consecutiveDays > 1) {
-            warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
-          }
-          
-          warningMsg += '\n\n' +
-                       '🗺️ Survey Work:\n' +
-                       '✅ ยังจองวันหยุดได้! แต่ต้องจองก่อน 13:00 น.\n' +
-                       '⏳ เหลือเวลาอีก ' + (13 - currentHour) + ' ชั่วโมง ' + (60 - now.getMinutes()) + ' นาที\n\n' +
-                       '📌 หมายเหตุ:\n' +
-                       '   • วันนี้เป็นวันทำการ ✓\n' +
-                       '   • จองล่วงหน้า ≥1 วัน ✓\n' +
-                       '   • จองก่อน 13:00 น. ✓';
-          
-          warningType = 'warning';
-          warningTitle = '⏰ พรุ่งนี้เป็นวันหยุด - รีบจอง!';
-          
-        } else {
-          warningMsg = '📅 พรุ่งนี้: ' + tomorrowHoliday.name;
-          
-          if (consecutiveDays > 1) {
-            warningMsg += ' (หยุดติดต่อกัน ' + consecutiveDays + ' วัน)';
-          }
-          
-          warningMsg += '\n\n' +
-                       '❌ เลยเวลาจองแล้ว (ต้องจองก่อน 13:00 น.)\n\n' +
-                       '🗺️ Survey Work: ห้ามจองวันหยุด\n' +
-                       '💡 กรุณารอจนถึงวันทำการถัดไป';
-          
-          warningType = 'error';
-          warningTitle = '❌ เลยเวลาจองวันหยุดแล้ว';
-        }
-        
-        showToast(
-          warningTitle,
-          warningMsg,
-          warningType,
-          20000
-        );
-      }
-      
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error checking holiday status:', error);
-    })
-    .getHolidayList();
-}
-
-/**
- * ⭐ Setup Holiday Check
- */
-function setupHolidayCheck() {
-  var dateInput = document.getElementById('requestDate');
-  
-  dateInput.addEventListener('change', function() {
-    var selectedDate = this.value;
-    
-    if (selectedDate && !isSurveyRole) {
-      // ❌ Regular User - เช็ควันหยุด
-      checkHolidayRestrictions(selectedDate, 'survey');
-    } else if (selectedDate && isSurveyRole) {
-      // ✅ Survey Role - ไม่เช็ควันหยุด
-      console.log('⭐ Survey Role - Holiday check skipped');
-      showToast('Survey Role', 'ไม่มีข้อจำกัดวันหยุด ✅', 'info', 2000);
     }
-  });
-}
 
-/**
- * ⭐ แก้ไข checkTodayHolidayStatus สำหรับ Survey Role
- */
-var originalCheckTodayHolidayStatus = checkTodayHolidayStatus;
-
-checkTodayHolidayStatus = function() {
-  if (isSurveyRole) {
-    // ⭐ Survey Role - ไม่แสดง Warning วันหยุด
-    console.log('⭐ Survey Role - Today holiday check skipped');
-    return;
-  }
-  
-  // ❌ Regular User - เช็คตามปกติ
-  originalCheckTodayHolidayStatus();
-};
-
-function checkHolidayRestrictions(dateStr, inspectionType) {
-  if (!dateStr) return;
-  
-  console.log('🔍 Checking holiday restrictions (Survey):', dateStr);
-  
-  showToast('กำลังตรวจสอบ', 'กำลังเช็ควันหยุด...', 'info', 2000);
-  
-  google.script.run
-    .withSuccessHandler(function(result) {
-      console.log('📥 Holiday check result:', result);
+    function checkHolidayRestrictions(dateStr, inspectionType) {
+      if (!dateStr) return;
       
-      if (!result.allowed) {
-        console.log('❌ Cannot book:', result.reason);
-        
-        showToast(
-          result.title || '❌ ไม่สามารถจองวันนี้ได้',
-          result.message,
-          'error',
-          12000
-        );
-        
-        showMessage(result.message, 'error', 12000);
-        
-        document.getElementById('requestDate').value = '';
-        
-        document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-        document.getElementById('startTime').disabled = true;
-        resetEndTimeSelect();
-        
-      } else if (result.warning) {
-        console.log('⚠️ Warning:', result.message);
-        
-        showToast(
-          result.title || '⚠️ คำเตือน',
-          result.message,
-          'warning',
-          10000
-        );
-        
-      } else {
-        console.log('✅ Date is available for booking');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('❌ Error checking holiday:', error);
-      showToast(
-        '⚠️ เกิดข้อผิดพลาด',
-        'ไม่สามารถตรวจสอบวันหยุดได้: ' + error.message,
-        'error',
-        5000
-      );
-    })
-    .checkDateBookingAllowed(dateStr, 'survey'); // ⭐ เปลี่ยนเป็น 'survey'
-}
-
-
-/**
- * ⭐ แก้ไข updateAvailableSlots สำหรับ Survey Role
- */
-var originalUpdateAvailableSlots = updateAvailableSlots;
-
-updateAvailableSlots = function() {
-  var date = document.getElementById('requestDate').value;
-  var startTimeSelect = document.getElementById('startTime');
-  var endTimeSelect = document.getElementById('endTime');
-  
-  if (!date) {
-    startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-    startTimeSelect.disabled = true;
-    hideTeamSelection();
-    return; // ✅ ถูกต้อง - อยู่ใน function
-  }
-  
-  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลา...');
-  resetEndTimeSelect();
-  hideTeamSelection();
-  
-  if (isSurveyRole) {
-    // ⭐⭐⭐ Survey Role - เลือกได้ทุกเวลา
-    console.log('⭐ Loading ALL time slots for Survey Role');
-    
-    startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-    startTimeSelect.innerHTML = '';
-    
-    // สร้าง all slots (09:00 - 19:30)
-    var allSlots = [];
-    for (var hour = 9; hour <= 19; hour++) {
-      for (var minute = 0; minute < 60; minute += 30) {
-        if (hour === 19 && minute === 30) break;
-        var time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
-        allSlots.push(time);
-      }
+      console.log('🔍 Checking holiday restrictions (Survey):', dateStr);
+      
+      showToast('กำลังตรวจสอบ', 'กำลังเช็ควันหยุด...', 'info', 2000);
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('📥 Holiday check result:', result);
+          
+          if (!result.allowed) {
+            console.log('❌ Cannot book:', result.reason);
+            
+            showToast(
+              result.title || '❌ ไม่สามารถจองวันนี้ได้',
+              result.message,
+              'error',
+              12000
+            );
+            
+            showMessage(result.message, 'error', 12000);
+            
+            document.getElementById('requestDate').value = '';
+            
+            document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+            document.getElementById('startTime').disabled = true;
+            resetEndTimeSelect();
+            
+          } else if (result.warning) {
+            console.log('⚠️ Warning:', result.message);
+            
+            showToast(
+              result.title || '⚠️ คำเตือน',
+              result.message,
+              'warning',
+              10000
+            );
+            
+          } else {
+            console.log('✅ Date is available for booking');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('❌ Error checking holiday:', error);
+          showToast(
+            '⚠️ เกิดข้อผิดพลาด',
+            'ไม่สามารถตรวจสอบวันหยุดได้: ' + error.message,
+            'error',
+            5000
+          );
+        })
+        .checkDateBookingAllowed(dateStr, 'survey');
     }
-    
-    startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
-    
-    allSlots.forEach(function(slot) {
-      var option = document.createElement('option');
-      option.value = slot;
-      option.textContent = slot + ' น.';
-      startTimeSelect.appendChild(option);
+
+    // ============================================
+    // 8. ⭐ PAGE EXIT PREVENTION
+    // ============================================
+
+    window.addEventListener('beforeunload', function(e) {
+      if (isSubmitting || !formChanged) {
+        return undefined;
+      }
+      
+      var confirmationMessage = 'คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?';
+      
+      e.preventDefault();
+      e.returnValue = confirmationMessage;
+      return confirmationMessage;
     });
-    
-    startTimeSelect.disabled = false;
-    
-    showToast(
-      '⭐ Survey Role Mode', 
-      'เลือกเวลาได้ทุกช่วง (' + allSlots.length + ' slots)\n💡 เลือกเวลาสิ้นสุดเพื่อเลือกทีม', 
-      'info', 
-      5000
-    );
-    
-  } else {
-    // ❌ Regular User
-    console.log('❌ Regular User - Loading available slots only');
-    originalUpdateAvailableSlots();
-  }
-};
+
+    // ============================================
+    // 9. ⭐ WINDOW.ONLOAD (ต้องมาท้ายสุด)
+    // ============================================
+
+    window.onload = function() {
+      setMinDate();
+      loadWorkTypes();
+      checkUserRole();
+      loadManualLink();
+      setupFormChangeDetection();
+      setupHolidayCheck();
+      checkTodayHolidayStatus();
+      showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
+      
+      document.getElementById('requestDate').addEventListener('change', function() {
+        updateAvailableSlots();
+      });
+
+      document.getElementById('startTime').addEventListener('change', function() {
+        updateEndTimeSlots();
+      });
+
+      document.getElementById('endTime').addEventListener('change', function() {
+        if (isSurveyRole) {
+          loadAvailableSurveyTeams();
+        }
+      });
+
+      document.getElementById('workType').addEventListener('change', function() {
+        resetTimeSelections();
+      });
+
+      document.getElementById('surveyWorkForm').addEventListener('submit', function(e) {
+        handleSubmit(e);
+      });
+      
+      document.getElementById('requesterSelection').addEventListener('change', function() {
+        var selectedValue = this.value;
+        
+        if (selectedValue) {
+          var parts = selectedValue.split('|');
+          var email = parts[0];
+          var name = parts[1];
+          
+          document.getElementById('requesterEmail').value = email;
+          document.getElementById('requesterName').value = name;
+          
+          console.log('✅ Selected requester:', name, '-', email);
+        }
+      });
+    };
 
   </script>
 </body>
