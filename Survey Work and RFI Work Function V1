@@ -6970,13 +6970,13 @@ function getAllRequesters() {
 }
 
 /**
- * ⭐ Survey Available Time Slots (สำหรับ Survey Role - ไม่มีข้อจำกัด 30 นาที)
+ * ⭐ Survey Role - เลือกได้ทุกเวลา (ไม่เช็คว่าทีมว่าง)
  */
 function getSurveyRoleAvailableTimeSlots(date) {
   try {
     if (!date) return [];
     
-    console.log('⭐ Getting time slots for Survey Role (no 30-min restriction)');
+    console.log('⭐ Getting time slots for Survey Role - ALL TIMES AVAILABLE');
     
     // สร้าง all slots (09:00 - 19:30)
     const allSlots = [];
@@ -6988,57 +6988,8 @@ function getSurveyRoleAvailableTimeSlots(date) {
       }
     }
     
-    const availableTeams = getSurveyTeams();
-    
-    if (availableTeams.length === 0) {
-      return [];
-    }
-    
-    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
-    const availableSlots = [];
-    
-    for (let i = 0; i < allSlots.length; i++) {
-      const startSlot = allSlots[i];
-      
-      const startParts = startSlot.split(':');
-      const startHour = parseInt(startParts[0]);
-      const startMin = parseInt(startParts[1]);
-      const endHour = startMin === 30 ? startHour + 1 : startHour;
-      const endMin = startMin === 30 ? 0 : 30;
-      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
-      
-      const requestStartMinutes = timeToMinutes(startSlot);
-      const requestEndMinutes = timeToMinutes(endSlot);
-      
-      let hasAvailableTeam = false;
-      
-      for (let j = 0; j < availableTeams.length; j++) {
-        const team = availableTeams[j];
-        const blocks = blockedSlots[team.resourceId] || [];
-        
-        let isAvailable = true;
-        
-        for (let k = 0; k < blocks.length; k++) {
-          const block = blocks[k];
-          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
-            isAvailable = false;
-            break;
-          }
-        }
-        
-        if (isAvailable) {
-          hasAvailableTeam = true;
-          break;
-        }
-      }
-      
-      if (hasAvailableTeam) {
-        availableSlots.push(startSlot);
-      }
-    }
-    
-    console.log('✅ Survey Role - Available slots:', availableSlots.length);
-    return availableSlots;
+    console.log('✅ Survey Role - All', allSlots.length, 'slots available (no restrictions)');
+    return allSlots;
     
   } catch (error) {
     console.error('Error in getSurveyRoleAvailableTimeSlots:', error);
@@ -7271,6 +7222,173 @@ function deleteITPCode(nameWork, itp, qcCode, item) {
     return {
       success: false,
       message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ Survey Role - ดึง ALL Time Slots (ไม่เช็คว่าทีมว่าง)
+ * ให้เลือกได้ทุกเวลา แล้วเช็คทีมตอน submit
+ */
+function getSurveyRoleAllTimeSlots() {
+  try {
+    console.log('⭐ Getting ALL time slots for Survey Role (no team check)');
+    
+    // สร้าง all slots (09:00 - 19:30)
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    console.log('✅ Generated', allSlots.length, 'time slots for Survey Role');
+    return allSlots;
+    
+  } catch (error) {
+    console.error('Error in getSurveyRoleAllTimeSlots:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ Survey Role - ดึง ALL Time Slots พร้อมสถานะว่าทีมว่างหรือไม่
+ */
+function getSurveyRoleAllTimeSlotsWithStatus(date) {
+  try {
+    if (!date) return [];
+    
+    console.log('⭐ Getting ALL time slots with team status for Survey Role');
+    
+    // สร้าง all slots (09:00 - 19:30)
+    const allSlots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        const time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      console.log('⚠️ No Survey teams found');
+      // Return all slots but mark as unavailable
+      return allSlots.map(function(slot) {
+        return {
+          time: slot,
+          available: false,
+          teamCount: 0
+        };
+      });
+    }
+    
+    const blockedSlots = getBlockedTimeSlotsForTeams(date, availableTeams);
+    const slotsWithStatus = [];
+    
+    for (let i = 0; i < allSlots.length; i++) {
+      const startSlot = allSlots[i];
+      
+      const startParts = startSlot.split(':');
+      const startHour = parseInt(startParts[0]);
+      const startMin = parseInt(startParts[1]);
+      const endHour = startMin === 30 ? startHour + 1 : startHour;
+      const endMin = startMin === 30 ? 0 : 30;
+      const endSlot = endHour.toString().padStart(2, '0') + ':' + endMin.toString().padStart(2, '0');
+      
+      const requestStartMinutes = timeToMinutes(startSlot);
+      const requestEndMinutes = timeToMinutes(endSlot);
+      
+      let availableTeamCount = 0;
+      
+      for (let j = 0; j < availableTeams.length; j++) {
+        const team = availableTeams[j];
+        const blocks = blockedSlots[team.resourceId] || [];
+        
+        let isAvailable = true;
+        
+        for (let k = 0; k < blocks.length; k++) {
+          const block = blocks[k];
+          if (!(requestEndMinutes <= block.start || requestStartMinutes >= block.end)) {
+            isAvailable = false;
+            break;
+          }
+        }
+        
+        if (isAvailable) {
+          availableTeamCount++;
+        }
+      }
+      
+      slotsWithStatus.push({
+        time: startSlot,
+        available: availableTeamCount > 0,
+        teamCount: availableTeamCount,
+        totalTeams: availableTeams.length
+      });
+    }
+    
+    console.log('✅ Generated', slotsWithStatus.length, 'slots with team status');
+    return slotsWithStatus;
+    
+  } catch (error) {
+    console.error('Error in getSurveyRoleAllTimeSlotsWithStatus:', error);
+    return [];
+  }
+}
+
+/**
+ * ⭐ เช็คว่าทีม Survey ว่างหรือไม่ในช่วงเวลาที่เลือก
+ */
+function checkSurveyTeamAvailability(date, startTime, endTime) {
+  try {
+    console.log('🔍 Checking Survey team availability:', date, startTime, endTime);
+    
+    const availableTeams = getSurveyTeams();
+    
+    if (availableTeams.length === 0) {
+      return {
+        available: false,
+        message: 'ไม่พบทีม Survey ในระบบ',
+        teamCount: 0,
+        totalTeams: 0
+      };
+    }
+    
+    let availableTeamCount = 0;
+    const availableTeamNames = [];
+    
+    for (let i = 0; i < availableTeams.length; i++) {
+      const team = availableTeams[i];
+      
+      if (isSurveyTeamAvailable(team.resourceId, date, startTime, endTime)) {
+        availableTeamCount++;
+        availableTeamNames.push(team.resourceName);
+      }
+    }
+    
+    console.log('Available teams:', availableTeamCount, '/', availableTeams.length);
+    
+    return {
+      available: availableTeamCount > 0,
+      message: availableTeamCount > 0 ? 
+        'มีทีมว่าง ' + availableTeamCount + ' ทีม: ' + availableTeamNames.join(', ') :
+        'ไม่มีทีม Survey ว่างในเวลาที่เลือก',
+      teamCount: availableTeamCount,
+      totalTeams: availableTeams.length,
+      availableTeams: availableTeamNames
+    };
+    
+  } catch (error) {
+    console.error('Error checking Survey team availability:', error);
+    return {
+      available: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString(),
+      teamCount: 0,
+      totalTeams: 0
     };
   }
 }
