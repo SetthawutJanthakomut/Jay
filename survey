@@ -590,54 +590,186 @@
     min-width: auto;
   }
 }
-
-/* ⭐ Time Slot Status Indicators */
-.time-slot-available {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-  color: #065f46 !important;
-  font-weight: 500;
-}
-
-.time-slot-busy {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-  color: #92400e !important;
-}
-
-.time-slot-unavailable {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
-  color: #991b1b !important;
-}
-
-/* ⭐ Team Status Info */
-.team-status-info {
-  font-size: 12px;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
+/* ⭐ Survey Team Selection */
+.survey-team-selection {
   display: none;
+  margin-top: 15px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+}
+
+.survey-team-selection.show {
+  display: block;
   animation: slideDown 0.3s ease-out;
 }
 
-.team-status-info.available {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-left: 4px solid #10b981;
-  color: #065f46;
-}
-
-.team-status-info.busy {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-left: 4px solid #f59e0b;
+.team-selection-header {
+  font-size: 15px;
+  font-weight: 600;
   color: #92400e;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.team-status-info.unavailable {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  border-left: 4px solid #ef4444;
+.team-selection-info {
+  font-size: 13px;
+  color: #b45309;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.team-checkbox-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #fed7aa;
+}
+
+.team-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.team-checkbox-item:hover {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+.team-checkbox-item.selected {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border-color: #10b981;
+}
+
+.team-checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #10b981;
+}
+
+.team-checkbox-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-workload-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  border: 1px solid #10b981;
+}
+
+.team-workload-badge.busy {
+  color: #d97706;
+  border-color: #f59e0b;
+}
+
+.team-workload-badge.full {
+  color: #dc2626;
+  border-color: #ef4444;
+}
+
+.no-teams-available {
+  text-align: center;
+  padding: 20px;
   color: #991b1b;
+  font-size: 14px;
 }
 
-.team-status-info.show {
+.team-selection-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.team-selection-actions button {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.select-all-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.clear-selection-btn {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: white;
+}
+
+.select-all-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.clear-selection-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.selected-teams-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 2px solid #10b981;
+  font-size: 13px;
+  color: #065f46;
+  display: none;
+}
+
+.selected-teams-summary.show {
   display: block;
+}
+
+.selected-teams-summary strong {
+  color: #059669;
+}
+
+@media (max-width: 480px) {
+  .team-checkbox-container {
+    max-height: 200px;
+  }
+  
+  .team-selection-actions {
+    flex-direction: column;
+  }
+  
+  .team-selection-actions button {
+    width: 100%;
+  }
 }
   </style>
 </head>
@@ -711,6 +843,36 @@
         </select>
         <div class="time-info">ระบบจะกำหนดเวลาเริ่มต้น +1 ชั่วโมง</div>
       </div>
+
+      <!-- ⭐ Survey Team Selection (Survey Role Only) -->
+<div id="surveyTeamSelection" class="survey-team-selection">
+  <div class="team-selection-header">
+    <span style="font-size: 20px;">👥</span>
+    <span>เลือกทีม Survey</span>
+  </div>
+  
+  <div class="team-selection-info">
+    <strong>💡 คำแนะนำ:</strong> เลือกทีมที่ต้องการ (เลือกได้หลายทีม)<br>
+    ระบบแสดงเฉพาะทีมที่ว่างในเวลาที่เลือก
+  </div>
+  
+  <div id="teamCheckboxContainer" class="team-checkbox-container">
+    <!-- Teams will be loaded here -->
+  </div>
+  
+  <div class="team-selection-actions">
+    <button type="button" class="select-all-btn" onclick="selectAllTeams()">
+      ✓ เลือกทั้งหมด
+    </button>
+    <button type="button" class="clear-selection-btn" onclick="clearTeamSelection()">
+      ✗ ล้างการเลือก
+    </button>
+  </div>
+  
+  <div id="selectedTeamsSummary" class="selected-teams-summary">
+    <!-- Summary will be shown here -->
+  </div>
+</div>
       
       <div class="form-group">
         <label for="description">รายละเอียด Survey Work <span>*</span></label>
@@ -961,27 +1123,29 @@ window.onload = function() {
   checkTodayHolidayStatus();
   showMessage('กรุณาเลือกวันที่และเวลาที่ต้องการจอง Survey Work', 'info');
   
-  document.getElementById('requestDate').addEventListener('change', updateAvailableSlots);
-  document.getElementById('startTime').addEventListener('change', updateEndTimeSlots);
-  document.getElementById('workType').addEventListener('change', resetTimeSelections);
-  document.getElementById('surveyWorkForm').addEventListener('submit', handleSubmit);
-  
-  // ⭐ เพิ่ม Event Listener สำหรับ Requester Selection
-  document.getElementById('requesterSelection').addEventListener('change', function() {
-    const selectedValue = this.value;
-    
-    if (selectedValue) {
-      const parts = selectedValue.split('|');
-      const email = parts[0];
-      const name = parts[1];
-      
-      document.getElementById('requesterEmail').value = email;
-      document.getElementById('requesterName').value = name;
-      
-      console.log('✅ Selected requester:', name, '-', email);
-    }
-  });
-};
+// ⭐ Event Listeners
+document.getElementById('requestDate').addEventListener('change', function() {
+  updateAvailableSlots();
+});
+
+document.getElementById('startTime').addEventListener('change', function() {
+  updateEndTimeSlots();
+});
+
+document.getElementById('endTime').addEventListener('change', function() {
+  // ⭐ ถ้าเป็น Survey Role → โหลดทีมที่ว่าง
+  if (isSurveyRole) {
+    loadAvailableSurveyTeams();
+  }
+});
+
+document.getElementById('workType').addEventListener('change', function() {
+  resetTimeSelections();
+});
+
+document.getElementById('surveyWorkForm').addEventListener('submit', function(e) {
+  handleSubmit(e);
+});
 
 function checkUserRole() {
   console.log('🔍 Checking user role...');
@@ -1558,6 +1722,242 @@ function resetSubmitProgress() {
   }
 }
 
+/**
+ * ⭐ Global Variable สำหรับเก็บข้อมูลทีม
+ */
+var availableSurveyTeams = [];
+var selectedTeamIds = [];
+
+/**
+ * ⭐ โหลดทีม Survey ที่ว่างในช่วงเวลาที่เลือก
+ */
+function loadAvailableSurveyTeams() {
+  if (!isSurveyRole) return;
+  
+  var date = document.getElementById('requestDate').value;
+  var startTime = document.getElementById('startTime').value;
+  var endTime = document.getElementById('endTime').value;
+  
+  if (!date || !startTime || !endTime) {
+    hideTeamSelection();
+    return;
+  }
+  
+  console.log('🔍 Loading available Survey teams for:', date, startTime, '-', endTime);
+  
+  showToast('กำลังโหลด', 'กำลังค้นหาทีม Survey ที่ว่าง...', 'info', 3000);
+  
+  google.script.run
+    .withSuccessHandler(function(teams) {
+      console.log('📥 Received teams:', teams);
+      
+      availableSurveyTeams = teams;
+      displayTeamCheckboxes(teams);
+      
+      if (teams && teams.length > 0) {
+        showTeamSelection();
+        showToast('✅ พบทีมว่าง', 'มี ' + teams.length + ' ทีมว่าง - กรุณาเลือกทีม', 'success', 4000);
+      } else {
+        hideTeamSelection();
+        showToast('⚠️ ไม่มีทีมว่าง', 'ไม่มีทีม Survey ว่างในเวลานี้\n💡 ลองเลือกเวลาอื่น', 'warning', 5000);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading teams:', error);
+      hideTeamSelection();
+      showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลทีมได้: ' + error.message, 'error', 5000);
+    })
+    .getAvailableSurveyTeamsForTime(date, startTime, endTime);
+}
+
+/**
+ * ⭐ แสดงรายการทีมเป็น Checkbox
+ */
+function displayTeamCheckboxes(teams) {
+  var container = document.getElementById('teamCheckboxContainer');
+  
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (!teams || teams.length === 0) {
+    container.innerHTML = '<div class="no-teams-available">❌ ไม่มีทีม Survey ว่างในเวลานี้</div>';
+    return;
+  }
+  
+  teams.forEach(function(team) {
+    var item = document.createElement('div');
+    item.className = 'team-checkbox-item';
+    item.setAttribute('data-team-id', team.resourceId);
+    
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = 'team_' + team.resourceId;
+    checkbox.value = team.resourceId;
+    checkbox.onchange = function() {
+      toggleTeamSelection(team.resourceId);
+      updateSelectedItem(this.checked, item);
+    };
+    
+    var label = document.createElement('label');
+    label.className = 'team-checkbox-label';
+    label.htmlFor = 'team_' + team.resourceId;
+    label.style.cursor = 'pointer';
+    
+    var teamName = document.createElement('span');
+    teamName.textContent = team.resourceName;
+    
+    var workloadBadge = document.createElement('span');
+    workloadBadge.className = 'team-workload-badge';
+    
+    if (team.workload === 0) {
+      workloadBadge.textContent = '✅ ว่าง';
+    } else if (team.workload <= 2) {
+      workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
+    } else {
+      workloadBadge.className += ' busy';
+      workloadBadge.textContent = '📊 ' + team.workload + ' งาน';
+    }
+    
+    label.appendChild(teamName);
+    label.appendChild(workloadBadge);
+    
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    
+    // Click ที่ item ก็สามารถเลือกได้
+    item.onclick = function(e) {
+      if (e.target !== checkbox) {
+        checkbox.checked = !checkbox.checked;
+        checkbox.onchange();
+      }
+    };
+    
+    container.appendChild(item);
+  });
+}
+
+/**
+ * ⭐ Toggle Team Selection
+ */
+function toggleTeamSelection(teamId) {
+  var index = selectedTeamIds.indexOf(teamId);
+  
+  if (index === -1) {
+    selectedTeamIds.push(teamId);
+    console.log('✅ Selected team:', teamId);
+  } else {
+    selectedTeamIds.splice(index, 1);
+    console.log('❌ Deselected team:', teamId);
+  }
+  
+  updateSelectedTeamsSummary();
+}
+
+/**
+ * ⭐ อัปเดตสไตล์ของ Item ที่เลือก
+ */
+function updateSelectedItem(isSelected, item) {
+  if (isSelected) {
+    item.classList.add('selected');
+  } else {
+    item.classList.remove('selected');
+  }
+}
+
+/**
+ * ⭐ Select All Teams
+ */
+function selectAllTeams() {
+  selectedTeamIds = [];
+  
+  var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
+  
+  checkboxes.forEach(function(checkbox) {
+    checkbox.checked = true;
+    selectedTeamIds.push(checkbox.value);
+    
+    var item = checkbox.closest('.team-checkbox-item');
+    if (item) {
+      item.classList.add('selected');
+    }
+  });
+  
+  updateSelectedTeamsSummary();
+  showToast('✅ เลือกทั้งหมด', 'เลือกทีมทั้งหมด ' + selectedTeamIds.length + ' ทีม', 'success', 2000);
+}
+
+/**
+ * ⭐ Clear Team Selection
+ */
+function clearTeamSelection() {
+  selectedTeamIds = [];
+  
+  var checkboxes = document.querySelectorAll('#teamCheckboxContainer input[type="checkbox"]');
+  
+  checkboxes.forEach(function(checkbox) {
+    checkbox.checked = false;
+    
+    var item = checkbox.closest('.team-checkbox-item');
+    if (item) {
+      item.classList.remove('selected');
+    }
+  });
+  
+  updateSelectedTeamsSummary();
+  showToast('ℹ️ ล้างแล้ว', 'ล้างการเลือกทีมแล้ว', 'info', 2000);
+}
+
+/**
+ * ⭐ อัปเดตสรุปทีมที่เลือก
+ */
+function updateSelectedTeamsSummary() {
+  var summary = document.getElementById('selectedTeamsSummary');
+  
+  if (!summary) return;
+  
+  if (selectedTeamIds.length === 0) {
+    summary.classList.remove('show');
+    return;
+  }
+  
+  var selectedTeamNames = availableSurveyTeams
+    .filter(function(team) {
+      return selectedTeamIds.indexOf(team.resourceId) !== -1;
+    })
+    .map(function(team) {
+      return team.resourceName;
+    });
+  
+  summary.innerHTML = 
+    '<strong>✓ เลือกแล้ว:</strong> ' + selectedTeamIds.length + ' ทีม<br>' +
+    '<small>' + selectedTeamNames.join(', ') + '</small>';
+  
+  summary.classList.add('show');
+}
+
+/**
+ * ⭐ แสดง Team Selection
+ */
+function showTeamSelection() {
+  var selection = document.getElementById('surveyTeamSelection');
+  if (selection) {
+    selection.classList.add('show');
+  }
+}
+
+/**
+ * ⭐ ซ่อน Team Selection
+ */
+function hideTeamSelection() {
+  var selection = document.getElementById('surveyTeamSelection');
+  if (selection) {
+    selection.classList.remove('show');
+  }
+  selectedTeamIds = [];
+  availableSurveyTeams = [];
+}
+
 function handleSubmit(event) {
   event.preventDefault();
   
@@ -1585,49 +1985,60 @@ function handleSubmit(event) {
     return;
   }
   
-  // ⭐⭐⭐ ถ้าเป็น Survey Role → เช็คว่าทีมว่างก่อน Submit
+  // ⭐⭐⭐ Survey Role - ต้องเลือกทีมก่อน Submit
   if (isSurveyRole) {
-    submitBtn.disabled = true;
-    showToast('กำลังตรวจสอบ', 'กำลังเช็คว่าทีมว่าง...', 'info', 3000);
+    if (selectedTeamIds.length === 0) {
+      showToast('⚠️ ยังไม่เลือกทีม', 'กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'warning', 5000);
+      showMessage('❌ กรุณาเลือกทีม Survey อย่างน้อย 1 ทีม', 'error');
+      
+      // Scroll to team selection
+      var teamSelection = document.getElementById('surveyTeamSelection');
+      if (teamSelection) {
+        teamSelection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      return;
+    }
     
-    google.script.run
-      .withSuccessHandler(function(availabilityResult) {
-        submitBtn.disabled = false;
-        
-        if (!availabilityResult.available) {
-          // ⚠️ ทีมไม่ว่าง - ถามยืนยัน
-          var confirmMsg = 
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '⚠️ คำเตือน: ทีมไม่ว่าง\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            availabilityResult.message + '\n\n' +
-            '📊 สถานะทีม: ' + availabilityResult.teamCount + ' / ' + availabilityResult.totalTeams + ' ว่าง\n\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '⚠️ ต้องการบันทึกต่อหรือไม่?\n' +
-            '💡 แนะนำ: เลือกเวลาอื่นที่มีทีมว่าง';
-          
-          if (!confirm(confirmMsg)) {
-            showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ - กรุณาเลือกเวลาใหม่', 'info', 3000);
-            return;
-          }
-          
-          showToast('⚠️ คำเตือน', 'กำลังบันทึกแม้ทีมไม่ว่าง...', 'warning', 3000);
-        } else {
-          // ✅ ทีมว่าง
-          showToast('✅ ทีมว่าง', availabilityResult.message, 'success', 3000);
-        }
-        
-        // ดำเนินการ Submit
-        proceedWithSubmit(formData, submitBtn, loading);
+    // ⭐ เพิ่มข้อมูลทีมที่เลือกเข้า formData
+    var selectedTeamNames = availableSurveyTeams
+      .filter(function(team) {
+        return selectedTeamIds.indexOf(team.resourceId) !== -1;
       })
-      .withFailureHandler(function(error) {
-        submitBtn.disabled = false;
-        showToast('เกิดข้อผิดพลาด', 'ไม่สามารถเช็คสถานะทีมได้: ' + error.message, 'error', 5000);
-      })
-      .checkSurveyTeamAvailability(formData.requestDate, formData.startTime, formData.endTime);
+      .map(function(team) {
+        return team.resourceName;
+      });
     
+    formData.selectedTeams = selectedTeamNames.join(',');
+    formData.selectedTeamIds = selectedTeamIds.join(',');
+    
+    console.log('✅ Selected teams:', formData.selectedTeams);
+  }
+  
+  // ❌ Regular User - ไม่ต้องเลือกทีม (Auto)
+  const confirmMessage = 
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '📋 ยืนยันการส่ง Survey Work Request\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '📅 วันที่: ' + formData.requestDate + '\n' +
+    '🔧 ประเภทงาน: ' + formData.workType + '\n' +
+    '⏰ เวลา: ' + formData.startTime + ' - ' + formData.endTime + ' น.\n' +
+    (isSurveyRole ? '👥 ทีม: ' + formData.selectedTeams + '\n' : '') +
+    '📍 สถานที่: ' + formData.location + '\n' +
+    '👤 ผู้ขอ: ' + formData.requesterName + '\n' +
+    '📧 อีเมล: ' + formData.requesterEmail + '\n' +
+    (selectedFileData ? '📎 ไฟล์: ' + selectedFileData.name + '\n' : '📎 ไฟล์: ไม่มีไฟล์แนบ\n') +
+    '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ ต้องการส่งคำขอนี้หรือไม่?';
+  
+  if (!confirm(confirmMessage)) {
+    console.log('❌ User cancelled submission');
+    showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
     return;
   }
+  
+  proceedWithSubmit(formData, submitBtn, loading);
+}
   
   // ❌ Regular User - Submit เลย (เพราะเลือกได้แค่เวลาที่ว่าง)
   const confirmMessage = 
@@ -1966,172 +2377,69 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
     .checkDateBookingAllowed(dateStr, 'survey'); // ⭐ เปลี่ยนเป็น 'survey'
 }
 
+
+/**
+ * ⭐ แก้ไข updateAvailableSlots สำหรับ Survey Role
+ */
 var originalUpdateAvailableSlots = updateAvailableSlots;
 
 updateAvailableSlots = function() {
-  const date = document.getElementById('requestDate').value;
-  const startTimeSelect = document.getElementById('startTime');
-  const endTimeSelect = document.getElementById('endTime');
+  var date = document.getElementById('requestDate').value;
+  var startTimeSelect = document.getElementById('startTime');
+  var endTimeSelect = document.getElementById('endTime');
   
   if (!date) {
     startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
     startTimeSelect.disabled = true;
-    hideTeamStatus();
-    return;
+    hideTeamSelection();
+    return; // ✅ ถูกต้อง - อยู่ใน function
   }
   
   setSelectLoading(startTimeSelect, 'กำลังโหลดเวลา...');
   resetEndTimeSelect();
-  hideTeamStatus();
+  hideTeamSelection();
   
   if (isSurveyRole) {
-    // ⭐⭐⭐ Survey Role - เลือกได้ทุกเวลา พร้อมแสดงสถานะ
-    console.log('⭐ Loading ALL time slots with status for Survey Role');
+    // ⭐⭐⭐ Survey Role - เลือกได้ทุกเวลา
+    console.log('⭐ Loading ALL time slots for Survey Role');
     
-    google.script.run
-      .withSuccessHandler(function(slotsWithStatus) {
-        console.log('📥 Received slots:', slotsWithStatus); // ⭐ Debug
-        
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '';
-        
-        if (!slotsWithStatus || slotsWithStatus.length === 0) {
-          startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-          startTimeSelect.disabled = true;
-          showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดเวลาได้', 'error', 4000);
-          return;
-        }
-        
-        // ⭐ แสดงทุก slot พร้อมสถานะ
-        startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
-        
-        var availableCount = 0;
-        var busyCount = 0;
-        var unavailableCount = 0;
-        
-        slotsWithStatus.forEach(function(slot) {
-          const option = document.createElement('option');
-          option.value = slot.time;
-          
-          // ⭐ สร้างข้อความแสดง
-          var displayText = slot.time + ' น. ';
-          
-          if (slot.available) {
-            displayText += '✅ ว่าง (' + slot.teamCount + '/' + slot.totalTeams + ' ทีม)';
-            option.className = 'time-slot-available';
-            availableCount++;
-          } else if (slot.teamCount === 0) {
-            displayText += '❌ เต็ม';
-            option.className = 'time-slot-unavailable';
-            unavailableCount++;
-          } else {
-            displayText += '⚠️ ทีมน้อย (' + slot.teamCount + '/' + slot.totalTeams + ')';
-            option.className = 'time-slot-busy';
-            busyCount++;
-          }
-          
-          option.textContent = displayText;
-          option.setAttribute('data-available', slot.available);
-          option.setAttribute('data-team-count', slot.teamCount);
-          option.setAttribute('data-total-teams', slot.totalTeams);
-          
-          startTimeSelect.appendChild(option);
-        });
-        
-        startTimeSelect.disabled = false;
-        
-        // ⭐ แสดง Toast สรุป
-        var summaryMsg = 'ทั้งหมด ' + slotsWithStatus.length + ' slots\n' +
-                        '✅ ว่าง: ' + availableCount + ' slots';
-        
-        if (busyCount > 0) {
-          summaryMsg += '\n⚠️ ทีมน้อย: ' + busyCount + ' slots';
-        }
-        
-        if (unavailableCount > 0) {
-          summaryMsg += '\n❌ เต็ม: ' + unavailableCount + ' slots';
-        }
-        
-        summaryMsg += '\n💡 เลือกได้ทุกช่วง - จะเช็คทีมตอน Submit';
-        
-        showToast('⭐ Survey Role Mode', summaryMsg, 'info', 6000);
-        
-        console.log('✅ Slots loaded:', availableCount, 'available,', busyCount, 'busy,', unavailableCount, 'unavailable');
-      })
-      .withFailureHandler(function(error) {
-        console.error('❌ Error:', error);
-        startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
-        startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
-        startTimeSelect.disabled = true;
-        showToast('เกิดข้อผิดพลาด', error.message, 'error', 4000);
-      })
-      .getSurveyRoleAllTimeSlotsWithStatus(date);  // ✅✅✅ เรียกฟังก์ชันถูก
-      
+    startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
+    startTimeSelect.innerHTML = '';
+    
+    // สร้าง all slots (09:00 - 19:30)
+    var allSlots = [];
+    for (var hour = 9; hour <= 19; hour++) {
+      for (var minute = 0; minute < 60; minute += 30) {
+        if (hour === 19 && minute === 30) break;
+        var time = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        allSlots.push(time);
+      }
+    }
+    
+    startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+    
+    allSlots.forEach(function(slot) {
+      var option = document.createElement('option');
+      option.value = slot;
+      option.textContent = slot + ' น.';
+      startTimeSelect.appendChild(option);
+    });
+    
+    startTimeSelect.disabled = false;
+    
+    showToast(
+      '⭐ Survey Role Mode', 
+      'เลือกเวลาได้ทุกช่วง (' + allSlots.length + ' slots)\n💡 เลือกเวลาสิ้นสุดเพื่อเลือกทีม', 
+      'info', 
+      5000
+    );
+    
   } else {
-    // ❌ Regular User - ใช้ฟังก์ชันเดิม (เช็คทีมว่าง + 30 นาที)
+    // ❌ Regular User
     console.log('❌ Regular User - Loading available slots only');
     originalUpdateAvailableSlots();
   }
 };
-/**
- * ⭐ แสดงสถานะทีมเมื่อเลือกเวลา
- */
-document.getElementById('startTime').addEventListener('change', function() {
-  if (!isSurveyRole) {
-    hideTeamStatus();
-    return;
-  }
-  
-  var selectedOption = this.options[this.selectedIndex];
-  
-  if (!selectedOption.value) {
-    hideTeamStatus();
-    return;
-  }
-  
-  var isAvailable = selectedOption.getAttribute('data-available') === 'true';
-  var teamCount = parseInt(selectedOption.getAttribute('data-team-count')) || 0;
-  var totalTeams = parseInt(selectedOption.getAttribute('data-total-teams')) || 0;
-  
-  showTeamStatus(isAvailable, teamCount, totalTeams);
-});
-
-/**
- * ⭐ แสดงสถานะทีม
- */
-function showTeamStatus(isAvailable, teamCount, totalTeams) {
-  var statusDiv = document.getElementById('teamStatusInfo');
-  
-  if (!statusDiv) return;
-  
-  var statusClass = isAvailable ? 'available' : (teamCount > 0 ? 'busy' : 'unavailable');
-  var icon = isAvailable ? '✅' : (teamCount > 0 ? '⚠️' : '❌');
-  var statusText = '';
-  
-  if (isAvailable) {
-    statusText = '<strong>' + icon + ' ทีมว่าง:</strong> มี ' + teamCount + ' ทีมว่างจาก ' + totalTeams + ' ทีม<br>' +
-                '<small>💡 สามารถบันทึกได้เลย</small>';
-  } else if (teamCount > 0) {
-    statusText = '<strong>' + icon + ' ทีมน้อย:</strong> มี ' + teamCount + ' ทีมว่างจาก ' + totalTeams + ' ทีม<br>' +
-                '<small>⚠️ อาจไม่เพียงพอ - ระบบจะเช็คอีกครั้งตอน Submit</small>';
-  } else {
-    statusText = '<strong>' + icon + ' ทีมเต็ม:</strong> ไม่มีทีมว่างในช่วงนี้<br>' +
-                '<small>⚠️ ระบบจะแจ้งเตือนตอน Submit</small>';
-  }
-  
-  statusDiv.className = 'team-status-info ' + statusClass + ' show';
-  statusDiv.innerHTML = statusText;
-}
-
-/**
- * ⭐ ซ่อนสถานะทีม
- */
-function hideTeamStatus() {
-  var statusDiv = document.getElementById('teamStatusInfo');
-  if (statusDiv) {
-    statusDiv.className = 'team-status-info';
-  }
-}
 
   </script>
 </body>
