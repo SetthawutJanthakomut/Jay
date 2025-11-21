@@ -1,4 +1,4 @@
-<!--version 2 with Confirmation Dialog-->
+<!--version 1 with Confirmation Dialog-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -590,6 +590,55 @@
     min-width: auto;
   }
 }
+
+/* ⭐ Time Slot Status Indicators */
+.time-slot-available {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+  color: #065f46 !important;
+  font-weight: 500;
+}
+
+.time-slot-busy {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  color: #92400e !important;
+}
+
+.time-slot-unavailable {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+  color: #991b1b !important;
+}
+
+/* ⭐ Team Status Info */
+.team-status-info {
+  font-size: 12px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: none;
+  animation: slideDown 0.3s ease-out;
+}
+
+.team-status-info.available {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+
+.team-status-info.busy {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+}
+
+.team-status-info.unavailable {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.team-status-info.show {
+  display: block;
+}
   </style>
 </head>
 <body>
@@ -1043,10 +1092,11 @@ function updateInfoBoxForSurveyRole() {
   
   if (infoBox) {
     infoBox.innerHTML = 
-      '<strong>👨‍💼 Survey Role Mode:</strong> จองได้ทุกเวลา ไม่มีข้อจำกัด<br>' +
+      '<strong>👨‍💼 Survey Role Mode:</strong> เลือกเวลาได้ทุกช่วง ⭐<br>' +
+      '<strong>⚠️ หมายเหตุ:</strong> ระบบจะเช็คว่าทีมว่างตอน Submit<br>' +
       '<strong>📅 จองวันหยุด:</strong> ได้ ✅<br>' +
       '<strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น.<br>' +
-      '<strong>👥 ทีมงาน:</strong> ต้องมีทีมว่าง (เช็คเหมือนเดิม)';
+      '<strong>👥 ทีมงาน:</strong> ต้องมีทีมว่าง (เช็คตอน Submit)';
     infoBox.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
     infoBox.style.borderColor = '#f59e0b';
   }
@@ -1535,6 +1585,51 @@ function handleSubmit(event) {
     return;
   }
   
+  // ⭐⭐⭐ ถ้าเป็น Survey Role → เช็คว่าทีมว่างก่อน Submit
+  if (isSurveyRole) {
+    submitBtn.disabled = true;
+    showToast('กำลังตรวจสอบ', 'กำลังเช็คว่าทีมว่าง...', 'info', 3000);
+    
+    google.script.run
+      .withSuccessHandler(function(availabilityResult) {
+        submitBtn.disabled = false;
+        
+        if (!availabilityResult.available) {
+          // ⚠️ ทีมไม่ว่าง - ถามยืนยัน
+          var confirmMsg = 
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '⚠️ คำเตือน: ทีมไม่ว่าง\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+            availabilityResult.message + '\n\n' +
+            '📊 สถานะทีม: ' + availabilityResult.teamCount + ' / ' + availabilityResult.totalTeams + ' ว่าง\n\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '⚠️ ต้องการบันทึกต่อหรือไม่?\n' +
+            '💡 แนะนำ: เลือกเวลาอื่นที่มีทีมว่าง';
+          
+          if (!confirm(confirmMsg)) {
+            showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ - กรุณาเลือกเวลาใหม่', 'info', 3000);
+            return;
+          }
+          
+          showToast('⚠️ คำเตือน', 'กำลังบันทึกแม้ทีมไม่ว่าง...', 'warning', 3000);
+        } else {
+          // ✅ ทีมว่าง
+          showToast('✅ ทีมว่าง', availabilityResult.message, 'success', 3000);
+        }
+        
+        // ดำเนินการ Submit
+        proceedWithSubmit(formData, submitBtn, loading);
+      })
+      .withFailureHandler(function(error) {
+        submitBtn.disabled = false;
+        showToast('เกิดข้อผิดพลาด', 'ไม่สามารถเช็คสถานะทีมได้: ' + error.message, 'error', 5000);
+      })
+      .checkSurveyTeamAvailability(formData.requestDate, formData.startTime, formData.endTime);
+    
+    return;
+  }
+  
+  // ❌ Regular User - Submit เลย (เพราะเลือกได้แค่เวลาที่ว่าง)
   const confirmMessage = 
     '━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     '📋 ยืนยันการส่ง Survey Work Request\n' +
@@ -1549,14 +1644,21 @@ function handleSubmit(event) {
     '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     '✅ ต้องการส่งคำขอนี้หรือไม่?';
   
-if (!confirm(confirmMessage)) {
-  console.log('❌ User cancelled submission');
-  showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
-  return;
+  if (!confirm(confirmMessage)) {
+    console.log('❌ User cancelled submission');
+    showToast('ยกเลิก', 'ยกเลิกการส่งคำขอ', 'info', 2000);
+    return;
+  }
+  
+  proceedWithSubmit(formData, submitBtn, loading);
 }
 
-setSubmittingFlag(); // ⭐ เพิ่มบรรทัดนี้
-submitBtn.disabled = true;
+/**
+ * ⭐ ดำเนินการ Submit จริง
+ */
+function proceedWithSubmit(formData, submitBtn, loading) {
+  setSubmittingFlag();
+  submitBtn.disabled = true;
   loading.style.display = 'block';
   
   // ⭐ เริ่ม Progress
@@ -1586,9 +1688,9 @@ submitBtn.disabled = true;
           let successMsg = result.message || '✅ บันทึก Survey Work Request เรียบร้อยแล้ว';
           let toastMsg = 'บันทึกข้อมูลเรียบร้อย';
 
-              if (result.recordedBy) {
-      toastMsg += '\n📝 บันทึกโดย: ' + result.recordedBy;
-    }
+          if (result.recordedBy) {
+            toastMsg += '\n📝 บันทึกโดย: ' + result.recordedBy;
+          }
           
           if (result.fileName) {
             toastMsg += ' และอัปโหลดไฟล์สำเร็จ';
@@ -1601,12 +1703,12 @@ submitBtn.disabled = true;
         }, 1200);
         
       } else {
-  resetSubmitProgress();
-  isSubmitting = false; // ⭐ เพิ่มบรรทัดนี้
-  const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-  showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
-  showMessage('❌ ' + errorMessage, 'error');
-}
+        resetSubmitProgress();
+        isSubmitting = false;
+        const errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+        showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
+        showMessage('❌ ' + errorMessage, 'error');
+      }
     })
     .withFailureHandler(function(error) {
       loading.style.display = 'none';
@@ -1863,9 +1965,7 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
     })
     .checkDateBookingAllowed(dateStr, 'survey'); // ⭐ เปลี่ยนเป็น 'survey'
 }
-/**
- * ⭐ แก้ไข updateAvailableSlots สำหรับ Survey Role
- */
+
 var originalUpdateAvailableSlots = updateAvailableSlots;
 
 updateAvailableSlots = function() {
@@ -1876,53 +1976,162 @@ updateAvailableSlots = function() {
   if (!date) {
     startTimeSelect.innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
     startTimeSelect.disabled = true;
+    hideTeamStatus();
     return;
   }
   
-  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลาที่ว่าง...');
+  setSelectLoading(startTimeSelect, 'กำลังโหลดเวลา...');
   resetEndTimeSelect();
+  hideTeamStatus();
   
   if (isSurveyRole) {
-    // ⭐ Survey Role - ไม่เช็ควันที่ผ่านมา และไม่เช็ค 30 นาที
-    console.log('⭐ Loading time slots for Survey Role (no restrictions)');
+    // ⭐⭐⭐ Survey Role - เลือกได้ทุกเวลา พร้อมแสดงสถานะ
+    console.log('⭐ Loading ALL time slots with status for Survey Role');
     
     google.script.run
-      .withSuccessHandler(function(availableSlots) {
+      .withSuccessHandler(function(slotsWithStatus) {
+        console.log('📥 Received slots:', slotsWithStatus); // ⭐ Debug
+        
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
         startTimeSelect.innerHTML = '';
         
-        if (!availableSlots || availableSlots.length === 0) {
-          startTimeSelect.innerHTML = '<option value="">-- ไม่มีเวลาว่าง --</option>';
+        if (!slotsWithStatus || slotsWithStatus.length === 0) {
+          startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
           startTimeSelect.disabled = true;
-          showToast('ไม่มีเวลาว่าง', 'ทีม Survey เต็มหมดแล้ว', 'warning', 4000);
-        } else {
-          startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
-          
-          availableSlots.forEach(function(slot) {
-            const option = document.createElement('option');
-            option.value = slot;
-            option.textContent = slot + ' น.';
-            startTimeSelect.appendChild(option);
-          });
-          
-          startTimeSelect.disabled = false;
-          showToast('✅ พร้อมจอง', 'มี ' + availableSlots.length + ' ช่วงเวลาว่าง', 'success', 2000);
+          showToast('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดเวลาได้', 'error', 4000);
+          return;
         }
+        
+        // ⭐ แสดงทุก slot พร้อมสถานะ
+        startTimeSelect.innerHTML = '<option value="">-- เลือกเวลาเริ่มต้น --</option>';
+        
+        var availableCount = 0;
+        var busyCount = 0;
+        var unavailableCount = 0;
+        
+        slotsWithStatus.forEach(function(slot) {
+          const option = document.createElement('option');
+          option.value = slot.time;
+          
+          // ⭐ สร้างข้อความแสดง
+          var displayText = slot.time + ' น. ';
+          
+          if (slot.available) {
+            displayText += '✅ ว่าง (' + slot.teamCount + '/' + slot.totalTeams + ' ทีม)';
+            option.className = 'time-slot-available';
+            availableCount++;
+          } else if (slot.teamCount === 0) {
+            displayText += '❌ เต็ม';
+            option.className = 'time-slot-unavailable';
+            unavailableCount++;
+          } else {
+            displayText += '⚠️ ทีมน้อย (' + slot.teamCount + '/' + slot.totalTeams + ')';
+            option.className = 'time-slot-busy';
+            busyCount++;
+          }
+          
+          option.textContent = displayText;
+          option.setAttribute('data-available', slot.available);
+          option.setAttribute('data-team-count', slot.teamCount);
+          option.setAttribute('data-total-teams', slot.totalTeams);
+          
+          startTimeSelect.appendChild(option);
+        });
+        
+        startTimeSelect.disabled = false;
+        
+        // ⭐ แสดง Toast สรุป
+        var summaryMsg = 'ทั้งหมด ' + slotsWithStatus.length + ' slots\n' +
+                        '✅ ว่าง: ' + availableCount + ' slots';
+        
+        if (busyCount > 0) {
+          summaryMsg += '\n⚠️ ทีมน้อย: ' + busyCount + ' slots';
+        }
+        
+        if (unavailableCount > 0) {
+          summaryMsg += '\n❌ เต็ม: ' + unavailableCount + ' slots';
+        }
+        
+        summaryMsg += '\n💡 เลือกได้ทุกช่วง - จะเช็คทีมตอน Submit';
+        
+        showToast('⭐ Survey Role Mode', summaryMsg, 'info', 6000);
+        
+        console.log('✅ Slots loaded:', availableCount, 'available,', busyCount, 'busy,', unavailableCount, 'unavailable');
       })
       .withFailureHandler(function(error) {
-        console.error('Error:', error);
+        console.error('❌ Error:', error);
         startTimeSelect.className = startTimeSelect.className.replace(' loading-select', '');
         startTimeSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
         startTimeSelect.disabled = true;
         showToast('เกิดข้อผิดพลาด', error.message, 'error', 4000);
       })
-      .getSurveyRoleAvailableTimeSlots(date);
+      .getSurveyRoleAllTimeSlotsWithStatus(date);  // ✅✅✅ เรียกฟังก์ชันถูก
       
   } else {
-    // ❌ Regular User - ใช้ฟังก์ชันเดิม (เช็ควันที่ผ่านมา + 30 นาที)
+    // ❌ Regular User - ใช้ฟังก์ชันเดิม (เช็คทีมว่าง + 30 นาที)
+    console.log('❌ Regular User - Loading available slots only');
     originalUpdateAvailableSlots();
   }
 };
+/**
+ * ⭐ แสดงสถานะทีมเมื่อเลือกเวลา
+ */
+document.getElementById('startTime').addEventListener('change', function() {
+  if (!isSurveyRole) {
+    hideTeamStatus();
+    return;
+  }
+  
+  var selectedOption = this.options[this.selectedIndex];
+  
+  if (!selectedOption.value) {
+    hideTeamStatus();
+    return;
+  }
+  
+  var isAvailable = selectedOption.getAttribute('data-available') === 'true';
+  var teamCount = parseInt(selectedOption.getAttribute('data-team-count')) || 0;
+  var totalTeams = parseInt(selectedOption.getAttribute('data-total-teams')) || 0;
+  
+  showTeamStatus(isAvailable, teamCount, totalTeams);
+});
+
+/**
+ * ⭐ แสดงสถานะทีม
+ */
+function showTeamStatus(isAvailable, teamCount, totalTeams) {
+  var statusDiv = document.getElementById('teamStatusInfo');
+  
+  if (!statusDiv) return;
+  
+  var statusClass = isAvailable ? 'available' : (teamCount > 0 ? 'busy' : 'unavailable');
+  var icon = isAvailable ? '✅' : (teamCount > 0 ? '⚠️' : '❌');
+  var statusText = '';
+  
+  if (isAvailable) {
+    statusText = '<strong>' + icon + ' ทีมว่าง:</strong> มี ' + teamCount + ' ทีมว่างจาก ' + totalTeams + ' ทีม<br>' +
+                '<small>💡 สามารถบันทึกได้เลย</small>';
+  } else if (teamCount > 0) {
+    statusText = '<strong>' + icon + ' ทีมน้อย:</strong> มี ' + teamCount + ' ทีมว่างจาก ' + totalTeams + ' ทีม<br>' +
+                '<small>⚠️ อาจไม่เพียงพอ - ระบบจะเช็คอีกครั้งตอน Submit</small>';
+  } else {
+    statusText = '<strong>' + icon + ' ทีมเต็ม:</strong> ไม่มีทีมว่างในช่วงนี้<br>' +
+                '<small>⚠️ ระบบจะแจ้งเตือนตอน Submit</small>';
+  }
+  
+  statusDiv.className = 'team-status-info ' + statusClass + ' show';
+  statusDiv.innerHTML = statusText;
+}
+
+/**
+ * ⭐ ซ่อนสถานะทีม
+ */
+function hideTeamStatus() {
+  var statusDiv = document.getElementById('teamStatusInfo');
+  if (statusDiv) {
+    statusDiv.className = 'team-status-info';
+  }
+}
 
   </script>
 </body>
