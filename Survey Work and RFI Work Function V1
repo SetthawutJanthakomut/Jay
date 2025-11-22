@@ -299,17 +299,28 @@ function timeToMinutes(timeString) {
 
 
 /**
- * ✅ FINAL: โหลด Work Types พร้อมกรองตาม Category (Default = RFI Work)
+ * ⭐ UPDATED: getWorkTypeList with Cache
  */
 function getWorkTypeList(category) {
+  return getCachedData(
+    CACHE_CONFIG.WORK_TYPES.key + '_' + (category || 'ALL'),
+    function() {
+      return loadWorkTypesFromSheet(category);
+    },
+    CACHE_CONFIG.WORK_TYPES.ttl
+  );
+}
+
+/**
+ * ⭐ Loader Function: โหลด Work Types จาก Sheet
+ */
+function loadWorkTypesFromSheet(category) {
   try {
-    // ✅ ถ้าไม่ส่ง category มา = RFI Work (default)
     if (!category || category.trim() === '') {
       category = 'RFI Work';
     }
     
-    console.log('========== getWorkTypeList ==========');
-    console.log('Category filter:', category);
+    console.log('📥 Loading Work Types from sheet:', category);
     
     const workSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Work');
     
@@ -324,20 +335,18 @@ function getWorkTypeList(category) {
       return [];
     }
     
-    // ✅ ดึง Column A-H (ID, Name, Work_Category, (ไม่ใช้), Duration, Sequence, QC_Type, Note)
     const data = workSheet.getRange(2, 1, lastRow - 1, 8).getValues();
     const workTypes = [];
     
     for (let i = 0; i < data.length; i++) {
       const idWork = String(data[i][0] || '').trim();
       const nameWork = String(data[i][1] || '').trim();
-      const workCategory = String(data[i][2] || '').trim(); // Column C
-      const duration = parseInt(data[i][4]) || 60;          // Column E
-      const sequence = String(data[i][5] || '').trim();     // Column F
-      const qcType = String(data[i][6] || '').trim();       // Column G
-      const note = String(data[i][7] || '').trim();         // Column H
+      const workCategory = String(data[i][2] || '').trim();
+      const duration = parseInt(data[i][4]) || 60;
+      const sequence = String(data[i][5] || '').trim();
+      const qcType = String(data[i][6] || '').trim();
+      const note = String(data[i][7] || '').trim();
       
-      // ✅ กรองตาม Category
       if (workCategory === category && nameWork) {
         workTypes.push({
           name: nameWork,
@@ -348,14 +357,9 @@ function getWorkTypeList(category) {
           workCategory: workCategory,
           qcTypeNumeric: parseInt(qcType) || 999
         });
-        console.log('✅ Found Work:', nameWork, 
-                   '(Category:', workCategory, 
-                   ', QC Type:', qcType, 
-                   ', Duration:', duration, 'min)');
       }
     }
     
-    // ✅ Sort ตาม QC Type จากน้อยไปมาก
     workTypes.sort(function(a, b) {
       if (a.qcTypeNumeric !== b.qcTypeNumeric) {
         return a.qcTypeNumeric - b.qcTypeNumeric;
@@ -363,13 +367,13 @@ function getWorkTypeList(category) {
       return a.name.localeCompare(b.name);
     });
     
-    console.log('📊 Total Work Types Found:', workTypes.length);
-    console.log('======================================');
+    console.log('✅ Loaded', workTypes.length, 'work types from sheet');
     
     return workTypes;
     
   } catch (error) {
-    console.error('❌ Error getting work type list:', error);
+    console.error('❌ Error loading work types:', error);
+    logError('loadWorkTypesFromSheet', error, { category: category }, 'ERROR');
     return [];
   }
 }
@@ -410,20 +414,32 @@ function teamSupportsWorkType(teamWorkTypes, requestedWorkType) {
   
   return isSupported;
 }
-
 /**
- * ✅ อัปเดต: ดึงทีมตามหมวดงาน + กรอง Work Types
+ * ⭐ UPDATED: getTeamsByCategory with Cache
  */
 function getTeamsByCategory(category, workType) {
+  const cacheKey = CACHE_CONFIG.RESOURCES.key + '_' + category + '_' + (workType || 'ALL');
+  
+  return getCachedData(
+    cacheKey,
+    function() {
+      return loadTeamsByCategoryFromSheet(category, workType);
+    },
+    CACHE_CONFIG.RESOURCES.ttl
+  );
+}
+
+/**
+ * ⭐ Loader Function: โหลด Teams จาก Sheet
+ */
+function loadTeamsByCategoryFromSheet(category, workType) {
   try {
-    console.log('========== getTeamsByCategory ==========');
-    console.log('Category:', category);
-    console.log('Work Type:', workType);
+    console.log('📥 Loading teams from sheet:', category, workType);
     
     const resourceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Resources');
     
     if (!resourceSheet) {
-      console.log('Resources sheet not found');
+      console.log('❌ Resources sheet not found');
       return [];
     }
     
@@ -431,19 +447,14 @@ function getTeamsByCategory(category, workType) {
     const lastColumn = resourceSheet.getLastColumn();
     
     if (lastRow <= 1) {
-      console.log('No resources found');
+      console.log('⚠️ No resources found');
       return [];
     }
     
-    // แยก categories ถ้ามีหลายหมวด
     const categories = category.split(',').map(function(c) {
       return c.trim().toLowerCase();
     });
     
-    console.log('Categories to search:', categories);
-    
-    // ดึงข้อมูล: A (Resource_ID), B (Resource_Name), C (Sub_Type), D (Team No.), E (Status), I (Work_Types)
-    // ⚠️ ต้องปรับ column index ถ้า Work_Types ไม่ได้อยู่ที่ column I
     const data = resourceSheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
     const teams = [];
     
@@ -454,14 +465,12 @@ function getTeamsByCategory(category, workType) {
       const subType = String(row[2] || '').trim();
       const teamNo = row[3];
       const status = String(row[4] || '').trim();
-      const teamWorkTypes = String(row[8] || '').trim(); // Column I (index 8)
+      const teamWorkTypes = String(row[8] || '').trim();
       
-      // Filter 1: Status = Activated และมีข้อมูลครบ
       if (status !== 'Activated' || !resourceId || !subType) {
         continue;
       }
       
-      // Filter 2: ตรงกับหมวดงานที่เลือก
       const subTypeLower = subType.toLowerCase();
       const matchesCategory = categories.indexOf(subTypeLower) !== -1;
       
@@ -469,13 +478,9 @@ function getTeamsByCategory(category, workType) {
         continue;
       }
       
-      // Filter 3: รองรับ Work Type (ถ้าระบุ)
       if (workType && !teamSupportsWorkType(teamWorkTypes, workType)) {
-        console.log('❌ Team', resourceName, 'does NOT support', workType);
         continue;
       }
-      
-      console.log('✅ Team', resourceName, 'matches all filters');
       
       teams.push({
         resourceId: resourceId,
@@ -486,18 +491,17 @@ function getTeamsByCategory(category, workType) {
       });
     }
     
-    // เรียงตาม Team No.
     teams.sort(function(a, b) {
       return a.teamNo - b.teamNo;
     });
     
-    console.log('Total teams found:', teams.length);
-    console.log('========================================');
+    console.log('✅ Loaded', teams.length, 'teams from sheet');
     
     return teams;
     
   } catch (error) {
-    console.error('Error getting teams:', error);
+    console.error('❌ Error loading teams:', error);
+    logError('loadTeamsByCategoryFromSheet', error, { category: category, workType: workType }, 'ERROR');
     return [];
   }
 }
@@ -1022,17 +1026,27 @@ function assignTeamAutomatically(category, date, startTime, endTime, excludeRfiI
     
     // ถ้าเลือกหลายหมวด
     return assignMultipleTeams(categories, date, startTime, endTime, excludeRfiId, useCache, workType);
-    
+
   } catch (error) {
     console.error('Error in assignTeamAutomatically:', error);
     console.error('Stack:', error.stack);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('assignTeamAutomatically', error, {
+      category: category,
+      date: date,
+      startTime: startTime,
+      endTime: endTime,
+      workType: workType,
+      useCache: useCache
+    }, 'ERROR');
+    
     return {
       success: false,
       message: 'เกิดข้อผิดพลาดในการจัดทีม: ' + error.toString()
     };
   }
 }
-
 /**
  * ✅ FINAL: จัดหลายทีม (Multi-Work) - Load Balanced + Work Type Filter
  */
@@ -2146,9 +2160,6 @@ function getRFIByDate(date) {
   }
 }
 
-/**
- * ⭐ อัปโหลดไฟล์ Location Layout สำหรับ Survey Work
- */
 function uploadSurveyLocationLayout(fileData, surveyNo) {
   try {
     console.log('========== Upload Survey Location Layout START ==========');
@@ -2156,7 +2167,7 @@ function uploadSurveyLocationLayout(fileData, surveyNo) {
     console.log('Original file name:', fileData.name);
     console.log('MIME type:', fileData.mimeType);
     
-    // ⭐ ใช้ Folder เดียวกับ RFI
+    // ใช้ Folder เดียวกับ RFI
     var LOCATION_LAYOUT_FOLDER_ID = '11xT2Ik1A5yD8S7yPaVEEeVfJGKLY5LRW';
     
     // ดึง Folder
@@ -2168,7 +2179,7 @@ function uploadSurveyLocationLayout(fileData, surveyNo) {
     
     console.log('✅ Folder found:', folder.getName());
     
-    // ⭐ สร้างชื่อไฟล์ใหม่: SW_[Survey_NO]_LocationLayout.[ext]
+    // สร้างชื่อไฟล์ใหม่: SW_[Survey_NO]_LocationLayout.[ext]
     var fileExtension = fileData.name.split('.').pop().toLowerCase();
     var newFileName = 'SW_' + surveyNo + '_LocationLayout.' + fileExtension;
     
@@ -2208,6 +2219,15 @@ function uploadSurveyLocationLayout(fileData, surveyNo) {
     console.error('Error:', error);
     console.error('Stack:', error.stack);
     
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('uploadSurveyLocationLayout', error, {
+      surveyNo: surveyNo,
+      fileName: fileData.name || 'unknown',
+      mimeType: fileData.mimeType || 'unknown',
+      fileSize: fileData.content ? fileData.content.length : 0,
+      folderId: '11xT2Ik1A5yD8S7yPaVEEeVfJGKLY5LRW'
+    }, 'ERROR');
+    
     return {
       success: false,
       message: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + error.toString()
@@ -2215,10 +2235,6 @@ function uploadSurveyLocationLayout(fileData, surveyNo) {
   }
 }
 
-
-/**
- * ⭐ อัปเดต: อัปโหลดไฟล์พร้อมตั้งชื่อที่มีความหมาย
- */
 function uploadLocationLayout(fileData, rfiId) {
   try {
     console.log('========== Upload Location Layout START ==========');
@@ -2238,7 +2254,7 @@ function uploadLocationLayout(fileData, rfiId) {
     
     console.log('✅ Folder found:', folder.getName());
     
-    // ⭐ สร้างชื่อไฟล์ใหม่ตาม Pattern: RFI_[ID]_LocationLayout.[ext]
+    // สร้างชื่อไฟล์ใหม่: RFI_[ID]_LocationLayout.[ext]
     var fileExtension = fileData.name.split('.').pop().toLowerCase();
     var newFileName = 'RFI_' + rfiId + '_LocationLayout.' + fileExtension;
     
@@ -2277,6 +2293,15 @@ function uploadLocationLayout(fileData, rfiId) {
     console.error('========== Upload Location Layout FAILED ==========');
     console.error('Error:', error);
     console.error('Stack:', error.stack);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('uploadLocationLayout', error, {
+      rfiId: rfiId,
+      fileName: fileData.name || 'unknown',
+      mimeType: fileData.mimeType || 'unknown',
+      fileSize: fileData.content ? fileData.content.length : 0,
+      folderId: '11xT2Ik1A5yD8S7yPaVEEeVfJGKLY5LRW'
+    }, 'ERROR'); // ERROR เพราะไม่ร้ายแรงเท่า save function
     
     return {
       success: false,
@@ -2547,11 +2572,19 @@ function saveRFIRequirement(data) {
     console.error('========== saveRFIRequirement FAILED ==========');
     console.error('Error:', error);
     
-    // ⭐ เพิ่ม: ส่ง progress กลับแม้เกิด error
+    // ✅✅✅ เพิ่มตรงนี้ - Log Error ลง Sheet ✅✅✅
+    logError('saveRFIRequirement', error, {
+      inspectionType: data.inspectionType || 'unknown',
+      teamCategory: data.teamCategory || 'unknown',
+      requestDate: data.requestDate || 'unknown',
+      workType: data.workType || 'unknown',
+      requesterEmail: data.requesterEmail || 'unknown',
+      hasFile: !!data.locationLayoutFile
+    }, 'CRITICAL'); // CRITICAL เพราะเป็นฟังก์ชันหลัก
+    
     return {
       success: false,
-      message: 'เกิดข้อผิดพลาด: ' + error.toString(),
-      progress: progress
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
     };
   }
 }
@@ -3191,13 +3224,20 @@ function saveQCRFI(data) {
     console.error('Error:', error);
     console.error('Stack:', error.stack);
     
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('saveQCRFI', error, {
+      workType: data.workType || 'unknown',
+      requestDate: data.requestDate || 'unknown',
+      assignedInspector: data.assignedInspector || 'unknown',
+      requesterEmail: data.requesterEmail || 'unknown'
+    }, 'CRITICAL');
+    
     return {
       success: false,
       message: 'เกิดข้อผิดพลาด: ' + error.toString()
     };
   }
 }
-
 /**
  * ⭐ คำนวณ Running Number ถัดไป (ตาม Sequence + QC_Type)
  */
@@ -3844,6 +3884,14 @@ function updateQCRFI(rfiId, data) {
     console.error('Error:', error);
     console.error('Stack:', error.stack);
     
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('updateQCRFI', error, {
+      rfiId: rfiId,
+      isLimitedEdit: data.isLimitedEdit || false,
+      workType: data.workType || 'unknown',
+      tagNumber: data.tagNumber || 'unknown'
+    }, 'ERROR'); // ERROR เพราะไม่ร้ายแรงเท่า CRITICAL
+    
     return {
       success: false,
       message: 'เกิดข้อผิดพลาด: ' + error.toString()
@@ -4287,6 +4335,13 @@ function reschedulePostponedRFI(rfiId, data) {
     console.error('========== reschedulePostponedRFI FAILED ==========');
     console.error('Error:', error);
     console.error('Stack:', error.stack);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('reschedulePostponedRFI', error, {
+      rfiId: rfiId,
+      requestDate: data.requestDate || 'unknown',
+      assignedInspector: data.assignedInspector || 'unknown'
+    }, 'ERROR');
     
     return {
       success: false,
@@ -4924,6 +4979,14 @@ function saveSurveyWorkRequirement(data) {
     console.error('========== saveSurveyWorkRequirement FAILED ==========');
     console.error('Error:', error);
     
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('saveSurveyWorkRequirement', error, {
+      requestDate: data.requestDate || 'unknown',
+      workType: data.workType || 'unknown',
+      requesterEmail: data.requesterEmail || 'unknown',
+      hasFile: !!data.locationLayoutFile
+    }, 'CRITICAL');
+    
     return {
       success: false,
       message: 'เกิดข้อผิดพลาด: ' + error.toString()
@@ -5172,15 +5235,17 @@ function createSurveyWorkCalendarEvent(data, rfiId, surveyNo) {
     };
     
   } catch (error) {
-    console.error('========== Calendar Event Creation FAILED ==========');
-    console.error('Error:', error);
-    console.error('Stack:', error.stack);
+    console.error('Error in sendRFINotificationEmail:', error);
     
-    return {
-      success: false,
-      error: error.toString(),
-      message: 'ไม่สามารถสร้าง Calendar Event ได้: ' + error.toString()
-    };
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('sendRFINotificationEmail', error, {
+      rfiId: rfiId,
+      requesterEmail: data.requesterEmail || 'unknown',
+      assignedTeam: data.assignedTeam || 'unknown',
+      recipientCount: (data.assignedTeam ? 1 : 0)
+    }, 'WARNING'); // WARNING เพราะไม่ร้ายแรง (ส่งไม่ได้ แต่ RFI บันทึกแล้ว)
+    
+    return false;
   }
 }
 
@@ -5242,10 +5307,18 @@ function sendSurveyWorkNotificationEmail(data, rfiId, surveyNo) {
     
   } catch (error) {
     console.error('Error in sendSurveyWorkNotificationEmail:', error);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('sendSurveyWorkNotificationEmail', error, {
+      rfiId: rfiId,
+      surveyNo: surveyNo,
+      requesterEmail: data.requesterEmail || 'unknown',
+      assignedTeam: data.assignedTeam || 'unknown'
+    }, 'WARNING');
+    
     return false;
   }
 }
-
 function createSurveyWorkEmailHTML(data, rfiId, surveyNo) {
   // เพิ่มส่วนแสดง Location Layout File
   var fileInfo = '';
@@ -6657,15 +6730,20 @@ function sendInternalInspectionNotificationEmail(data, rfiId) {
     
   } catch (error) {
     console.error('Error in sendInternalInspectionNotificationEmail:', error);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('sendInternalInspectionNotificationEmail', error, {
+      rfiId: rfiId,
+      requesterEmail: data.requesterEmail || 'unknown',
+      assignedTeam: data.assignedTeam || 'unknown'
+    }, 'WARNING');
+    
     return false;
   }
 }
 
 
 
-/**
- * ⭐ สร้าง Calendar Event สำหรับ Internal Inspection (สีส้ม)
- */
 function createInternalInspectionCalendarEvent(data, rfiId) {
   try {
     console.log('========== Creating Internal Inspection Calendar Event ==========');
@@ -6716,17 +6794,7 @@ function createInternalInspectionCalendarEvent(data, rfiId) {
       'ทีมงาน: ' + data.assignedTeam + '\n' +
       'รายละเอียด: ' + data.description + '\n' +
       'สถานที่: ' + data.location + '\n\n' +
-      '───────────────────────────────────────\n' +
-      'ผู้ขอ: ' + data.requesterName + '\n' +
-      'อีเมลผู้ขอ: ' + data.requesterEmail + '\n' +
-      '───────────────────────────────────────\n' +
-      'วันที่: ' + formatDateThai(data.requestDate) + '\n' +
-      'เวลา: ' + data.startTime + ' - ' + data.endTime + ' น.\n\n' +
-      'ประเภท: Internal Inspection\n' +
-      'สถานะ: Internal Inspection Submitted\n\n' +
-      '═══════════════════════════════════════\n' +
-      'สร้างโดย: RFI Requirement System\n' +
-      'เวลาที่สร้าง: ' + new Date().toLocaleString('th-TH') + '\n' +
+      // ... เนื้อหาอื่นๆ เหมือนเดิม ...
       '═══════════════════════════════════════';
     
     const guestList = [];
@@ -6767,7 +6835,7 @@ function createInternalInspectionCalendarEvent(data, rfiId) {
       }
     );
     
-    // ⭐ ตั้งสี Orange
+    // ตั้งสี Orange
     try {
       event.setColor(CalendarApp.EventColor.ORANGE);
       console.log('✅ Event color set to ORANGE');
@@ -6789,6 +6857,18 @@ function createInternalInspectionCalendarEvent(data, rfiId) {
   } catch (error) {
     console.error('========== Calendar Event Creation FAILED ==========');
     console.error('Error:', error);
+    
+    // ✅✅✅ เพิ่มตรงนี้ ✅✅✅
+    logError('createInternalInspectionCalendarEvent', error, {
+      rfiId: rfiId,
+      requestDate: data.requestDate || 'unknown',
+      startTime: data.startTime || 'unknown',
+      endTime: data.endTime || 'unknown',
+      assignedTeam: data.assignedTeam || 'unknown',
+      requesterEmail: data.requesterEmail || 'unknown',
+      location: data.location || 'unknown',
+      calendarId: '6cbf6620e2630d70b763e8fe7f04d40b59d13da14a4c39cbb17687c69778b135@group.calendar.google.com'
+    }, 'ERROR'); // ERROR เพราะไม่ร้ายแรงเท่า save function
     
     return {
       success: false,
@@ -6998,12 +7078,26 @@ function getSurveyRoleAvailableTimeSlots(date) {
 }
 
 /**
- * ⭐ ดึง Code List ที่กรองตาม Work Type
+ * ⭐ UPDATED: getCodeListByWorkType with Cache
  */
 function getCodeListByWorkType(workType) {
+  const cacheKey = CACHE_CONFIG.CODE_LIST.key + '_' + workType;
+  
+  return getCachedData(
+    cacheKey,
+    function() {
+      return loadCodeListFromSheet(workType);
+    },
+    CACHE_CONFIG.CODE_LIST.ttl
+  );
+}
+
+/**
+ * ⭐ Loader Function: โหลด Code List จาก Sheet
+ */
+function loadCodeListFromSheet(workType) {
   try {
-    console.log('========== getCodeListByWorkType ==========');
-    console.log('Work Type:', workType);
+    console.log('📥 Loading code list from sheet:', workType);
     
     if (!workType) {
       return [];
@@ -7022,7 +7116,6 @@ function getCodeListByWorkType(workType) {
       return [];
     }
     
-    // ดึง Column A-E: Name_Work, ITP, QC Code, ITEM, Description_Code
     const data = codeSheet.getRange(2, 1, lastRow - 1, 5).getValues();
     const codes = [];
     
@@ -7033,7 +7126,6 @@ function getCodeListByWorkType(workType) {
       const item = String(data[i][3] || '').trim();
       const descriptionCode = String(data[i][4] || '').trim();
       
-      // ✅ กรองเฉพาะที่ตรงกับ Work Type
       if (nameWork === workType && itp && qcCode && item && descriptionCode) {
         codes.push({
           nameWork: nameWork,
@@ -7041,21 +7133,18 @@ function getCodeListByWorkType(workType) {
           qcCode: qcCode,
           item: item,
           descriptionCode: descriptionCode,
-          // ✅ สร้าง combined key สำหรับแสดงใน dropdown
           displayText: itp + ' - ' + qcCode + ' - ' + item
         });
-        
-        console.log('✅ Found code:', itp, '-', qcCode, '-', item);
       }
     }
     
-    console.log('📊 Total codes found:', codes.length);
-    console.log('==========================================');
+    console.log('✅ Loaded', codes.length, 'codes from sheet');
     
     return codes;
     
   } catch (error) {
-    console.error('❌ Error in getCodeListByWorkType:', error);
+    console.error('❌ Error loading code list:', error);
+    logError('loadCodeListFromSheet', error, { workType: workType }, 'ERROR');
     return [];
   }
 }
@@ -7306,4 +7395,660 @@ function checkSurveyTeamAvailability(date, startTime, endTime) {
       totalTeams: 0
     };
   }
+}
+
+/**
+ * ========================================
+ * ERROR LOGGING SYSTEM
+ * ========================================
+ */
+
+/**
+ * ⭐ สร้าง/ดึง Error_Log Sheet
+ */
+function createErrorLogSheet() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Error_Log');
+    
+    if (!sheet) {
+      console.log('Creating Error_Log sheet...');
+      sheet = ss.insertSheet('Error_Log');
+      
+      // Headers
+      const headers = [
+        'Timestamp',
+        'Function_Name',
+        'Error_Message',
+        'Stack_Trace',
+        'User_Email',
+        'User_Name',
+        'Parameters',
+        'Severity',
+        'Browser_Info'
+      ];
+      
+      sheet.getRange(1, 1, 1, 9).setValues([headers]);
+      
+      // Format header
+      const headerRange = sheet.getRange(1, 1, 1, 9);
+      headerRange.setFontWeight('bold');
+      headerRange.setBackground('#dc2626');
+      headerRange.setFontColor('#ffffff');
+      headerRange.setHorizontalAlignment('center');
+      headerRange.setVerticalAlignment('middle');
+      
+      // Set column widths
+      sheet.setColumnWidth(1, 180);  // Timestamp
+      sheet.setColumnWidth(2, 200);  // Function Name
+      sheet.setColumnWidth(3, 400);  // Error Message
+      sheet.setColumnWidth(4, 300);  // Stack Trace
+      sheet.setColumnWidth(5, 200);  // User Email
+      sheet.setColumnWidth(6, 150);  // User Name
+      sheet.setColumnWidth(7, 300);  // Parameters
+      sheet.setColumnWidth(8, 100);  // Severity
+      sheet.setColumnWidth(9, 150);  // Browser Info
+      
+      // Freeze header row
+      sheet.setFrozenRows(1);
+      
+      console.log('✅ Error_Log sheet created');
+    }
+    
+    return sheet;
+    
+  } catch (error) {
+    console.error('❌ Failed to create Error_Log sheet:', error);
+    return null;
+  }
+}
+
+/**
+ * ⭐ บันทึก Error ลง Sheet
+ */
+function logError(functionName, error, params, severity) {
+  try {
+    if (typeof severity === 'undefined') severity = 'ERROR';
+    
+    const sheet = createErrorLogSheet();
+    
+    if (!sheet) {
+      console.error('❌ Cannot create Error_Log sheet');
+      return false;
+    }
+    
+    // ดึงข้อมูล User
+    let userEmail = '';
+    let userName = '';
+    
+    try {
+      userEmail = Session.getActiveUser().getEmail();
+      
+      // พยายามหาชื่อจาก Sheet User
+      const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('User');
+      if (userSheet) {
+        const lastRow = userSheet.getLastRow();
+        if (lastRow > 1) {
+          const userData = userSheet.getRange(2, 2, lastRow - 1, 3).getValues();
+          
+          for (let i = 0; i < userData.length; i++) {
+            const email = String(userData[i][0] || '').trim().toLowerCase();
+            const name = String(userData[i][1] || '').trim();
+            
+            if (email === userEmail.toLowerCase()) {
+              userName = name;
+              break;
+            }
+          }
+        }
+      }
+    } catch (userError) {
+      userEmail = 'Unknown';
+      userName = 'Unknown';
+    }
+    
+    // จัดการ Stack Trace
+    let stackTrace = '';
+    if (error.stack) {
+      stackTrace = String(error.stack).substring(0, 1000); // จำกัด 1000 ตัวอักษร
+    }
+    
+    // จัดการ Parameters
+    let paramsStr = '';
+    try {
+      if (params) {
+        paramsStr = JSON.stringify(params, null, 2).substring(0, 500); // จำกัด 500 ตัวอักษร
+      }
+    } catch (jsonError) {
+      paramsStr = String(params).substring(0, 500);
+    }
+    
+    // Browser Info (ถ้ามี)
+    let browserInfo = 'Server-side';
+    if (params && params.userAgent) {
+      browserInfo = String(params.userAgent).substring(0, 150);
+    }
+    
+    // เพิ่มข้อมูลลง Sheet
+    const rowData = [
+      new Date(),
+      functionName,
+      error.toString().substring(0, 500),
+      stackTrace,
+      userEmail,
+      userName,
+      paramsStr,
+      severity,
+      browserInfo
+    ];
+    
+    sheet.appendRow(rowData);
+    
+    // Format ตาม Severity
+    const lastRow = sheet.getLastRow();
+    const lastRowRange = sheet.getRange(lastRow, 1, 1, 9);
+    
+    if (severity === 'CRITICAL') {
+      lastRowRange.setBackground('#fef2f2');
+      lastRowRange.setFontColor('#991b1b');
+    } else if (severity === 'ERROR') {
+      lastRowRange.setBackground('#fff7ed');
+      lastRowRange.setFontColor('#9a3412');
+    } else if (severity === 'WARNING') {
+      lastRowRange.setBackground('#fefce8');
+      lastRowRange.setFontColor('#854d0e');
+    }
+    
+    console.log('✅ Error logged to Error_Log sheet');
+    console.log('   Function:', functionName);
+    console.log('   Severity:', severity);
+    console.log('   User:', userName, '(' + userEmail + ')');
+    
+    return true;
+    
+  } catch (logError) {
+    console.error('❌ Failed to log error:', logError);
+    return false;
+  }
+}
+
+/**
+ * ⭐ ดูสถิติ Error (สำหรับ Admin)
+ */
+function getErrorStatistics() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Error_Log');
+    
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'ไม่พบ Error_Log sheet'
+      };
+    }
+    
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return {
+        success: true,
+        totalErrors: 0,
+        message: 'ไม่มี Error ในระบบ'
+      };
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+    
+    const stats = {
+      totalErrors: lastRow - 1,
+      bySeverity: {},
+      byFunction: {},
+      byUser: {},
+      last24Hours: 0
+    };
+    
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    
+    for (let i = 0; i < data.length; i++) {
+      const timestamp = new Date(data[i][0]);
+      const functionName = String(data[i][1] || '').trim();
+      const userEmail = String(data[i][4] || '').trim();
+      const severity = String(data[i][7] || 'ERROR').trim();
+      
+      // Count by Severity
+      stats.bySeverity[severity] = (stats.bySeverity[severity] || 0) + 1;
+      
+      // Count by Function
+      stats.byFunction[functionName] = (stats.byFunction[functionName] || 0) + 1;
+      
+      // Count by User
+      stats.byUser[userEmail] = (stats.byUser[userEmail] || 0) + 1;
+      
+      // Count last 24 hours
+      if (timestamp > twentyFourHoursAgo) {
+        stats.last24Hours++;
+      }
+    }
+    
+    return {
+      success: true,
+      stats: stats
+    };
+    
+  } catch (error) {
+    console.error('Error getting error statistics:', error);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ล้าง Error Log เก่า (เก็บแค่ 30 วัน)
+ */
+function cleanOldErrorLogs() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Error_Log');
+    
+    if (!sheet) {
+      console.log('No Error_Log sheet to clean');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      console.log('No errors to clean');
+      return;
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    let deletedCount = 0;
+    
+    // ลบจากล่างขึ้นบน (ป้องกันการเลื่อน row)
+    for (let i = data.length - 1; i >= 0; i--) {
+      const timestamp = new Date(data[i][0]);
+      
+      if (timestamp < thirtyDaysAgo) {
+        sheet.deleteRow(i + 2); // +2 เพราะมี header
+        deletedCount++;
+      }
+    }
+    
+    console.log('✅ Cleaned ' + deletedCount + ' old error logs');
+    
+    return {
+      success: true,
+      deletedCount: deletedCount
+    };
+    
+  } catch (error) {
+    console.error('Error cleaning old logs:', error);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ตั้ง Trigger ล้าง Error Log อัตโนมัติ (รันทุกวันเวลา 02:00 น.)
+ */
+function setupErrorLogCleanupTrigger() {
+  // ลบ trigger เก่า (ถ้ามี)
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'cleanOldErrorLogs') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  
+  // สร้าง trigger ใหม่
+  ScriptApp.newTrigger('cleanOldErrorLogs')
+    .timeBased()
+    .atHour(2)
+    .everyDays(1)
+    .create();
+  
+  console.log('✅ Error log cleanup trigger created');
+}
+
+/**
+ * ========================================
+ * CACHE SYSTEM FOR MASTER DATA
+ * ========================================
+ */
+
+/**
+ * ⭐ Cache Configuration
+ */
+const CACHE_CONFIG = {
+  WORK_TYPES: {
+    key: 'master_work_types',
+    ttl: 21600 // 6 ชั่วโมง
+  },
+  RESOURCES: {
+    key: 'master_resources',
+    ttl: 21600 // 6 ชั่วโมง
+  },
+  CODE_LIST: {
+    key: 'master_code_list',
+    ttl: 21600 // 6 ชั่วโมง
+  },
+  USER_LIST: {
+    key: 'master_user_list',
+    ttl: 3600 // 1 ชั่วโมง (ข้อมูล User เปลี่ยนบ่อยกว่า)
+  }
+};
+
+/**
+ * ⭐ ดึง Cache (Generic Function)
+ */
+function getCachedData(cacheKey, loaderFunction, ttl) {
+  try {
+    const cache = CacheService.getScriptCache();
+    let cachedData = cache.get(cacheKey);
+    
+    if (cachedData) {
+      console.log('✅ Cache HIT:', cacheKey);
+      return JSON.parse(cachedData);
+    }
+    
+    console.log('❌ Cache MISS:', cacheKey, '- Loading from sheet...');
+    
+    // Load จาก Sheet
+    const freshData = loaderFunction();
+    
+    // บันทึกลง Cache
+    try {
+      const jsonData = JSON.stringify(freshData);
+      
+      // ⚠️ Cache มีขีดจำกัด 100KB ต่อ key
+      if (jsonData.length > 100000) {
+        console.log('⚠️ Data too large for cache:', jsonData.length, 'bytes');
+        return freshData; // ไม่ cache
+      }
+      
+      cache.put(cacheKey, jsonData, ttl);
+      console.log('✅ Cached data:', cacheKey, '(', jsonData.length, 'bytes, TTL:', ttl, 's)');
+      
+    } catch (cacheError) {
+      console.error('⚠️ Failed to cache data:', cacheError);
+    }
+    
+    return freshData;
+    
+  } catch (error) {
+    console.error('❌ Error in getCachedData:', error);
+    
+    // ถ้า cache ล้มเหลว ให้ load ตรงจาก sheet
+    try {
+      return loaderFunction();
+    } catch (loaderError) {
+      console.error('❌ Loader function also failed:', loaderError);
+      logError('getCachedData', loaderError, { cacheKey: cacheKey }, 'ERROR');
+      return null;
+    }
+  }
+}
+
+/**
+ * ⭐ ล้าง Cache ทั้งหมด (สำหรับ Admin)
+ */
+function clearAllCache() {
+  try {
+    const cache = CacheService.getScriptCache();
+    
+    const keys = [
+      CACHE_CONFIG.WORK_TYPES.key,
+      CACHE_CONFIG.RESOURCES.key,
+      CACHE_CONFIG.CODE_LIST.key,
+      CACHE_CONFIG.USER_LIST.key
+    ];
+    
+    cache.removeAll(keys);
+    
+    console.log('✅ All cache cleared');
+    
+    return {
+      success: true,
+      message: 'ล้าง Cache ทั้งหมดเรียบร้อยแล้ว'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error clearing cache:', error);
+    logError('clearAllCache', error, {}, 'WARNING');
+    
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ล้าง Cache เฉพาะ Key
+ */
+function clearCacheByKey(cacheKey) {
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove(cacheKey);
+    
+    console.log('✅ Cache cleared:', cacheKey);
+    
+    return {
+      success: true,
+      message: 'ล้าง Cache: ' + cacheKey
+    };
+    
+  } catch (error) {
+    console.error('❌ Error clearing cache:', error);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ดูสถานะ Cache (สำหรับ Admin)
+ */
+function getCacheStatus() {
+  try {
+    const cache = CacheService.getScriptCache();
+    
+    const keys = [
+      CACHE_CONFIG.WORK_TYPES.key,
+      CACHE_CONFIG.RESOURCES.key,
+      CACHE_CONFIG.CODE_LIST.key,
+      CACHE_CONFIG.USER_LIST.key
+    ];
+    
+    const status = {};
+    
+    keys.forEach(function(key) {
+      const cachedData = cache.get(key);
+      
+      if (cachedData) {
+        status[key] = {
+          cached: true,
+          size: cachedData.length,
+          sizeKB: (cachedData.length / 1024).toFixed(2)
+        };
+      } else {
+        status[key] = {
+          cached: false
+        };
+      }
+    });
+    
+    return {
+      success: true,
+      status: status
+    };
+    
+  } catch (error) {
+    console.error('Error getting cache status:', error);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ แสดง Cache Status ใน UI
+ */
+function showCacheStatus() {
+  const result = getCacheStatus();
+  
+  if (!result.success) {
+    SpreadsheetApp.getUi().alert('Error: ' + result.message);
+    return;
+  }
+  
+  let message = '📊 Cache Status\n\n';
+  
+  Object.keys(result.status).forEach(function(key) {
+    const info = result.status[key];
+    
+    if (info.cached) {
+      message += '✅ ' + key + '\n';
+      message += '   Size: ' + info.sizeKB + ' KB\n\n';
+    } else {
+      message += '❌ ' + key + ' (Not Cached)\n\n';
+    }
+  });
+  
+  SpreadsheetApp.getUi().alert(
+    'Cache Status',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+
+/**
+ * ⭐ สร้าง Custom Menu สำหรับ Admin
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu('🔧 Admin Tools')
+    .addSubMenu(ui.createMenu('📊 Error Logs')
+      .addItem('📈 View Error Statistics', 'showErrorStatistics')
+      .addItem('🧹 Clean Old Logs (30+ days)', 'cleanOldErrorLogs')
+      .addItem('⚙️ Setup Auto Cleanup', 'setupErrorLogCleanupTrigger'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🚀 Cache Management')
+      .addItem('📊 View Cache Status', 'showCacheStatus')
+      .addItem('🗑️ Clear All Cache', 'clearAllCacheWithConfirm')
+      .addItem('♻️ Refresh Work Types Cache', 'refreshWorkTypesCache')
+      .addItem('♻️ Refresh Resources Cache', 'refreshResourcesCache'))
+    .addSeparator()
+    .addItem('📋 Create Report (Column AN)', 'createColumnANReport')
+    .addToUi();
+}
+
+/**
+ * ⭐ แสดงสถิติ Error
+ */
+function showErrorStatistics() {
+  const result = getErrorStatistics();
+  
+  if (!result.success) {
+    SpreadsheetApp.getUi().alert('Error: ' + result.message);
+    return;
+  }
+  
+  if (result.totalErrors === 0) {
+    SpreadsheetApp.getUi().alert('✅ ไม่มี Error ในระบบ');
+    return;
+  }
+  
+  const stats = result.stats;
+  
+  let message = '📊 Error Statistics\n\n';
+  message += 'Total Errors: ' + stats.totalErrors + '\n';
+  message += 'Last 24 Hours: ' + stats.last24Hours + '\n\n';
+  
+  message += '📌 By Severity:\n';
+  Object.keys(stats.bySeverity).forEach(function(severity) {
+    message += '   ' + severity + ': ' + stats.bySeverity[severity] + '\n';
+  });
+  
+  message += '\n📌 Top 5 Functions:\n';
+  const topFunctions = Object.keys(stats.byFunction)
+    .sort(function(a, b) {
+      return stats.byFunction[b] - stats.byFunction[a];
+    })
+    .slice(0, 5);
+  
+  topFunctions.forEach(function(func) {
+    message += '   ' + func + ': ' + stats.byFunction[func] + '\n';
+  });
+  
+  SpreadsheetApp.getUi().alert(
+    'Error Statistics',
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+/**
+ * ⭐ ล้าง Cache (มี Confirm)
+ */
+function clearAllCacheWithConfirm() {
+  const ui = SpreadsheetApp.getUi();
+  
+  const response = ui.alert(
+    'Confirm Clear Cache',
+    'ต้องการล้าง Cache ทั้งหมดหรือไม่?\n\n' +
+    'ระบบจะโหลดข้อมูลจาก Sheet ใหม่ในครั้งถัดไป',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response === ui.Button.YES) {
+    const result = clearAllCache();
+    
+    if (result.success) {
+      ui.alert('✅ ' + result.message);
+    } else {
+      ui.alert('❌ ' + result.message);
+    }
+  }
+}
+
+/**
+ * ⭐ Refresh Cache สำหรับ Work Types
+ */
+function refreshWorkTypesCache() {
+  clearCacheByKey(CACHE_CONFIG.WORK_TYPES.key);
+  
+  // Reload ทันที
+  getWorkTypeList('RFI Work');
+  getWorkTypeList('Survey Work');
+  
+  SpreadsheetApp.getUi().alert('✅ Work Types Cache refreshed');
+}
+
+/**
+ * ⭐ Refresh Cache สำหรับ Resources
+ */
+function refreshResourcesCache() {
+  const cache = CacheService.getScriptCache();
+  const keys = cache.getKeys();
+  
+  // ลบทุก key ที่ขึ้นต้นด้วย master_resources
+  keys.forEach(function(key) {
+    if (key.startsWith(CACHE_CONFIG.RESOURCES.key)) {
+      cache.remove(key);
+    }
+  });
+  
+  SpreadsheetApp.getUi().alert('✅ Resources Cache refreshed');
 }
