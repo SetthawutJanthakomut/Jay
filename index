@@ -887,6 +887,260 @@ input[type="file"]::file-selector-button:hover {
   font-size: 16px;
   margin-right: 4px;
 }
+  /* Step Progress Indicator */
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      position: relative;
+      padding: 0 20px;
+    }
+    
+    .progress-steps::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #e4e6eb;
+      z-index: 0;
+    }
+    
+    .progress-line {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1877f2 0%, #2948b1 100%);
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1;
+    }
+    
+    .progress-step {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .progress-step.disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+    
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #e4e6eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-step.active .step-circle {
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+      border-color: #1877f2;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.4);
+    }
+    
+    .progress-step.completed .step-circle {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-color: #10b981;
+      color: white;
+    }
+    
+    .progress-step.completed .step-circle::after {
+      content: '✓';
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .step-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      text-align: center;
+      max-width: 80px;
+      line-height: 1.3;
+    }
+    
+    .progress-step.active .step-label {
+      color: #1877f2;
+      font-weight: 600;
+    }
+    
+    .progress-step.completed .step-label {
+      color: #10b981;
+    }
+    
+    /* Step Content */
+    .step-content {
+      display: none;
+      animation: fadeInUp 0.4s ease-out;
+    }
+    
+    .step-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .step-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .step-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1877f2;
+      margin-bottom: 8px;
+    }
+    
+    .step-subtitle {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+    }
+    
+    /* Navigation Buttons */
+    .step-navigation {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    
+    .btn-prev, .btn-next {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .btn-prev {
+      background: #f0f2f5;
+      color: #666;
+    }
+    
+    .btn-prev:hover:not(:disabled) {
+      background: #e4e6eb;
+      transform: translateX(-2px);
+    }
+    
+    .btn-next {
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
+    }
+    
+    .btn-next:hover:not(:disabled) {
+      transform: translateX(2px);
+      box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4);
+    }
+    
+    .btn-prev:disabled,
+    .btn-next:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    /* Step Summary Card */
+    .summary-card {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%);
+      border-left: 4px solid #1877f2;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .summary-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1877f2;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .summary-item {
+      display: flex;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(24, 119, 242, 0.1);
+    }
+    
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+    
+    .summary-label {
+      font-weight: 500;
+      color: #666;
+      min-width: 140px;
+    }
+    
+    .summary-value {
+      color: #333;
+      font-weight: 500;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .progress-steps {
+        padding: 0 10px;
+      }
+      
+      .step-circle {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+      }
+      
+      .step-label {
+        font-size: 10px;
+        max-width: 60px;
+      }
+      
+      .step-title {
+        font-size: 20px;
+      }
+      
+      .step-navigation {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
@@ -905,41 +1159,34 @@ input[type="file"]::file-selector-button:hover {
       <p class="subtitle">ระบบบันทึก Request for Information</p>
     </div>
 
-    <!-- ⭐ Inspection Type Buttons -->
-    <div class="inspection-type-section">
-      <label class="inspection-type-label">Request for Inspection</label>
-      <div class="inspection-buttons">
-        <button type="button" class="inspection-btn" data-type="internal">
-          <span class="icon">🏢</span>
-          <span>Internal</span>
-        </button>
-        <button type="button" class="inspection-btn" data-type="external">
-          <span class="icon">🤝</span>
-          <span>External</span>
-        </button>
+    <!-- ⭐ Progress Steps Indicator -->
+    <div class="progress-steps">
+      <div class="progress-line" id="progressLine" style="width: 0%"></div>
+      
+      <div class="progress-step active" data-step="1">
+        <div class="step-circle">🏢</div>
+        <div class="step-label">ประเภทการตรวจ</div>
       </div>
-    </div>
-
-    <!-- ⭐ Info Box - External -->
-    <div class="info-box" id="infoBoxExternal">
-      <strong>📌 ข้อกำหนด (External):</strong><br>
-      <strong>📅 Lead Time:</strong> ≥ 1 วัน (จองพรุ่งนี้ปิดรับ 13:00 น.)<br>
-      <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
-      <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
-      <strong>✅ Approval:</strong> ต้องขออนุมัติ Consultant
-    </div>
-
-    <!-- ⭐ Info Box - Internal -->
-    <div class="info-box internal" id="infoBoxInternal">
-      <strong>📌 ข้อกำหนด (Internal):</strong><br>
-      <strong>📅 จองวันนี้:</strong> ได้ ถ้าจองก่อน 16:00 น. ⭐<br>
-      <strong>📅 จองพรุ่งนี้:</strong> ได้ (ไม่มีข้อจำกัด)<br>
-      <strong>⚡ Lead Time:</strong> 30 นาที<br>
-      <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
-      <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
-      <strong>📅 Calendar:</strong> สร้างทันที + ส่ง invitation<br>
-      <strong>✅ Approval:</strong> ไม่ต้องขออนุมัติ Consultant
+      
+      <div class="progress-step disabled" data-step="2">
+        <div class="step-circle">📋</div>
+        <div class="step-label">ประเภทงาน & ทีม</div>
+      </div>
+      
+      <div class="progress-step disabled" data-step="3">
+        <div class="step-circle">📅</div>
+        <div class="step-label">วันที่ & เวลา</div>
+      </div>
+      
+      <div class="progress-step disabled" data-step="4">
+        <div class="step-circle">✍️</div>
+        <div class="step-label">รายละเอียด</div>
+      </div>
+      
+      <div class="progress-step disabled" data-step="5">
+        <div class="step-circle">✅</div>
+        <div class="step-label">ยืนยันข้อมูล</div>
+      </div>
     </div>
 
     <a href="https://calendar.google.com/calendar/u/0/embed?src=developeritd75@gmail.com&ctz=Asia/Bangkok" 
@@ -963,154 +1210,283 @@ input[type="file"]::file-selector-button:hover {
     <form id="rfiForm">
       <input type="hidden" id="inspectionType" name="inspectionType" value="">
 
-<div class="form-group">
-  <label for="workType">ประเภทงาน <span>*</span></label>
-  <select id="workType" name="workType" required>
-    <option value="">-- กำลังโหลด... --</option>
-  </select>
-  <div class="time-info">เลือกประเภทงานที่ต้องการก่อน ระบบจะแนะนำทีมงานให้</div>
-  <!-- ✅ เพิ่มส่วนแสดง Note -->
-  <div id="workTypeNote" class="work-type-note" style="display: none;"></div>
-</div>
-      
-      <div class="form-group team-category-section">
-        <label>ทีมงาน <span>*</span></label>
-        
-        <div class="recommendation-box" id="recommendationBox">
-          <div id="recommendationText"></div>
+      <!-- ========== STEP 1: Inspection Type ========== -->
+      <div class="step-content active" data-step="1">
+        <div class="step-header">
+          <div class="step-title">🏢 เลือกประเภทการตรวจ</div>
+          <div class="step-subtitle">กรุณาเลือกว่าต้องการตรวจแบบ Internal หรือ External</div>
+        </div>
+
+        <div class="inspection-type-section">
+          <div class="inspection-buttons">
+            <button type="button" class="inspection-btn" data-type="internal">
+              <span class="icon">🏢</span>
+              <span>Internal</span>
+            </button>
+            <button type="button" class="inspection-btn" data-type="external">
+              <span class="icon">🤝</span>
+              <span>External</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="info-box" id="infoBoxExternal">
+          <strong>📌 ข้อกำหนด (External):</strong><br>
+          <strong>📅 Lead Time:</strong> ≥ 1 วัน (จองพรุ่งนี้ปิดรับ 13:00 น.)<br>
+          <strong>📌 เลือกทีม:</strong> ควรเลือกทีมงานให้ครอบคลุมงานที่จอง<br>
+          <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
+          <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
+          <strong>✅ Approval:</strong> ต้องขออนุมัติ Consultant
+        </div>
+
+        <div class="info-box internal" id="infoBoxInternal">
+          <strong>📌 ข้อกำหนด (Internal):</strong><br>
+          <strong>📅 จองวันนี้:</strong> ได้ ถ้าจองก่อน 16:00 น. ⭐<br>
+          <strong>📅 จองพรุ่งนี้:</strong> ได้ (ไม่มีข้อจำกัด)<br>
+          <strong>⚡ Lead Time:</strong> 30 นาที<br>
+          <strong>⏰ เวลาทำการ:</strong> 09:00 - 20:00 น. (ช่วงละ 30 นาที)<br>
+          <strong>👥 จัดทีม:</strong> ระบบจะเลือกทีมที่ว่างให้อัตโนมัติ<br>
+          <strong>📅 Calendar:</strong> สร้างทันที + ส่ง invitation<br>
+          <strong>✅ Approval:</strong> ไม่ต้องขออนุมัติ Consultant
+        </div>
+      </div>
+
+      <!-- ========== STEP 2: Work Type & Team ========== -->
+      <div class="step-content" data-step="2">
+        <div class="step-header">
+          <div class="step-title">📋 เลือกประเภทงานและทีม</div>
+          <div class="step-subtitle">ระบุประเภทงานที่ต้องการและเลือกทีมงาน</div>
+        </div>
+
+        <div class="form-group">
+          <label for="workType">ประเภทงาน <span>*</span></label>
+          <select id="workType" name="workType" required>
+            <option value="">-- กำลังโหลด... --</option>
+          </select>
+          <div class="time-info">เลือกประเภทงานที่ต้องการก่อน ระบบจะแนะนำทีมงานให้</div>
+          <div id="workTypeNote" class="work-type-note" style="display: none;"></div>
         </div>
         
-        <div class="team-buttons">
-          <button type="button" class="team-btn" data-category="Survey">
-            <span class="icon">🔍</span>
-            <span>Survey</span>
-          </button>
-          <button type="button" class="team-btn" data-category="Lab">
-            <span class="icon">🧪</span>
-            <span>Lab</span>
-          </button>
-          <button type="button" class="team-btn" data-category="Inspector">
-            <span class="icon">📋</span>
-            <span>Inspector</span>
-          </button>
-          <button type="button" class="team-btn" data-category="งานรวม" id="multiWorkBtn">
-            <span class="icon">👥</span>
-            <span>งานรวม</span>
-          </button>
-        </div>
-        
-        <div class="multi-select-container" id="multiSelectContainer">
-          <div class="multi-select-title">✓ เลือกทีมงานที่ต้องการ (เลือกได้หลายทีม)</div>
-          <div class="checkbox-group">
-            <div class="checkbox-item">
-              <input type="checkbox" id="cbSurvey" value="Survey">
+        <div class="form-group team-category-section">
+          <label>ทีมงาน <span>*</span></label>
+          
+          <div class="recommendation-box" id="recommendationBox">
+            <div id="recommendationText"></div>
+          </div>
+          
+          <div class="team-buttons">
+            <button type="button" class="team-btn" data-category="Survey">
               <span class="icon">🔍</span>
-              <label for="cbSurvey">Survey</label>
-            </div>
-            <div class="checkbox-item">
-              <input type="checkbox" id="cbLab" value="Lab">
+              <span>Survey</span>
+            </button>
+            <button type="button" class="team-btn" data-category="Lab">
               <span class="icon">🧪</span>
-              <label for="cbLab">Lab</label>
-            </div>
-            <div class="checkbox-item">
-              <input type="checkbox" id="cbInspector" value="Inspector">
+              <span>Lab</span>
+            </button>
+            <button type="button" class="team-btn" data-category="Inspector">
               <span class="icon">📋</span>
-              <label for="cbInspector">Inspector</label>
+              <span>Inspector</span>
+            </button>
+            <button type="button" class="team-btn" data-category="งานรวม" id="multiWorkBtn">
+              <span class="icon">👥</span>
+              <span>งานรวม</span>
+            </button>
+          </div>
+          
+          <div class="multi-select-container" id="multiSelectContainer">
+            <div class="multi-select-title">✓ เลือกทีมงานที่ต้องการ (เลือกได้หลายทีม)</div>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" id="cbSurvey" value="Survey">
+                <span class="icon">🔍</span>
+                <label for="cbSurvey">Survey</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="cbLab" value="Lab">
+                <span class="icon">🧪</span>
+                <label for="cbLab">Lab</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="cbInspector" value="Inspector">
+                <span class="icon">📋</span>
+                <label for="cbInspector">Inspector</label>
+              </div>
+            </div>
+          </div>
+          
+          <input type="hidden" id="teamCategory" name="teamCategory" required>
+          <div class="time-info">เลือกทีมงานตามคำแนะนำ หรือเลือกเองก็ได้</div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 3: Date & Time ========== -->
+      <div class="step-content" data-step="3">
+        <div class="step-header">
+          <div class="step-title">📅 เลือกวันที่และเวลา</div>
+          <div class="step-subtitle">กำหนดวันที่และช่วงเวลาที่ต้องการ</div>
+        </div>
+
+        <div class="form-group">
+          <label for="requestDate">วันที่ต้องการ <span>*</span></label>
+          <input type="date" id="requestDate" name="requestDate" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="startTime">เวลาเริ่มต้น <span>*</span></label>
+          <select id="startTime" name="startTime" required disabled>
+            <option value="">-- กรุณาเลือกวันที่ก่อน --</option>
+          </select>
+          <div class="time-info">เลือกเวลาเริ่มต้นที่ต้องการ</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="endTime">เวลาสิ้นสุด <span>*</span></label>
+          <select id="endTime" name="endTime" required disabled>
+            <option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>
+          </select>
+          <div class="time-info">ระบบจะกำหนดเวลาเริ่มต้น +1 ชั่วโมง</div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 4: Details ========== -->
+      <div class="step-content" data-step="4">
+        <div class="step-header">
+          <div class="step-title">✍️ กรอกรายละเอียด</div>
+          <div class="step-subtitle">ระบุรายละเอียดและแนบไฟล์ที่จำเป็น</div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">รายละเอียด RFI <span>*</span></label>
+          <textarea id="description" name="description" required 
+            placeholder="ระบุรายละเอียดให้ครบถ้วน: ประเภทงาน, ขอบเขต, วัตถุประสงค์, ข้อกำหนดพิเศษ"></textarea>
+          <div class="time-info">💡 ข้อมูลที่ชัดเจนช่วยลดเวลาติดต่อกลับเพื่อแก้ไข</div>
+        </div>
+
+        <div class="form-group">
+          <label for="location">สถานที่ <span>*</span></label>
+          <input type="text" id="location" name="location" required 
+            placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
+          <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
+        </div>
+
+        <div class="form-group">
+          <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout <span>*</span></label>
+          <input type="file" 
+                 id="locationLayoutFile" 
+                 name="locationLayoutFile" 
+                 accept=".pdf,.png,.jpg,.jpeg,.gif" 
+                 required
+                 style="width: 100%; padding: 10px; border: 2px dashed #1877f2; background: #f0f7ff; cursor: pointer;">
+          <div class="time-info">
+            📎 แนบไฟล์ PDF หรือรูปภาพ (PNG, JPG, GIF)<br>
+            💡 ไฟล์จะถูกบันทึกใน Google Drive อัตโนมัติ<br>
+            ⚠️ ขนาดไฟล์ไม่เกิน 10 MB
+          </div>
+          <div id="fileInfo" style="display: none; margin-top: 10px; padding: 12px; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <div style="flex: 1; min-width: 0;">
+                <strong>✓ ไฟล์ที่เลือก:</strong> <span id="fileName" style="word-break: break-all;"></span><br>
+                <strong>📏 ขนาด:</strong> <span id="fileSize"></span>
+              </div>
+              <button type="button" 
+                      id="clearFileBtn" 
+                      onclick="clearLocationFile()"
+                      title="ลบไฟล์">
+                🗑️
+              </button>
             </div>
           </div>
         </div>
         
-        <input type="hidden" id="teamCategory" name="teamCategory" required>
-        <div class="time-info">เลือกทีมงานตามคำแนะนำ หรือเลือกเองก็ได้</div>
-      </div>
-      
-      <div class="form-group">
-        <label for="requestDate">วันที่ต้องการ <span>*</span></label>
-        <input type="date" id="requestDate" name="requestDate" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="startTime">เวลาเริ่มต้น <span>*</span></label>
-        <select id="startTime" name="startTime" required disabled>
-          <option value="">-- กรุณาเลือกวันที่ก่อน --</option>
-        </select>
-        <div class="time-info">เลือกเวลาเริ่มต้นที่ต้องการ</div>
-      </div>
-      
-      <div class="form-group">
-        <label for="endTime">เวลาสิ้นสุด <span>*</span></label>
-        <select id="endTime" name="endTime" required disabled>
-          <option value="">-- กรุณาเลือกเวลาเริ่มก่อน --</option>
-        </select>
-        <div class="time-info">ระบบจะกำหนดเวลาเริ่มต้น +1 ชั่วโมง</div>
-      </div>
-      
-      <div class="form-group">
-        <label for="description">รายละเอียด RFI <span>*</span></label>
-        <textarea id="description" name="description" required 
-          placeholder="ระบุรายละเอียดให้ครบถ้วน: ประเภทงาน, ขอบเขต, วัตถุประสงค์, ข้อกำหนดพิเศษ"></textarea>
-        <div class="time-info">💡 ข้อมูลที่ชัดเจนช่วยลดเวลาติดต่อกลับเพื่อแก้ไข</div>
+        <div class="form-group">
+          <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
+          <input type="text" id="requesterName" name="requesterName" required 
+                 placeholder="กำลังโหลด..." readonly
+                 style="background: #f0f7ff; cursor: wait;">
+          <div class="time-info" id="nameInfo">🔍 กำลังตรวจสอบข้อมูลผู้ใช้...</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
+          <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
+                 style="background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%); color: #1877f2; font-weight: 500; cursor: not-allowed; border-color: #1877f2;"
+                 placeholder="กำลังโหลดอีเมลของคุณ...">
+          <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
+        </div>
       </div>
 
-<div class="form-group">
-  <label for="location">สถานที่ <span>*</span></label>
-  <input type="text" id="location" name="location" required 
-    placeholder="ระบุให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060">
-  <div class="time-info">📍 สถานที่ที่ละเอียดช่วยให้ทีมเข้าถึงได้รวดเร็วและถูกต้อง</div>
-</div>
+      <!-- ========== STEP 5: Confirmation ========== -->
+      <div class="step-content" data-step="5">
+        <div class="step-header">
+          <div class="step-title">✅ ยืนยันข้อมูล</div>
+          <div class="step-subtitle">กรุณาตรวจสอบข้อมูลก่อนส่ง</div>
+        </div>
 
-<!-- ⭐ เพิ่ม: Location Layout File Upload -->
-<!-- ⭐ เพิ่ม: Location Layout File Upload -->
-<div class="form-group">
-  <label for="locationLayoutFile">📎 แนบไฟล์ Location Layout <span>*</span></label>
-  <input type="file" 
-         id="locationLayoutFile" 
-         name="locationLayoutFile" 
-         accept=".pdf,.png,.jpg,.jpeg,.gif" 
-         required
-         style="width: 100%; padding: 10px; border: 2px dashed #1877f2; background: #f0f7ff; cursor: pointer;">
-  <div class="time-info">
-    📎 แนบไฟล์ PDF หรือรูปภาพ (PNG, JPG, GIF)<br>
-    💡 ไฟล์จะถูกบันทึกใน Google Drive อัตโนมัติ<br>
-    ⚠️ ขนาดไฟล์ไม่เกิน 10 MB
-  </div>
- <div id="fileInfo" style="display: none; margin-top: 10px; padding: 12px; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-      <div style="flex: 1; min-width: 0;">
-        <strong>✓ ไฟล์ที่เลือก:</strong> <span id="fileName" style="word-break: break-all;"></span><br>
-        <strong>📏 ขนาด:</strong> <span id="fileSize"></span>
+        <div class="summary-card">
+          <div class="summary-title">
+            <span>📋</span>
+            <span>สรุปข้อมูล RFI Request</span>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">ประเภทการตรวจ:</div>
+            <div class="summary-value" id="summaryInspectionType">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">ประเภทงาน:</div>
+            <div class="summary-value" id="summaryWorkType">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">ทีมงาน:</div>
+            <div class="summary-value" id="summaryTeam">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">วันที่:</div>
+            <div class="summary-value" id="summaryDate">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">เวลา:</div>
+            <div class="summary-value" id="summaryTime">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">สถานที่:</div>
+            <div class="summary-value" id="summaryLocation">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">ไฟล์แนบ:</div>
+            <div class="summary-value" id="summaryFile">-</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">ผู้ขอ:</div>
+            <div class="summary-value" id="summaryRequester">-</div>
+          </div>
+        </div>
+
+        <div class="submit-progress-container">
+          <button type="submit" id="submitBtn">ส่ง RFI Request</button>
+          <div class="submit-progress-bar" id="submitProgressBar"></div>
+        </div>
+        <div class="submit-step-text" id="submitStepText"></div>
       </div>
-      <button type="button" 
-              id="clearFileBtn" 
-              onclick="clearLocationFile()"
-              title="ลบไฟล์">
-        🗑️
-      </button>
-    </div>
-  </div>
-</div>
-      
-      <div class="form-group">
-        <label for="requesterName">ชื่อผู้ขอ <span>*</span></label>
-        <input type="text" id="requesterName" name="requesterName" required 
-               placeholder="กำลังโหลด..." readonly
-               style="background: #f0f7ff; cursor: wait;">
-        <div class="time-info" id="nameInfo">🔍 กำลังตรวจสอบข้อมูลผู้ใช้...</div>
+
+      <!-- Navigation Buttons -->
+      <div class="step-navigation" id="stepNavigation">
+        <button type="button" class="btn-prev" id="btnPrev" disabled>
+          <span>←</span>
+          <span>ย้อนกลับ</span>
+        </button>
+        <button type="button" class="btn-next" id="btnNext">
+          <span>ถัดไป</span>
+          <span>→</span>
+        </button>
       </div>
-      
-      <div class="form-group">
-        <label for="requesterEmail">อีเมลผู้ขอ <span>*</span></label>
-        <input type="email" id="requesterEmail" name="requesterEmail" required readonly 
-               style="background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%); color: #1877f2; font-weight: 500; cursor: not-allowed; border-color: #1877f2;"
-               placeholder="กำลังโหลดอีเมลของคุณ...">
-        <div class="time-info">🔒 ระบบดึงอีเมลจากบัญชี Google ของคุณอัตโนมัติ</div>
-      </div>
-      
-      <div class="submit-progress-container">
-        <button type="submit" id="submitBtn">ส่ง RFI Request</button>
-        <div class="submit-progress-bar" id="submitProgressBar"></div>
-      </div>
-      <div class="submit-step-text" id="submitStepText"></div>
     </form>
     
     <div class="loading" id="loading">
@@ -1127,7 +1503,366 @@ input[type="file"]::file-selector-button:hover {
   </div>
   
   <div class="toast-container" id="toastContainer"></div>
+
   <script>
+    // ========== Progressive Form Logic ==========
+    
+    var currentStep = 1;
+    var totalSteps = 5;
+    var completedSteps = new Set();
+    
+    // Step Configuration
+    var STEP_CONFIG = {
+      1: {
+        title: 'ประเภทการตรวจ',
+        requiredFields: ['inspectionType'],
+        validate: validateStep1
+      },
+      2: {
+        title: 'ประเภทงาน & ทีม',
+        requiredFields: ['workType', 'teamCategory'],
+        validate: validateStep2
+      },
+      3: {
+        title: 'วันที่ & เวลา',
+        requiredFields: ['requestDate', 'startTime', 'endTime'],
+        validate: validateStep3
+      },
+      4: {
+        title: 'รายละเอียด',
+        requiredFields: ['description', 'location', 'locationLayoutFile', 'requesterName', 'requesterEmail'],
+        validate: validateStep4
+      },
+      5: {
+        title: 'ยืนยันข้อมูล',
+        requiredFields: [],
+        validate: function() { return { valid: true }; }
+      }
+    };
+    
+    // Initialize
+    function initProgressiveForm() {
+      setupStepNavigation();
+      setupStepClickHandlers();
+      updateNavigationButtons();
+      updateProgressLine();
+    }
+    
+    // Setup Navigation
+    function setupStepNavigation() {
+      document.getElementById('btnPrev').addEventListener('click', function() {
+        if (currentStep > 1) {
+          goToStep(currentStep - 1);
+        }
+      });
+      
+      document.getElementById('btnNext').addEventListener('click', function() {
+        if (currentStep < totalSteps) {
+          var validation = validateCurrentStep();
+          
+          if (validation.valid) {
+            completedSteps.add(currentStep);
+            goToStep(currentStep + 1);
+          } else {
+            showToast('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน', validation.message, 'warning', 5000);
+          }
+        }
+      });
+    }
+    
+    // Setup Step Click Handlers
+    function setupStepClickHandlers() {
+      var steps = document.querySelectorAll('.progress-step');
+      
+      steps.forEach(function(step) {
+        step.addEventListener('click', function() {
+          var targetStep = parseInt(this.getAttribute('data-step'));
+          
+          // อนุญาตให้กลับไปขั้นตอนที่ผ่านมาแล้วเท่านั้น
+          if (!this.classList.contains('disabled') && targetStep < currentStep) {
+            goToStep(targetStep);
+          }
+        });
+      });
+    }
+    
+    // Go to Step
+    function goToStep(stepNumber) {
+      if (stepNumber < 1 || stepNumber > totalSteps) return;
+      
+      console.log('🔄 Going to step:', stepNumber);
+      
+      // Hide all steps
+      var allSteps = document.querySelectorAll('.step-content');
+      allSteps.forEach(function(content) {
+        content.classList.remove('active');
+      });
+      
+      // Show target step
+      var targetContent = document.querySelector('.step-content[data-step="' + stepNumber + '"]');
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+      
+      // Update progress indicators
+      updateProgressIndicators(stepNumber);
+      
+      // Update current step
+      currentStep = stepNumber;
+      
+      // Update buttons
+      updateNavigationButtons();
+      
+      // Update progress line
+      updateProgressLine();
+      
+      // Update summary if on step 5
+      if (stepNumber === 5) {
+        updateSummary();
+      }
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Update Progress Indicators
+    function updateProgressIndicators(activeStep) {
+      var steps = document.querySelectorAll('.progress-step');
+      
+      steps.forEach(function(step) {
+        var stepNumber = parseInt(step.getAttribute('data-step'));
+        
+        step.classList.remove('active', 'completed', 'disabled');
+        
+        if (stepNumber === activeStep) {
+          step.classList.add('active');
+        } else if (stepNumber < activeStep || completedSteps.has(stepNumber)) {
+          step.classList.add('completed');
+        } else {
+          step.classList.add('disabled');
+        }
+      });
+    }
+    
+    // Update Navigation Buttons
+    function updateNavigationButtons() {
+      var btnPrev = document.getElementById('btnPrev');
+      var btnNext = document.getElementById('btnNext');
+      var stepNav = document.getElementById('stepNavigation');
+      
+      // ซ่อน navigation ใน step 5
+      if (currentStep === 5) {
+        stepNav.style.display = 'none';
+      } else {
+        stepNav.style.display = 'flex';
+      }
+      
+      // Previous button
+      if (currentStep === 1) {
+        btnPrev.disabled = true;
+      } else {
+        btnPrev.disabled = false;
+      }
+      
+      // Next button
+      if (currentStep === totalSteps) {
+        btnNext.style.display = 'none';
+      } else {
+        btnNext.style.display = 'flex';
+        btnNext.innerHTML = '<span>ถัดไป</span><span>→</span>';
+      }
+    }
+    
+    // Update Progress Line
+    function updateProgressLine() {
+      var progressLine = document.getElementById('progressLine');
+      var percentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+      
+      progressLine.style.width = percentage + '%';
+    }
+    
+    // Validate Current Step
+    function validateCurrentStep() {
+      var stepConfig = STEP_CONFIG[currentStep];
+      
+      if (!stepConfig) {
+        return { valid: true };
+      }
+      
+      return stepConfig.validate();
+    }
+    
+    // ========== Step Validation Functions ==========
+    
+    function validateStep1() {
+      var inspectionType = document.getElementById('inspectionType').value;
+      
+      if (!inspectionType || !selectedInspectionType) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกประเภทการตรวจ (Internal หรือ External)'
+        };
+      }
+      
+      return { valid: true };
+    }
+    
+    function validateStep2() {
+      var workType = document.getElementById('workType').value;
+      var teamCategory = document.getElementById('teamCategory').value;
+      
+      if (!workType) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกประเภทงาน'
+        };
+      }
+      
+      if (!teamCategory || !selectedTeamCategory) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกทีมงาน'
+        };
+      }
+      
+      return { valid: true };
+    }
+    
+    function validateStep3() {
+      var requestDate = document.getElementById('requestDate').value;
+      var startTime = document.getElementById('startTime').value;
+      var endTime = document.getElementById('endTime').value;
+      
+      if (!requestDate) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกวันที่'
+        };
+      }
+      
+      if (!startTime) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกเวลาเริ่มต้น'
+        };
+      }
+      
+      if (!endTime) {
+        return {
+          valid: false,
+          message: 'กรุณาเลือกเวลาสิ้นสุด'
+        };
+      }
+      
+      return { valid: true };
+    }
+    
+    function validateStep4() {
+      var description = document.getElementById('description').value.trim();
+      var location = document.getElementById('location').value.trim();
+      var fileInput = document.getElementById('locationLayoutFile');
+      var requesterName = document.getElementById('requesterName').value.trim();
+      var requesterEmail = document.getElementById('requesterEmail').value.trim();
+      
+      if (!description) {
+        return {
+          valid: false,
+          message: 'กรุณากรอกรายละเอียด RFI'
+        };
+      }
+      
+      if (description.length < 20) {
+        return {
+          valid: false,
+          message: 'รายละเอียดควรมีอย่างน้อย 20 ตัวอักษร'
+        };
+      }
+      
+      if (!location) {
+        return {
+          valid: false,
+          message: 'กรุณากรอกสถานที่'
+        };
+      }
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        return {
+          valid: false,
+          message: 'กรุณาแนบไฟล์ Location Layout'
+        };
+      }
+      
+      if (!requesterName) {
+        return {
+          valid: false,
+          message: 'กรุณากรอกชื่อผู้ขอ'
+        };
+      }
+      
+      if (!requesterEmail || requesterEmail === 'กำลังโหลด...') {
+        return {
+          valid: false,
+          message: 'กรุณารอจนกว่าระบบจะโหลดอีเมลเสร็จ'
+        };
+      }
+      
+      return { valid: true };
+    }
+    
+    // ========== Update Summary ==========
+    
+    function updateSummary() {
+      // Inspection Type
+      var inspectionType = document.getElementById('inspectionType').value;
+      var inspectionText = inspectionType === 'internal' ? '🏢 Internal Inspection' : '🤝 External Inspection';
+      document.getElementById('summaryInspectionType').textContent = inspectionText;
+      
+      // Work Type
+      var workTypeSelect = document.getElementById('workType');
+      var workTypeText = workTypeSelect.options[workTypeSelect.selectedIndex]?.text || '-';
+      document.getElementById('summaryWorkType').textContent = workTypeText;
+      
+      // Team
+      var teamCategory = selectedTeamCategory || '-';
+      document.getElementById('summaryTeam').textContent = teamCategory.replace(/,/g, ', ');
+      
+      // Date
+      var requestDate = document.getElementById('requestDate').value;
+      if (requestDate) {
+        var dateObj = new Date(requestDate + 'T00:00:00');
+        var dateText = dateObj.toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        document.getElementById('summaryDate').textContent = dateText;
+      }
+      
+      // Time
+      var startTime = document.getElementById('startTime').value;
+      var endTime = document.getElementById('endTime').value;
+      if (startTime && endTime) {
+        document.getElementById('summaryTime').textContent = startTime + ' - ' + endTime + ' น.';
+      }
+      
+      // Location
+      var location = document.getElementById('location').value || '-';
+      document.getElementById('summaryLocation').textContent = location;
+      
+      // File
+      var fileInput = document.getElementById('locationLayoutFile');
+      if (fileInput.files && fileInput.files.length > 0) {
+        var file = fileInput.files[0];
+        document.getElementById('summaryFile').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+      }
+      
+      // Requester
+      var requesterName = document.getElementById('requesterName').value;
+      var requesterEmail = document.getElementById('requesterEmail').value;
+      if (requesterName && requesterEmail) {
+        document.getElementById('summaryRequester').textContent = requesterName + ' (' + requesterEmail + ')';
+      }
+    }
     var selectedTeamCategory = null;
     var isMultiWork = false;
     var recommendedCategory = null;
@@ -1274,51 +2009,52 @@ function formatFileSize(bytes) {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-    function initInspectionTypeButtons() {
-  var inspectionButtons = document.querySelectorAll('.inspection-btn');
-  
-  inspectionButtons.forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      // ⭐ ลบ active ออกจากทุกปุ่ม
-      inspectionButtons.forEach(function(b) {
-        b.classList.remove('active');
+   function initInspectionTypeButtons() {
+      var inspectionButtons = document.querySelectorAll('.inspection-btn');
+      
+      inspectionButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          inspectionButtons.forEach(function(b) {
+            b.classList.remove('active');
+          });
+          
+          this.classList.add('active');
+          
+          var type = this.getAttribute('data-type');
+          selectedInspectionType = type;
+          document.getElementById('inspectionType').value = type;
+          
+          var externalBox = document.getElementById('infoBoxExternal');
+          var internalBox = document.getElementById('infoBoxInternal');
+          
+          if (type === 'external') {
+            externalBox.classList.add('show');
+            internalBox.classList.remove('show');
+            showMessage('✅ เลือก: External Inspection', 'success', 2000);
+            setMinDateExternal();
+          } else if (type === 'internal') {
+            internalBox.classList.add('show');
+            externalBox.classList.remove('show');
+            showMessage('✅ เลือก: Internal Inspection', 'success', 2000);
+            setMinDateInternal();
+          }
+          
+          document.getElementById('requestDate').value = '';
+          document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+          document.getElementById('startTime').disabled = true;
+          resetEndTimeSelect();
+          
+          console.log('✅ Selected Inspection Type:', type);
+          
+          // ⭐ Auto next step after 1 second
+          setTimeout(function() {
+            completedSteps.add(1);
+            goToStep(2);
+            showToast('✅ ขั้นตอนที่ 1 เสร็จสิ้น', 'กำลังไปขั้นตอนที่ 2', 'success', 2000);
+          }, 1000);
+        });
       });
-      
-      // ⭐ เพิ่ม active ให้ปุ่มที่กด
-      this.classList.add('active');
-      
-      var type = this.getAttribute('data-type');
-      selectedInspectionType = type;
-      document.getElementById('inspectionType').value = type;
-      
-      // ⭐ แสดง/ซ่อน info-box
-      var externalBox = document.getElementById('infoBoxExternal');
-      var internalBox = document.getElementById('infoBoxInternal');
-      
-      if (type === 'external') {
-        externalBox.classList.add('show');
-        internalBox.classList.remove('show');
-        showMessage('✅ เลือก: External Inspection (ต้องขออนุมัติ Consultant)', 'success', 3000);
-        setMinDateExternal();
-      } else if (type === 'internal') {
-        internalBox.classList.add('show');
-        externalBox.classList.remove('show');
-        showMessage('✅ เลือก: Internal Inspection (ไม่ต้องขออนุมัติ, จองวันนี้ก็ได้)', 'success', 3000);
-        setMinDateInternal();
-      }
-      
-      // ⭐ เพิ่ม: Reset Date เพื่อให้เลือกใหม่
-      document.getElementById('requestDate').value = '';
-      document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-      document.getElementById('startTime').disabled = true;
-      resetEndTimeSelect();
-      
-      // ⭐ Log เพื่อ debug
-      console.log('✅ Selected Inspection Type:', type);
-      console.log('✅ Hidden input value:', document.getElementById('inspectionType').value);
-    });
-  });
-}
+    }
 
     // ⭐ ตั้ง Min Date สำหรับ External (พรุ่งนี้)
     function setMinDateExternal() {
@@ -2367,12 +3103,15 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
     .checkDateBookingAllowed(dateStr, inspectionType);
 }
 
-// ⭐ เรียกใช้ใน window.onload
-var originalOnLoad = window.onload;
-window.onload = function() {
-  if (originalOnLoad) originalOnLoad();
-  setupHolidayCheck(); // ⭐ เพิ่มบรรทัดนี้
-};
+    var originalOnLoad = window.onload;
+    window.onload = function() {
+      if (originalOnLoad) originalOnLoad();
+      
+      // Initialize Progressive Form
+      initProgressiveForm();
+      
+      console.log('✅ Progressive Form initialized');
+    };
 
 // ⭐ แก้ไขฟังก์ชัน updateAvailableSlots ให้เช็ควันหยุดก่อน
 var originalUpdateAvailableSlots = updateAvailableSlots;
