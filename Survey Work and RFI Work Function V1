@@ -7468,6 +7468,12 @@ function createErrorLogSheet() {
  */
 function logError(functionName, error, params, severity) {
   try {
+    // ✅ ป้องกัน invalid calls
+    if (!functionName || !error) {
+      console.warn('⚠️ logError called with missing parameters');
+      return false;
+    }
+    
     if (typeof severity === 'undefined') severity = 'ERROR';
     
     const sheet = createErrorLogSheet();
@@ -7695,27 +7701,7 @@ function cleanOldErrorLogs() {
   }
 }
 
-/**
- * ⭐ ตั้ง Trigger ล้าง Error Log อัตโนมัติ (รันทุกวันเวลา 02:00 น.)
- */
-function setupErrorLogCleanupTrigger() {
-  // ลบ trigger เก่า (ถ้ามี)
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(function(trigger) {
-    if (trigger.getHandlerFunction() === 'cleanOldErrorLogs') {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  });
-  
-  // สร้าง trigger ใหม่
-  ScriptApp.newTrigger('cleanOldErrorLogs')
-    .timeBased()
-    .atHour(2)
-    .everyDays(1)
-    .create();
-  
-  console.log('✅ Error log cleanup trigger created');
-}
+
 
 /**
  * ========================================
@@ -7745,17 +7731,27 @@ const CACHE_CONFIG = {
   }
 };
 
-/**
- * ⭐ ดึง Cache (Generic Function)
- */
 function getCachedData(cacheKey, loaderFunction, ttl) {
   try {
     const cache = CacheService.getScriptCache();
-    let cachedData = cache.get(cacheKey);
     
-    if (cachedData) {
-      console.log('✅ Cache HIT:', cacheKey);
-      return JSON.parse(cachedData);
+    // ✅ เช็คว่ามี cache แต่ไม่มีใน registry = old cache
+    const cachedData = cache.get(cacheKey);
+    const registry = getCacheRegistry();
+    
+    if (cachedData && !registry[cacheKey]) {
+      console.log('⚠️ Found old cache (not in registry):', cacheKey);
+      console.log('   Auto-adding to registry...');
+      
+      // เพิ่มเข้า registry
+      addToCacheRegistry(cacheKey, cachedData.length, ttl);
+    }
+    
+    // อ่านจาก cache ต่อ...
+    let data = getCachedDataWithChunks(cacheKey);
+    
+    if (data) {
+      return data;
     }
     
     console.log('❌ Cache MISS:', cacheKey, '- Loading from sheet...');
@@ -7763,18 +7759,21 @@ function getCachedData(cacheKey, loaderFunction, ttl) {
     // Load จาก Sheet
     const freshData = loaderFunction();
     
-    // บันทึกลง Cache
+    // บันทึกลง Cache + Registry
     try {
       const jsonData = JSON.stringify(freshData);
       
-      // ⚠️ Cache มีขีดจำกัด 100KB ต่อ key
-      if (jsonData.length > 100000) {
-        console.log('⚠️ Data too large for cache:', jsonData.length, 'bytes');
-        return freshData; // ไม่ cache
+      if (jsonData.length <= 100000) {
+        cache.put(cacheKey, jsonData, ttl);
+        console.log('✅ Cached (single):', cacheKey, '(', jsonData.length, 'bytes)');
+        
+        // ⭐ บันทึก registry
+        addToCacheRegistry(cacheKey, jsonData.length, ttl);
+        
+        return freshData;
       }
       
-      cache.put(cacheKey, jsonData, ttl);
-      console.log('✅ Cached data:', cacheKey, '(', jsonData.length, 'bytes, TTL:', ttl, 's)');
+      // ... chunk logic ...
       
     } catch (cacheError) {
       console.error('⚠️ Failed to cache data:', cacheError);
@@ -7785,7 +7784,6 @@ function getCachedData(cacheKey, loaderFunction, ttl) {
   } catch (error) {
     console.error('❌ Error in getCachedData:', error);
     
-    // ถ้า cache ล้มเหลว ให้ load ตรงจาก sheet
     try {
       return loaderFunction();
     } catch (loaderError) {
@@ -7797,26 +7795,113 @@ function getCachedData(cacheKey, loaderFunction, ttl) {
 }
 
 /**
- * ⭐ ล้าง Cache ทั้งหมด (สำหรับ Admin)
+ * ⭐ บันทึก Cache Key ลง Registry
+ */
+function addToCacheRegistry(cacheKey, size, ttl) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const registryKey = '__cache_registry__';
+    
+    // ดึง registry ปัจจุบัน
+    let registry = {};
+    const registryData = cache.get(registryKey);
+    
+    if (registryData) {
+      try {
+        registry = JSON.parse(registryData);
+      } catch (e) {
+        registry = {};
+      }
+    }
+    
+    // เพิ่ม key ใหม่
+    registry[cacheKey] = {
+      size: size,
+      timestamp: new Date().getTime(),
+      ttl: ttl
+    };
+    
+    // บันทึกกลับ (ใช้ TTL สูงสุด = 6 ชั่วโมง)
+    cache.put(registryKey, JSON.stringify(registry), 21600);
+    
+  } catch (error) {
+    console.error('Error updating cache registry:', error);
+  }
+}
+
+/**
+ * ⭐ ลบ Cache Key จาก Registry
+ */
+function removeFromCacheRegistry(cacheKey) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const registryKey = '__cache_registry__';
+    
+    const registryData = cache.get(registryKey);
+    if (!registryData) return;
+    
+    const registry = JSON.parse(registryData);
+    delete registry[cacheKey];
+    
+    cache.put(registryKey, JSON.stringify(registry), 21600);
+    
+  } catch (error) {
+    console.error('Error removing from cache registry:', error);
+  }
+}
+
+/**
+ * ⭐ ดึง Cache Registry
+ */
+function getCacheRegistry() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const registryKey = '__cache_registry__';
+    
+    const registryData = cache.get(registryKey);
+    
+    if (!registryData) {
+      return {};
+    }
+    
+    return JSON.parse(registryData);
+    
+  } catch (error) {
+    console.error('Error getting cache registry:', error);
+    return {};
+  }
+}
+
+/**
+ * ⭐ FIXED: ล้าง Cache ทั้งหมด (รวม Registry)
  */
 function clearAllCache() {
   try {
     const cache = CacheService.getScriptCache();
+    const registry = getCacheRegistry();
+    const keys = Object.keys(registry);
     
-    const keys = [
-      CACHE_CONFIG.WORK_TYPES.key,
-      CACHE_CONFIG.RESOURCES.key,
-      CACHE_CONFIG.CODE_LIST.key,
-      CACHE_CONFIG.USER_LIST.key
-    ];
+    console.log('Clearing', keys.length, 'cache keys...');
     
-    cache.removeAll(keys);
+    // ลบแต่ละ key
+    keys.forEach(function(key) {
+      cache.remove(key);
+      
+      // ลบ chunks ถ้ามี
+      cache.remove(key + '_meta');
+      for (let i = 0; i < 100; i++) {
+        cache.remove(key + '_chunk_' + i);
+      }
+    });
+    
+    // ลบ registry
+    cache.remove('__cache_registry__');
     
     console.log('✅ All cache cleared');
     
     return {
       success: true,
-      message: 'ล้าง Cache ทั้งหมดเรียบร้อยแล้ว'
+      message: 'ล้าง Cache ทั้งหมดเรียบร้อยแล้ว (' + keys.length + ' keys)'
     };
     
   } catch (error) {
@@ -7831,12 +7916,23 @@ function clearAllCache() {
 }
 
 /**
- * ⭐ ล้าง Cache เฉพาะ Key
+ * ⭐ FIXED: ล้าง Cache เฉพาะ Key
  */
 function clearCacheByKey(cacheKey) {
   try {
     const cache = CacheService.getScriptCache();
+    
+    // ลบ main key
     cache.remove(cacheKey);
+    
+    // ลบ chunks ถ้ามี
+    cache.remove(cacheKey + '_meta');
+    for (let i = 0; i < 100; i++) {
+      cache.remove(cacheKey + '_chunk_' + i);
+    }
+    
+    // ⭐ ลบจาก registry
+    removeFromCacheRegistry(cacheKey);
     
     console.log('✅ Cache cleared:', cacheKey);
     
@@ -7854,40 +7950,91 @@ function clearCacheByKey(cacheKey) {
   }
 }
 
+
 /**
- * ⭐ ดูสถานะ Cache (สำหรับ Admin)
+ * ⭐ FIXED: ดูสถานะ Cache (ใช้ Registry)
  */
 function getCacheStatus() {
   try {
-    const cache = CacheService.getScriptCache();
+    const registry = getCacheRegistry();
+    const keys = Object.keys(registry);
     
-    const keys = [
-      CACHE_CONFIG.WORK_TYPES.key,
-      CACHE_CONFIG.RESOURCES.key,
-      CACHE_CONFIG.CODE_LIST.key,
-      CACHE_CONFIG.USER_LIST.key
-    ];
+    if (keys.length === 0) {
+      return {
+        success: true,
+        totalKeys: 0,
+        totalSizeKB: '0.00',
+        message: 'Cache is empty',
+        groups: {
+          workTypes: [],
+          resources: [],
+          codeLists: [],
+          users: [],
+          other: []
+        },
+        status: {}
+      };
+    }
     
     const status = {};
+    let totalSize = 0;
+    
+    // จัดกลุ่มตามประเภท
+    const groups = {
+      workTypes: [],
+      resources: [],
+      codeLists: [],
+      users: [],
+      other: []
+    };
+    
+    const now = new Date().getTime();
     
     keys.forEach(function(key) {
-      const cachedData = cache.get(key);
+      const info = registry[key];
+      const size = info.size || 0;
+      const timestamp = info.timestamp || 0;
+      const ttl = info.ttl || 0;
       
-      if (cachedData) {
-        status[key] = {
-          cached: true,
-          size: cachedData.length,
-          sizeKB: (cachedData.length / 1024).toFixed(2)
-        };
+      // เช็คว่าหมดอายุหรือยัง
+      const expiresAt = timestamp + (ttl * 1000);
+      const isExpired = now > expiresAt;
+      
+      totalSize += size;
+      
+      const item = {
+        key: key,
+        size: size,
+        sizeKB: (size / 1024).toFixed(2),
+        isExpired: isExpired
+      };
+      
+      status[key] = {
+        cached: true,
+        size: size,
+        sizeKB: (size / 1024).toFixed(2),
+        isExpired: isExpired
+      };
+      
+      // จัดกลุ่ม
+      if (key.indexOf('master_work_types') === 0) {
+        groups.workTypes.push(item);
+      } else if (key.indexOf('master_resources') === 0) {
+        groups.resources.push(item);
+      } else if (key.indexOf('master_code_list') === 0) {
+        groups.codeLists.push(item);
+      } else if (key.indexOf('master_user_list') === 0) {
+        groups.users.push(item);
       } else {
-        status[key] = {
-          cached: false
-        };
+        groups.other.push(item);
       }
     });
     
     return {
       success: true,
+      totalKeys: keys.length,
+      totalSizeKB: (totalSize / 1024).toFixed(2),
+      groups: groups,
       status: status
     };
     
@@ -7899,9 +8046,8 @@ function getCacheStatus() {
     };
   }
 }
-
 /**
- * ⭐ แสดง Cache Status ใน UI
+ * ⭐ FIXED: แสดง Cache Status ใน UI (สวยงาม)
  */
 function showCacheStatus() {
   const result = getCacheStatus();
@@ -7911,18 +8057,67 @@ function showCacheStatus() {
     return;
   }
   
-  let message = '📊 Cache Status\n\n';
+  if (result.totalKeys === 0) {
+    SpreadsheetApp.getUi().alert(
+      '📊 Cache Status',
+      '❌ Cache is empty\n\n' +
+      '💡 Tip: Run "Warm Up Cache" to pre-load data',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
   
-  Object.keys(result.status).forEach(function(key) {
-    const info = result.status[key];
-    
-    if (info.cached) {
-      message += '✅ ' + key + '\n';
-      message += '   Size: ' + info.sizeKB + ' KB\n\n';
-    } else {
-      message += '❌ ' + key + ' (Not Cached)\n\n';
-    }
-  });
+  let message = '📊 Cache Status\n\n';
+  message += '📈 Total Keys: ' + result.totalKeys + '\n';
+  message += '💾 Total Size: ' + result.totalSizeKB + ' KB\n\n';
+  message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+  
+  // Work Types
+  if (result.groups.workTypes.length > 0) {
+    message += '📋 Work Types (' + result.groups.workTypes.length + '):\n';
+    result.groups.workTypes.forEach(function(item) {
+      const name = item.key.replace('master_work_types_', '');
+      message += '  ✅ ' + name + ' (' + item.sizeKB + ' KB)\n';
+    });
+    message += '\n';
+  }
+  
+  // Resources
+  if (result.groups.resources.length > 0) {
+    message += '👥 Resources (' + result.groups.resources.length + '):\n';
+    result.groups.resources.forEach(function(item) {
+      const name = item.key.replace('master_resources_', '');
+      message += '  ✅ ' + name + ' (' + item.sizeKB + ' KB)\n';
+    });
+    message += '\n';
+  }
+  
+  // Code Lists
+  if (result.groups.codeLists.length > 0) {
+    message += '🏷️ Code Lists (' + result.groups.codeLists.length + '):\n';
+    result.groups.codeLists.forEach(function(item) {
+      const name = item.key.replace('master_code_list_', '');
+      message += '  ✅ ' + name + ' (' + item.sizeKB + ' KB)\n';
+    });
+    message += '\n';
+  }
+  
+  // Users
+  if (result.groups.users.length > 0) {
+    message += '👤 Users (' + result.groups.users.length + '):\n';
+    result.groups.users.forEach(function(item) {
+      message += '  ✅ ' + item.key + ' (' + item.sizeKB + ' KB)\n';
+    });
+    message += '\n';
+  }
+  
+  // Other
+  if (result.groups.other.length > 0) {
+    message += '📦 Other (' + result.groups.other.length + '):\n';
+    result.groups.other.forEach(function(item) {
+      message += '  ✅ ' + item.key + ' (' + item.sizeKB + ' KB)\n';
+    });
+  }
   
   SpreadsheetApp.getUi().alert(
     'Cache Status',
@@ -7932,28 +8127,29 @@ function showCacheStatus() {
 }
 
 
-/**
- * ⭐ สร้าง Custom Menu สำหรับ Admin
- */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   
   ui.createMenu('🔧 Admin Tools')
-    .addSubMenu(ui.createMenu('📊 Error Logs')
-      .addItem('📈 View Error Statistics', 'showErrorStatistics')
-      .addItem('🧹 Clean Old Logs (30+ days)', 'cleanOldErrorLogs')
-      .addItem('⚙️ Setup Auto Cleanup', 'setupErrorLogCleanupTrigger'))
-    .addSeparator()
     .addSubMenu(ui.createMenu('🚀 Cache Management')
       .addItem('📊 View Cache Status', 'showCacheStatus')
+      .addItem('🔥 Warm Up Cache', 'warmUpAllCache')
+      .addSeparator()
+      .addItem('♻️ Refresh Work Types', 'refreshWorkTypesCache')       // ✅
+      .addItem('♻️ Refresh Resources', 'refreshResourcesCache')       // ✅
+      .addItem('♻️ Refresh Code Lists', 'refreshCodeListCache')       // ✅
+      .addSeparator()
       .addItem('🗑️ Clear All Cache', 'clearAllCacheWithConfirm')
-      .addItem('♻️ Refresh Work Types Cache', 'refreshWorkTypesCache')
-      .addItem('♻️ Refresh Resources Cache', 'refreshResourcesCache'))
+      .addItem('💣 Hard Reset Cache', 'hardResetCache')
+      .addSeparator()
+      .addItem('🐛 Debug Registry', 'debugCacheRegistry'))            // ✅
+    .addSubMenu(ui.createMenu('📊 Error Logs')
+      .addItem('📈 View Statistics', 'showErrorStatistics')
+      .addItem('🧹 Clean Old Logs', 'cleanOldErrorLogs'))
     .addSeparator()
     .addItem('📋 Create Report (Column AN)', 'createColumnANReport')
     .addToUi();
 }
-
 /**
  * ⭐ แสดงสถิติ Error
  */
@@ -8024,31 +8220,391 @@ function clearAllCacheWithConfirm() {
 }
 
 /**
- * ⭐ Refresh Cache สำหรับ Work Types
+ * ⭐ FIXED: Generic Refresh by Prefix (with validation)
  */
-function refreshWorkTypesCache() {
-  clearCacheByKey(CACHE_CONFIG.WORK_TYPES.key);
-  
-  // Reload ทันที
-  getWorkTypeList('RFI Work');
-  getWorkTypeList('Survey Work');
-  
-  SpreadsheetApp.getUi().alert('✅ Work Types Cache refreshed');
+function refreshCacheByPrefix(prefix, reloadFunction) {
+  try {
+    // ✅ เพิ่ม validation
+    if (!prefix) {
+      throw new Error('Prefix is required');
+    }
+    
+    console.log('========== Refreshing Cache:', prefix, '==========');
+    
+    const registry = getCacheRegistry();
+    
+    if (!registry || Object.keys(registry).length === 0) {
+      console.log('⚠️ Registry is empty');
+      return {
+        success: false,
+        message: 'Cache registry is empty. Run "Warm Up Cache" first.',
+        deletedCount: 0
+      };
+    }
+    
+    const keys = Object.keys(registry);
+    let deletedCount = 0;
+    
+    console.log('Checking', keys.length, 'keys in registry...');
+    
+    // ลบทุก key ที่ขึ้นต้นด้วย prefix
+    keys.forEach(function(key) {
+      if (key.indexOf(prefix) === 0) {
+        console.log('✅ Removing:', key);
+        clearCacheByKey(key);
+        deletedCount++;
+      }
+    });
+    
+    console.log('Deleted', deletedCount, 'caches');
+    
+    if (deletedCount === 0) {
+      console.log('⚠️ No matching keys found for prefix:', prefix);
+    }
+    
+    // Reload (ถ้ามี function)
+    if (reloadFunction) {
+      console.log('Reloading data...');
+      try {
+        reloadFunction();
+      } catch (reloadError) {
+        console.error('Error in reload function:', reloadError);
+      }
+    }
+    
+    console.log('✅ Cache refreshed:', prefix);
+    console.log('==========================================');
+    
+    return {
+      success: true,
+      deletedCount: deletedCount
+    };
+    
+  } catch (error) {
+    console.error('Error refreshing cache:', error);
+    return {
+      success: false,
+      message: error.toString(),
+      deletedCount: 0
+    };
+  }
 }
 
 /**
- * ⭐ Refresh Cache สำหรับ Resources
+ * ⭐ Refresh Work Types Cache
+ */
+function refreshWorkTypesCache() {
+  try {
+    console.log('🔄 Refreshing Work Types Cache...');
+    
+    const result = refreshCacheByPrefix('master_work_types', function() {
+      getWorkTypeList('RFI Work');
+      getWorkTypeList('Survey Work');
+    });
+    
+    if (result.success) {
+      SpreadsheetApp.getUi().alert(
+        'Work Types Cache Refreshed! ✅',
+        'Deleted: ' + result.deletedCount + ' old caches\n' +
+        'Reloaded: 2 work type lists\n\n' +
+        'Work Types cache is now up to date!',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } else {
+      SpreadsheetApp.getUi().alert(
+        'Refresh Failed',
+        result.message,
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    }
+    
+  } catch (error) {
+    console.error('Error in refreshWorkTypesCache:', error);
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ Refresh Resources Cache
  */
 function refreshResourcesCache() {
-  const cache = CacheService.getScriptCache();
-  const keys = cache.getKeys();
-  
-  // ลบทุก key ที่ขึ้นต้นด้วย master_resources
-  keys.forEach(function(key) {
-    if (key.startsWith(CACHE_CONFIG.RESOURCES.key)) {
-      cache.remove(key);
+  try {
+    console.log('🔄 Refreshing Resources Cache...');
+    
+    const result = refreshCacheByPrefix('master_resources', function() {
+      getTeamsByCategory('Survey');
+      getTeamsByCategory('Inspector');
+      getTeamsByCategory('Lab');
+    });
+    
+    if (result.success) {
+      SpreadsheetApp.getUi().alert(
+        'Resources Cache Refreshed! ✅',
+        'Deleted: ' + result.deletedCount + ' old caches\n' +
+        'Reloaded: 3 resource lists\n\n' +
+        'Resources cache is now up to date!',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } else {
+      SpreadsheetApp.getUi().alert(
+        'Refresh Failed',
+        result.message,
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
     }
-  });
+    
+  } catch (error) {
+    console.error('Error in refreshResourcesCache:', error);
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * ⭐ Refresh Code Lists Cache
+ */
+function refreshCodeListCache() {
+  try {
+    console.log('🔄 Refreshing Code Lists Cache...');
+    
+    const result = refreshCacheByPrefix('master_code_list');
+    
+    if (result.success) {
+      SpreadsheetApp.getUi().alert(
+        'Code Lists Cache Refreshed! ✅',
+        'Deleted: ' + result.deletedCount + ' old caches\n\n' +
+        'Code lists will be reloaded on next use.',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } else {
+      SpreadsheetApp.getUi().alert(
+        'Refresh Failed',
+        result.message,
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    }
+    
+  } catch (error) {
+    console.error('Error in refreshCodeListCache:', error);
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+
+/**
+ * ⭐ อ่านข้อมูลจาก Cache Chunks
+ */
+function getCachedDataWithChunks(cacheKey) {
+  try {
+    const cache = CacheService.getScriptCache();
+    
+    // ลองอ่านปกติก่อน
+    let cachedData = cache.get(cacheKey);
+    
+    if (cachedData) {
+      console.log('✅ Cache HIT (single key):', cacheKey);
+      return JSON.parse(cachedData);
+    }
+    
+    // ลองอ่านจาก chunks
+    const meta = cache.get(cacheKey + '_meta');
+    
+    if (meta) {
+      console.log('✅ Cache HIT (chunks):', cacheKey);
+      
+      const metaData = JSON.parse(meta);
+      const allData = [];
+      
+      for (let i = 0; i < metaData.totalChunks; i++) {
+        const chunkKey = cacheKey + '_chunk_' + i;
+        const chunkData = cache.get(chunkKey);
+        
+        if (chunkData) {
+          const chunk = JSON.parse(chunkData);
+          allData.push(...chunk);
+        } else {
+          console.log('⚠️ Missing chunk:', i);
+          return null; // chunk หาย → ต้อง reload
+        }
+      }
+      
+      console.log('✅ Reassembled', allData.length, 'items from', metaData.totalChunks, 'chunks');
+      return allData;
+    }
+    
+    // Cache miss
+    return null;
+    
+  } catch (error) {
+    console.error('Error reading cached chunks:', error);
+    return null;
+  }
+}
+
+/**
+ * ⭐ สร้าง Cache ทั้งหมดทันที (Warm Up Cache)
+ */
+function warmUpAllCache() {
+  console.log('========== Warming Up Cache ==========');
   
-  SpreadsheetApp.getUi().alert('✅ Resources Cache refreshed');
+  try {
+    // 1. Work Types
+    console.log('1. Loading Work Types...');
+    getWorkTypeList('RFI Work');
+    getWorkTypeList('Survey Work');
+    console.log('   ✅ Work Types cached');
+    
+    // 2. Resources (Survey)
+    console.log('2. Loading Survey Teams...');
+    getTeamsByCategory('Survey');
+    console.log('   ✅ Survey Teams cached');
+    
+    // 3. Resources (Inspector)
+    console.log('3. Loading Inspector Teams...');
+    getTeamsByCategory('Inspector');
+    console.log('   ✅ Inspector Teams cached');
+    
+    // 4. Resources (Lab)
+    console.log('4. Loading Lab Teams...');
+    getTeamsByCategory('Lab');
+    console.log('   ✅ Lab Teams cached');
+    
+    // 5. Code List (ตัวอย่าง)
+    console.log('5. Loading Code Lists...');
+    const workTypes = getWorkTypeList('RFI Work');
+    if (workTypes.length > 0) {
+      getCodeListByWorkType(workTypes[0].name);
+      console.log('   ✅ Code List cached');
+    }
+    
+    console.log('\n========== Cache Warm Up Complete ==========');
+    
+    // แสดงผล
+    const status = getCacheStatus();
+    console.log('\nCache Status:');
+    console.log(JSON.stringify(status, null, 2));
+    
+    SpreadsheetApp.getUi().alert(
+      'Cache Warm Up Complete! ✅',
+      'All master data has been loaded into cache.\n\n' +
+      'The system should now be much faster!',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('❌ Error warming up cache:', error);
+    
+    SpreadsheetApp.getUi().alert(
+      'Cache Warm Up Failed',
+      'Error: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * ⭐ ล้าง Cache แบบ Hard Reset (ทุกอย่าง)
+ */
+function hardResetCache() {
+  try {
+    const cache = CacheService.getScriptCache();
+    
+    console.log('========== Hard Reset Cache ==========');
+    
+    // ลอง brute force ลบ keys ที่รู้จัก
+    const possibleKeys = [
+      'master_work_types_RFI Work',
+      'master_work_types_Survey Work',
+      'master_work_types_ALL',
+      'master_resources_Survey_ALL',
+      'master_resources_Inspector_ALL',
+      'master_resources_Lab_ALL',
+      'master_code_list_Core Rock',
+      '__cache_registry__'
+    ];
+    
+    console.log('Removing known keys...');
+    possibleKeys.forEach(function(key) {
+      cache.remove(key);
+      cache.remove(key + '_meta');
+      
+      // ลบ chunks
+      for (let i = 0; i < 100; i++) {
+        cache.remove(key + '_chunk_' + i);
+      }
+    });
+    
+    // ลบ Registry
+    cache.remove('__cache_registry__');
+    
+    console.log('✅ Hard reset complete');
+    
+    SpreadsheetApp.getUi().alert(
+      'Cache Hard Reset Complete! ✅',
+      'All cache has been cleared.\n\n' +
+      'Now run "Warm Up Cache" to rebuild.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+    return {
+      success: true,
+      message: 'Hard reset complete'
+    };
+    
+  } catch (error) {
+    console.error('Error in hard reset:', error);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * ⭐ ตรวจสอบ Cache Health (รันอัตโนมัติทุกวัน)
+ */
+function checkCacheHealth() {
+  try {
+    console.log('========== Cache Health Check ==========');
+    
+    const status = getCacheStatus();
+    
+    console.log('Total Keys:', status.totalKeys);
+    console.log('Total Size:', status.totalSizeKB, 'KB');
+    
+    // เช็คว่า cache ว่างหรือไม่
+    if (status.totalKeys === 0) {
+      console.log('⚠️ Cache is empty - warming up...');
+      warmUpAllCache();
+      return;
+    }
+    
+    // เช็คว่ามี critical keys หรือไม่
+    const criticalKeys = [
+      'master_work_types_RFI Work',
+      'master_work_types_Survey Work',
+      'master_resources_Survey_ALL'
+    ];
+    
+    let missingKeys = [];
+    
+    criticalKeys.forEach(function(key) {
+      if (!status.status[key] || !status.status[key].cached) {
+        missingKeys.push(key);
+      }
+    });
+    
+    if (missingKeys.length > 0) {
+      console.log('⚠️ Missing critical keys:', missingKeys.join(', '));
+      console.log('Re-warming cache...');
+      warmUpAllCache();
+      return;
+    }
+    
+    console.log('✅ Cache health: OK');
+    console.log('==========================================');
+    
+  } catch (error) {
+    console.error('Error checking cache health:', error);
+    logError('checkCacheHealth', error, {}, 'WARNING');
+  }
 }
