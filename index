@@ -1141,6 +1141,26 @@ input[type="file"]::file-selector-button:hover {
         flex-direction: column;
       }
     }
+
+    .summary-value[id="summaryDescription"] {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 14px;
+  color: #444;
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #1877f2;
+}
+
+.summary-value[id="summaryDescription"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb {
+  background: #1877f2;
+  border-radius: 3px;
+}
   </style>
 </head>
 <body>
@@ -1458,6 +1478,11 @@ input[type="file"]::file-selector-button:hover {
             <div class="summary-value" id="summaryLocation">-</div>
           </div>
           
+            <div class="summary-item">
+    <div class="summary-label">รายละเอียด RFI:</div>
+    <div class="summary-value" id="summaryDescription" 
+         style="white-space: pre-wrap; line-height: 1.6;">-</div>
+      </div>
           <div class="summary-item">
             <div class="summary-label">ไฟล์แนบ:</div>
             <div class="summary-value" id="summaryFile">-</div>
@@ -1811,58 +1836,72 @@ input[type="file"]::file-selector-button:hover {
     
     // ========== Update Summary ==========
     
-    function updateSummary() {
-      // Inspection Type
-      var inspectionType = document.getElementById('inspectionType').value;
-      var inspectionText = inspectionType === 'internal' ? '🏢 Internal Inspection' : '🤝 External Inspection';
-      document.getElementById('summaryInspectionType').textContent = inspectionText;
-      
-      // Work Type
-      var workTypeSelect = document.getElementById('workType');
-      var workTypeText = workTypeSelect.options[workTypeSelect.selectedIndex]?.text || '-';
-      document.getElementById('summaryWorkType').textContent = workTypeText;
-      
-      // Team
-      var teamCategory = selectedTeamCategory || '-';
-      document.getElementById('summaryTeam').textContent = teamCategory.replace(/,/g, ', ');
-      
-      // Date
-      var requestDate = document.getElementById('requestDate').value;
-      if (requestDate) {
-        var dateObj = new Date(requestDate + 'T00:00:00');
-        var dateText = dateObj.toLocaleDateString('th-TH', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        document.getElementById('summaryDate').textContent = dateText;
-      }
-      
-      // Time
-      var startTime = document.getElementById('startTime').value;
-      var endTime = document.getElementById('endTime').value;
-      if (startTime && endTime) {
-        document.getElementById('summaryTime').textContent = startTime + ' - ' + endTime + ' น.';
-      }
-      
-      // Location
-      var location = document.getElementById('location').value || '-';
-      document.getElementById('summaryLocation').textContent = location;
-      
-      // File
-      var fileInput = document.getElementById('locationLayoutFile');
-      if (fileInput.files && fileInput.files.length > 0) {
-        var file = fileInput.files[0];
-        document.getElementById('summaryFile').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
-      }
-      
-      // Requester
-      var requesterName = document.getElementById('requesterName').value;
-      var requesterEmail = document.getElementById('requesterEmail').value;
-      if (requesterName && requesterEmail) {
-        document.getElementById('summaryRequester').textContent = requesterName + ' (' + requesterEmail + ')';
-      }
+function updateSummary() {
+  // Inspection Type
+  var inspectionType = document.getElementById('inspectionType').value;
+  var inspectionText = inspectionType === 'internal' ? '🏢 Internal Inspection' : '🤝 External Inspection';
+  document.getElementById('summaryInspectionType').textContent = inspectionText;
+  
+  // Work Type
+  var workTypeSelect = document.getElementById('workType');
+  var workTypeText = workTypeSelect.options[workTypeSelect.selectedIndex]?.text || '-';
+  document.getElementById('summaryWorkType').textContent = workTypeText;
+  
+  // Team
+  var teamCategory = selectedTeamCategory || '-';
+  document.getElementById('summaryTeam').textContent = teamCategory.replace(/,/g, ', ');
+  
+  // Date
+  var requestDate = document.getElementById('requestDate').value;
+  if (requestDate) {
+    var dateObj = new Date(requestDate + 'T00:00:00');
+    var dateText = dateObj.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    document.getElementById('summaryDate').textContent = dateText;
+  }
+  
+  // Time
+  var startTime = document.getElementById('startTime').value;
+  var endTime = document.getElementById('endTime').value;
+  if (startTime && endTime) {
+    document.getElementById('summaryTime').textContent = startTime + ' - ' + endTime + ' น.';
+  }
+  
+  // Location
+  var location = document.getElementById('location').value || '-';
+  document.getElementById('summaryLocation').textContent = location;
+  
+  // ⭐ เพิ่มส่วนนี้ - Description
+  var description = document.getElementById('description').value.trim() || '-';
+  var summaryDescriptionElement = document.getElementById('summaryDescription');
+  
+  if (summaryDescriptionElement) {
+    // จำกัดความยาวถ้ายาวเกินไป
+    if (description.length > 200) {
+      summaryDescriptionElement.textContent = description.substring(0, 200) + '...';
+      summaryDescriptionElement.title = description; // แสดงเต็มใน tooltip
+    } else {
+      summaryDescriptionElement.textContent = description;
     }
+  }
+  
+  // File
+  var fileInput = document.getElementById('locationLayoutFile');
+  if (fileInput.files && fileInput.files.length > 0) {
+    var file = fileInput.files[0];
+    document.getElementById('summaryFile').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+  }
+  
+  // Requester
+  var requesterName = document.getElementById('requesterName').value;
+  var requesterEmail = document.getElementById('requesterEmail').value;
+  if (requesterName && requesterEmail) {
+    document.getElementById('summaryRequester').textContent = requesterName + ' (' + requesterEmail + ')';
+  }
+}
     var selectedTeamCategory = null;
     var isMultiWork = false;
     var recommendedCategory = null;
@@ -2009,52 +2048,62 @@ function formatFileSize(bytes) {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-   function initInspectionTypeButtons() {
-      var inspectionButtons = document.querySelectorAll('.inspection-btn');
-      
-      inspectionButtons.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          inspectionButtons.forEach(function(b) {
-            b.classList.remove('active');
-          });
-          
-          this.classList.add('active');
-          
-          var type = this.getAttribute('data-type');
-          selectedInspectionType = type;
-          document.getElementById('inspectionType').value = type;
-          
-          var externalBox = document.getElementById('infoBoxExternal');
-          var internalBox = document.getElementById('infoBoxInternal');
-          
-          if (type === 'external') {
-            externalBox.classList.add('show');
-            internalBox.classList.remove('show');
-            showMessage('✅ เลือก: External Inspection', 'success', 2000);
-            setMinDateExternal();
-          } else if (type === 'internal') {
-            internalBox.classList.add('show');
-            externalBox.classList.remove('show');
-            showMessage('✅ เลือก: Internal Inspection', 'success', 2000);
-            setMinDateInternal();
-          }
-          
-          document.getElementById('requestDate').value = '';
-          document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
-          document.getElementById('startTime').disabled = true;
-          resetEndTimeSelect();
-          
-          console.log('✅ Selected Inspection Type:', type);
-          
-          // ⭐ Auto next step after 1 second
-          setTimeout(function() {
-            completedSteps.add(1);
-            goToStep(2);
-            showToast('✅ ขั้นตอนที่ 1 เสร็จสิ้น', 'กำลังไปขั้นตอนที่ 2', 'success', 2000);
-          }, 1000);
-        });
+function initInspectionTypeButtons() {
+  var inspectionButtons = document.querySelectorAll('.inspection-btn');
+  
+  inspectionButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      inspectionButtons.forEach(function(b) {
+        b.classList.remove('active');
       });
-    }
+      
+      this.classList.add('active');
+      
+      var type = this.getAttribute('data-type');
+      selectedInspectionType = type;
+      document.getElementById('inspectionType').value = type;
+      
+      var externalBox = document.getElementById('infoBoxExternal');
+      var internalBox = document.getElementById('infoBoxInternal');
+      
+      if (type === 'external') {
+        externalBox.classList.add('show');
+        internalBox.classList.remove('show');
+        showMessage('✅ เลือก: External Inspection', 'success', 2000);
+        setMinDateExternal();
+      } else if (type === 'internal') {
+        internalBox.classList.add('show');
+        externalBox.classList.remove('show');
+        showMessage('✅ เลือก: Internal Inspection', 'success', 2000);
+        setMinDateInternal();
+      }
+      
+      document.getElementById('requestDate').value = '';
+      document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
+      document.getElementById('startTime').disabled = true;
+      resetEndTimeSelect();
+      
+      console.log('✅ Selected Inspection Type:', type);
+      
+      // ⭐ ลบส่วน Auto Next ออกทั้งหมด
+      // ให้ผู้ใช้กดปุ่ม "ถัดไป" เอง
+      
+      // แสดงข้อความแนะนำ
+      showToast(
+        '✅ เลือกประเภทการตรวจเรียบร้อย',
+        '📖 กรุณาอ่านข้อกำหนดด้านล่าง จากนั้นกดปุ่ม "ถัดไป"',
+        'success',
+        5000
+      );
+      
+      // เน้นปุ่ม "ถัดไป" ให้เด่นชัดขึ้น
+      var btnNext = document.getElementById('btnNext');
+      if (btnNext) {
+        btnNext.style.animation = 'pulse 1.5s ease-in-out 3'; // กระพริบ 3 ครั้ง
+      }
+    });
+  });
+}
 
     // ⭐ ตั้ง Min Date สำหรับ External (พรุ่งนี้)
     function setMinDateExternal() {
@@ -3054,6 +3103,7 @@ function resetForm() {
   document.getElementById('summaryDate').textContent = '-';
   document.getElementById('summaryTime').textContent = '-';
   document.getElementById('summaryLocation').textContent = '-';
+  document.getElementById('summaryDescription').textContent = '-';
   document.getElementById('summaryFile').textContent = '-';
   document.getElementById('summaryRequester').textContent = '-';
   
