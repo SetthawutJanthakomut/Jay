@@ -2900,50 +2900,57 @@ reader.onload = function(e) {
     updateSubmitProgress(1, totalSteps, 'ตรวจสอบข้อมูล');
     
     google.script.run
-      .withSuccessHandler(function(result) {
-        loading.style.display = 'none';
-        submitBtn.disabled = false;
+.withSuccessHandler(function(result) {
+  loading.style.display = 'none';
+  submitBtn.disabled = false;
+  
+  console.log('📥 Response:', result);
+  
+  if (result && result.success) {
+    // ⭐ แสดง Progress ตามขั้นตอนที่ Backend ทำเสร็จ
+    if (result.progress) {
+      result.progress.forEach(function(step, index) {
+        setTimeout(function() {
+          updateSubmitProgress(index + 1, totalSteps, step);
+        }, index * 300);
+      });
+    }
+    
+    setTimeout(function() {
+      updateSubmitProgress(totalSteps, totalSteps, '✅ สำเร็จ');
+      
+      setTimeout(function() {
+        resetSubmitProgress();
         
-        console.log('📥 Response:', result);
+        var successMsg = result.message || 'บันทึกสำเร็จ';
+        var toastMsg = '';
         
-        if (result && result.success) {
-          // ⭐ แสดง Progress ตามขั้นตอนที่ Backend ทำเสร็จ
-          if (result.progress) {
-            result.progress.forEach(function(step, index) {
-              setTimeout(function() {
-                updateSubmitProgress(index + 1, totalSteps, step);
-              }, index * 300);
-            });
-          }
-          
-          setTimeout(function() {
-            updateSubmitProgress(totalSteps, totalSteps, '✅ สำเร็จ');
-            
-            setTimeout(function() {
-              resetSubmitProgress();
-            }, 2000);
-            
-            var successMsg = result.message || 'บันทึกสำเร็จ';
-            var toastMsg = '';
-            
-            if (result.fileUrl) {
-              toastMsg = 'บันทึกข้อมูลและไฟล์เรียบร้อย';
-            }
-            
-            showToast('✅ สำเร็จ!', toastMsg, 'success', 8000);
-            showMessage('✅ ' + successMsg, 'success', 10000);
-            resetFormChangeFlag();
-            
-            resetForm();
-          }, result.progress ? result.progress.length * 300 : 0);
-          
-        } else {
-          resetSubmitProgress();
-          var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
-          showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
-          showMessage('❌ ' + errorMessage, 'error');
+        if (result.fileUrl) {
+          toastMsg = 'บันทึกข้อมูลและไฟล์เรียบร้อย';
         }
-      })
+        
+        showToast('✅ สำเร็จ!', toastMsg, 'success', 8000);
+        showMessage('✅ ' + successMsg, 'success', 10000);
+        resetFormChangeFlag();
+        
+        // ⭐⭐⭐ CRITICAL FIX: Reset Form และกลับไป Step 1 ⭐⭐⭐
+setTimeout(function() {
+  resetToStep1();
+}, 1000);
+        
+      }, 2000);
+      
+    }, result.progress ? result.progress.length * 300 : 0);
+    
+  } else {
+    resetSubmitProgress();
+    var errorMessage = result && result.message ? result.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+    showToast('❌ เกิดข้อผิดพลาด', errorMessage, 'error', 8000);
+    showMessage('❌ ' + errorMessage, 'error');
+  }
+})
+          
+
       .withFailureHandler(function(error) {
         loading.style.display = 'none';
         submitBtn.disabled = false;
@@ -2970,9 +2977,12 @@ reader.onload = function(e) {
 }
     
 function resetForm() {
+  console.log('========== RESETTING FORM ==========');
+  
+  // ⭐ 1. Reset HTML Form
   document.getElementById('rfiForm').reset();
   
-  // ⭐ Reset Inspection Type
+  // ⭐ 2. Reset Inspection Type Buttons
   var inspectionButtons = document.querySelectorAll('.inspection-btn');
   inspectionButtons.forEach(function(btn) {
     btn.classList.remove('active');
@@ -2981,29 +2991,54 @@ function resetForm() {
   document.getElementById('infoBoxExternal').classList.remove('show');
   document.getElementById('infoBoxInternal').classList.remove('show');
   
-  // ⭐ Reset variables
+  // ⭐ 3. Reset Inspection Type Variables
   selectedInspectionType = null;
   document.getElementById('inspectionType').value = '';
   
-  // Reset Team
+  // ⭐ 4. Reset Team Buttons
   var teamButtons = document.querySelectorAll('.team-btn');
   teamButtons.forEach(function(btn) {
     btn.classList.remove('active');
+    btn.classList.remove('recommended'); // ⭐ เพิ่ม: ลบ class recommended
   });
   
   document.getElementById('multiSelectContainer').classList.remove('show');
   clearAllCheckboxes();
   
+  // ⭐ 5. Reset Team Variables
   selectedTeamCategory = null;
   isMultiWork = false;
+  recommendedCategory = null; // ⭐ เพิ่ม: Reset recommended
+  document.getElementById('teamCategory').value = '';
   hideRecommendation();
   
-  // Reset Time Slots
+  // ⭐ 6. Reset Work Type Select
+  var workTypeSelect = document.getElementById('workType');
+  workTypeSelect.innerHTML = '<option value="">-- กำลังโหลดประเภทงาน... --</option>';
+  workTypeSelect.disabled = true;
+  workTypeSelect.value = '';
+  
+  // ⭐ 7. Reset Work Type Note
+  var workTypeNote = document.getElementById('workTypeNote');
+  if (workTypeNote) {
+    workTypeNote.style.display = 'none';
+    workTypeNote.innerHTML = '';
+  }
+  
+  // ⭐ 8. Reset Date Input
+  document.getElementById('requestDate').value = '';
+  
+  // ⭐ 9. Reset Time Slots
   document.getElementById('startTime').innerHTML = '<option value="">-- กรุณาเลือกวันที่ก่อน --</option>';
   document.getElementById('startTime').disabled = true;
+  document.getElementById('startTime').value = '';
   resetEndTimeSelect();
   
-  // ⭐ UPDATED: Reset Location Layout File (เพิ่มการซ่อนปุ่มลบ)
+  // ⭐ 10. Reset Text Inputs
+  document.getElementById('description').value = '';
+  document.getElementById('location').value = '';
+  
+  // ⭐ 11. Reset Location Layout File
   var fileInput = document.getElementById('locationLayoutFile');
   var fileInfo = document.getElementById('fileInfo');
   var clearBtn = document.getElementById('clearFileBtn');
@@ -3012,15 +3047,60 @@ function resetForm() {
   fileInfo.style.display = 'none';
   if (clearBtn) clearBtn.style.display = 'none';
   
-  console.log('✅ Form reset - including file upload');
+  // ⭐ 12. Clear Summary (Step 5)
+  document.getElementById('summaryInspectionType').textContent = '-';
+  document.getElementById('summaryWorkType').textContent = '-';
+  document.getElementById('summaryTeam').textContent = '-';
+  document.getElementById('summaryDate').textContent = '-';
+  document.getElementById('summaryTime').textContent = '-';
+  document.getElementById('summaryLocation').textContent = '-';
+  document.getElementById('summaryFile').textContent = '-';
+  document.getElementById('summaryRequester').textContent = '-';
   
-  // Reload Data
+  // ⭐ 13. Reset Submit Button
+  var submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'ส่ง RFI Request';
+  
+  // ⭐ 14. Hide Loading
+  document.getElementById('loading').style.display = 'none';
+  
+  // ⭐ 15. Reload Master Data
   loadWorkTypes();
   loadUserEmailAndName();
   setMinDate();
+  
+  // ⭐ 16. Reset Form Change Flag
   resetFormChangeFlag();
   
-  showMessage('✅ รีเซ็ตฟอร์มเรียบร้อยแล้ว - กรุณาเลือกประเภทการตรวจใหม่', 'info', 3000);
+  console.log('✅ Form reset complete - All fields cleared');
+  console.log('========================================');
+}
+
+/**
+ * ⭐ Reset Form และกลับไป Step 1
+ */
+function resetToStep1() {
+  console.log('🔄 Resetting to Step 1...');
+  
+  // 1. Reset Form
+  resetForm();
+  
+  // 2. Clear Completed Steps
+  completedSteps.clear();
+  
+  // 3. Go to Step 1
+  goToStep(1);
+  
+  // 4. Scroll to Top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  
+  // 5. Show Info Message
+  setTimeout(function() {
+    showMessage('✅ พร้อมสำหรับ RFI Request ใหม่ - กรุณาเลือกประเภทการตรวจ', 'info', 5000);
+  }, 500);
+  
+  console.log('✅ Reset to Step 1 complete');
 }
 
 function setupHolidayCheck() {
