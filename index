@@ -1141,25 +1141,48 @@ input[type="file"]::file-selector-button:hover {
         flex-direction: column;
       }
     }
-
-    .summary-value[id="summaryDescription"] {
+/* ⭐ เพิ่ม CSS สำหรับ Summary Description */
+.summary-value[id="summaryDescription"] {
   max-height: 150px;
   overflow-y: auto;
   font-size: 14px;
   color: #444;
   background: #f8f9fa;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
   border-left: 3px solid #1877f2;
+  white-space: pre-wrap; /* ⭐ รักษา line break */
+  word-wrap: break-word; /* ⭐ ตัดคำยาวๆ */
+  line-height: 1.6;
+  font-family: 'Kanit', sans-serif;
 }
 
 .summary-value[id="summaryDescription"]::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+
+.summary-value[id="summaryDescription"]::-webkit-scrollbar-track {
+  background: #e4e6eb;
+  border-radius: 4px;
 }
 
 .summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb {
-  background: #1877f2;
-  border-radius: 3px;
+  background: linear-gradient(180deg, #1877f2 0%, #2948b1 100%);
+  border-radius: 4px;
+}
+
+.summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #2948b1 0%, #3b5bdb 100%);
+}
+
+/* ⭐ ปรับ Summary Item สำหรับ Description */
+.summary-item.description-item {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.summary-item.description-item .summary-label {
+  margin-bottom: 8px;
 }
   </style>
 </head>
@@ -1478,11 +1501,11 @@ input[type="file"]::file-selector-button:hover {
             <div class="summary-value" id="summaryLocation">-</div>
           </div>
           
-            <div class="summary-item">
-    <div class="summary-label">รายละเอียด RFI:</div>
-    <div class="summary-value" id="summaryDescription" 
-         style="white-space: pre-wrap; line-height: 1.6;">-</div>
-      </div>
+ <div class="summary-item description-item">
+  <div class="summary-label">รายละเอียด RFI:</div>
+  <div class="summary-value" id="summaryDescription" 
+       style="white-space: pre-wrap; line-height: 1.6; width: 100%;">-</div>
+</div>
           <div class="summary-item">
             <div class="summary-label">ไฟล์แนบ:</div>
             <div class="summary-value" id="summaryFile">-</div>
@@ -1879,12 +1902,12 @@ function updateSummary() {
   var summaryDescriptionElement = document.getElementById('summaryDescription');
   
   if (summaryDescriptionElement) {
-    // จำกัดความยาวถ้ายาวเกินไป
+    // ✅ แสดงเต็มทั้งหมด ไม่ตัด
+    summaryDescriptionElement.textContent = description;
+    
+    // ⭐ เพิ่ม hint ถ้าข้อความยาว
     if (description.length > 200) {
-      summaryDescriptionElement.textContent = description.substring(0, 200) + '...';
-      summaryDescriptionElement.title = description; // แสดงเต็มใน tooltip
-    } else {
-      summaryDescriptionElement.textContent = description;
+      summaryDescriptionElement.title = 'เลื่อนลงเพื่อดูรายละเอียดเพิ่มเติม';
     }
   }
   
@@ -3233,15 +3256,18 @@ function checkHolidayRestrictions(dateStr, inspectionType) {
     .checkDateBookingAllowed(dateStr, inspectionType);
 }
 
-    var originalOnLoad = window.onload;
-    window.onload = function() {
-      if (originalOnLoad) originalOnLoad();
-      
-      // Initialize Progressive Form
-      initProgressiveForm();
-      
-      console.log('✅ Progressive Form initialized');
-    };
+var originalOnLoad = window.onload;
+window.onload = function() {
+  if (originalOnLoad) originalOnLoad();
+  
+  // Initialize Progressive Form
+  initProgressiveForm();
+  
+  // ⭐ เพิ่มบรรทัดนี้
+  setupHolidayCheck();
+  
+  console.log('✅ Progressive Form initialized');
+};
 
 // ⭐ แก้ไขฟังก์ชัน updateAvailableSlots ให้เช็ควันหยุดก่อน
 var originalUpdateAvailableSlots = updateAvailableSlots;
