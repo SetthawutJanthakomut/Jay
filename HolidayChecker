@@ -495,39 +495,53 @@ function canBookDate(targetDateStr, inspectionType) {
       // 🤝 EXTERNAL INSPECTION (Lead Time: ≥1 วัน)
       // ========================================
       
-      const holidayToday = isHoliday(today);
-      
+const holidayToday = isHoliday(today);
+
 if (holidayToday) {
-  console.log('❌ External: Currently in holiday (any time)');
+  console.log('🔍 External: Currently in holiday - checking target date');
   
   const firstWorkday = getNextWorkday(today);
-  const nextBookable = getNextWorkday(firstWorkday.date); // ⭐ บรรทัดใหม่
+  const nextBookable = getNextWorkday(firstWorkday.date);
   
-  const consecutiveCount = getConsecutiveHolidayCount(today);
-        let consecutiveMessage = '';
-        
-        if (consecutiveCount > 1) {
-          consecutiveMessage = '\n🎉 หยุดติดต่อกัน ' + consecutiveCount + ' วัน';
-        }
-        
-        return {
-          allowed: false,
-          reason: 'holiday_today_external',
-          title: '🎉 วันนี้เป็นวันหยุด (External)',
-          message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
-                  '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
-                  '❌ ไม่สามารถจอง External ได้ในวันหยุด\n' +
-                  '📋 External Lead Time: ≥1 วัน (นับจากวันทำการ)\n\n' +
-                  '💡 แนะนำ: จอง' + nextBookable.suggest + ' ← วันที่จองได้เร็วที่สุด\n\n' +
-                  '📌 เหตุผล:\n' +
-                  '   • วันทำการถัดไป: ' + firstWorkday.dateThai + '\n' +
-                  '   • ต้อง Lead Time +1 วัน → จองได้ตั้งแต่ ' + nextBookable.dateThai,
-          holidayName: holidayToday.name,
-          nextWorkday: nextBookable.date,
-          nextWorkdayThai: nextBookable.dateThai,
-          consecutiveDays: consecutiveCount
-        };
-      }
+  // ⭐ เปรียบเทียบวันที่เลือกกับวันที่จองได้เร็วที่สุด
+  const targetDateObj = new Date(targetDateStr + 'T00:00:00');
+  const nextBookableObj = new Date(nextBookable.date + 'T00:00:00');
+  
+  if (targetDateObj < nextBookableObj) {
+    // ❌ เลือกวันที่ก่อนวันที่จองได้ → บล็อก
+    console.log('❌ External: Target date before next bookable date');
+    
+    const consecutiveCount = getConsecutiveHolidayCount(today);
+    let consecutiveMessage = '';
+    
+    if (consecutiveCount > 1) {
+      consecutiveMessage = '\n🎉 หยุดติดต่อกัน ' + consecutiveCount + ' วัน';
+    }
+    
+    return {
+      allowed: false,
+      reason: 'holiday_today_external',
+      title: '🎉 วันนี้เป็นวันหยุด (External)',
+      message: '📅 วันหยุดวันนี้: ' + holidayToday.name + consecutiveMessage + '\n' +
+              '⏰ เวลาปัจจุบัน: ' + currentHour + ':' + String(currentMinute).padStart(2, '0') + ' น.\n' +
+              '❌ ไม่สามารถจอง External ได้ในวันหยุด\n' +
+              '📋 External Lead Time: ≥1 วัน (นับจากวันทำการ)\n\n' +
+              '💡 แนะนำ: จอง' + nextBookable.suggest + ' ← วันที่จองได้เร็วที่สุด\n\n' +
+              '📌 เหตุผล:\n' +
+              '   • วันทำการถัดไป: ' + firstWorkday.dateThai + '\n' +
+              '   • ต้อง Lead Time +1 วัน → จองได้ตั้งแต่ ' + nextBookable.dateThai + '\n' +
+              '   • คุณเลือก: ' + formatDateThai(targetDateStr) + ' (ก่อนวันที่จองได้)',
+      holidayName: holidayToday.name,
+      nextWorkday: nextBookable.date,
+      nextWorkdayThai: nextBookable.dateThai,
+      consecutiveDays: consecutiveCount
+    };
+  } else {
+    // ✅ เลือกวันที่หลังวันที่จองได้ → อนุญาต!
+    console.log('✅ External: Target date is valid (after next bookable date)');
+    // ไม่ return ให้ไปเช็คเงื่อนไขอื่นต่อ
+  }
+}
       
       const dayBeforeCheck = isDayBeforeHoliday(today);
       
