@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>คู่มือการใช้งาน RFI Requirement System</title>
+  <title>คู่มือการใช้งาน - RFI Requirement System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,442 +14,502 @@
       padding: 0;
       box-sizing: border-box;
     }
-
+    
     body {
       font-family: 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 20px;
       line-height: 1.8;
+      color: #333;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px;
     }
-
+    
     .container {
-      max-width: 1200px;
+      max-width: 1000px;
       margin: 0 auto;
       background: white;
       border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
       overflow: hidden;
+      animation: fadeIn 0.5s ease-out;
     }
-
-    .header {
-      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
-      color: white;
-      padding: 40px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .header::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-      animation: rotate 20s linear infinite;
-    }
-
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    .header h1 {
-      font-size: 42px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      position: relative;
-      z-index: 1;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .header .subtitle {
-      font-size: 18px;
-      font-weight: 300;
-      opacity: 0.95;
-      position: relative;
-      z-index: 1;
-    }
-
-    .header .version {
-      position: absolute;
-      top: 20px;
-      right: 30px;
-      background: rgba(255,255,255,0.2);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 2;
-    }
-
-    .content {
-      padding: 40px;
-    }
-
-    .section {
-      margin-bottom: 50px;
-      animation: fadeInUp 0.6s ease-out;
-    }
-
-    @keyframes fadeInUp {
+    
+    @keyframes fadeIn {
       from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(20px);
       }
       to {
         opacity: 1;
         transform: translateY(0);
       }
     }
-
-    .section-title {
-      font-size: 32px;
-      font-weight: 600;
-      color: #1877f2;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 3px solid #1877f2;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .section-title .icon {
-      font-size: 40px;
-    }
-
-    .subsection-title {
-      font-size: 24px;
-      font-weight: 600;
-      color: #2948b1;
-      margin: 30px 0 15px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .info-card {
-      background: linear-gradient(135deg, #e7f3ff 0%, #d4e9ff 100%);
-      border-left: 5px solid #1877f2;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.1);
-    }
-
-    .warning-card {
-      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-      border-left: 5px solid #f59e0b;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1);
-    }
-
-    .success-card {
-      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-      border-left: 5px solid #10b981;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
-    }
-
-    .error-card {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      border-left: 5px solid #ef4444;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);
-    }
-
-    .table-container {
-      overflow-x: auto;
-      margin: 20px 0;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-    }
-
-    th {
+    
+    /* Header */
+    .header {
       background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
       color: white;
-      padding: 15px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 16px;
-    }
-
-    td {
-      padding: 15px;
-      border-bottom: 1px solid #e4e6eb;
-      font-size: 15px;
-    }
-
-    tr:hover {
-      background: #f8f9fa;
-    }
-
-    .flow-container {
-      background: #f8f9fa;
-      padding: 30px;
-      border-radius: 12px;
-      margin: 20px 0;
-    }
-
-    .flow-step {
-      background: white;
-      padding: 20px;
-      margin: 15px 0;
-      border-radius: 10px;
-      border-left: 4px solid #1877f2;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      position: relative;
-      padding-left: 70px;
-    }
-
-    .flow-step::before {
-      content: attr(data-step);
-      position: absolute;
-      left: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
-      color: white;
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .flow-arrow {
+      padding: 40px 30px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: pulse 15s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .header-icon {
+      font-size: 60px;
+      margin-bottom: 15px;
+      display: inline-block;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .header p {
+      font-size: 18px;
+      font-weight: 300;
+      opacity: 0.95;
+    }
+    
+    /* Navigation */
+    .nav {
+      background: #f8f9fa;
+      padding: 20px 30px;
+      border-bottom: 3px solid #1877f2;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .nav-title {
+      font-size: 16px;
+      font-weight: 600;
       color: #1877f2;
-      font-size: 24px;
-      margin: 5px 0;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-
-    .code-block {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 25px;
-      border-radius: 12px;
-      overflow-x: auto;
-      margin: 20px 0;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      line-height: 1.6;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-
-    .code-block .comment {
-      color: #6a9955;
-    }
-
-    .code-block .keyword {
-      color: #569cd6;
-    }
-
-    .code-block .string {
-      color: #ce9178;
-    }
-
-    .example-box {
+    
+    .nav-link {
+      padding: 10px 20px;
       background: white;
       border: 2px solid #e4e6eb;
-      border-radius: 12px;
-      padding: 25px;
-      margin: 20px 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .example-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1877f2;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .checklist {
-      list-style: none;
-      padding: 0;
-    }
-
-    .checklist li {
-      padding: 12px;
-      margin: 8px 0;
-      background: white;
       border-radius: 8px;
-      border-left: 4px solid #10b981;
+      text-decoration: none;
+      color: #333;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .nav-link:hover {
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+      color: white;
+      border-color: #1877f2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+    }
+    
+    /* Content */
+    .content {
+      padding: 40px 30px;
+    }
+    
+    .section {
+      margin-bottom: 50px;
+      scroll-margin-top: 80px;
+    }
+    
+    .section-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1877f2;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #e7f3ff;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
-
-    .checklist li::before {
-      content: '☑️';
+    
+    .section-icon {
+      font-size: 32px;
+    }
+    
+    .step {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border-left: 5px solid #1877f2;
+      transition: all 0.3s ease;
+    }
+    
+    .step:hover {
+      background: #e7f3ff;
+      transform: translateX(5px);
+      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.1);
+    }
+    
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 18px;
+      margin-right: 15px;
+      box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
+    }
+    
+    .step-title {
       font-size: 20px;
+      font-weight: 600;
+      color: #1877f2;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
     }
-
-    .tip-box {
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-      border-left: 5px solid #f59e0b;
+    
+    .step-content {
+      color: #555;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    
+    .step-content ul {
+      margin: 12px 0;
+      padding-left: 25px;
+    }
+    
+    .step-content li {
+      margin: 8px 0;
+      position: relative;
+    }
+    
+    .step-content li::marker {
+      color: #1877f2;
+    }
+    
+    /* Info Boxes */
+    .info-box {
       padding: 20px;
       border-radius: 12px;
       margin: 20px 0;
+      border-left: 5px solid;
+      animation: slideIn 0.5s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .info-box.success {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border-color: #10b981;
+      color: #065f46;
+    }
+    
+    .info-box.warning {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+    
+    .info-box.info {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #3b82f6;
+      color: #1e40af;
+    }
+    
+    .info-box.error {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+    
+    .info-box-title {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 10px;
       display: flex;
-      gap: 15px;
-    }
-
-    .tip-icon {
-      font-size: 30px;
-      flex-shrink: 0;
-    }
-
-    .button-demo {
-      display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 24px;
-      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
-      color: white;
-      border-radius: 10px;
-      font-weight: 500;
-      margin: 5px;
-      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
+      gap: 8px;
+    }
+    
+    .info-box-content {
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .comparison-table thead {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      color: #1a1a1a;
+      border-bottom: 3px solid #1877f2;
+    }
+    
+    .comparison-table th {
+      padding: 18px 20px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 17px;
+      color: #1a1a1a;
+    }
+    
+    .comparison-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e4e6eb;
       font-size: 15px;
     }
-
-    .button-demo.success {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    
+    .comparison-table tbody tr:hover {
+      background: #f8f9fa;
     }
-
-    .button-demo.warning {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    
+    .comparison-table .feature {
+      font-weight: 600;
+      color: #1877f2;
     }
-
-    .button-demo.error {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    
+    .comparison-table .internal-col {
+      background: #fff7ed;
     }
-
-    .footer {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    
+    .comparison-table .external-col {
+      background: #e7f3ff;
+    }
+    
+    /* Q&A */
+    .qa-item {
+      background: white;
+      border: 2px solid #e4e6eb;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .qa-item:hover {
+      border-color: #1877f2;
+      box-shadow: 0 4px 15px rgba(24, 119, 242, 0.1);
+    }
+    
+    .qa-question {
+      padding: 20px 25px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      font-weight: 600;
+      font-size: 16px;
+      color: #1877f2;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+    
+    .qa-question:hover {
+      background: linear-gradient(135deg, #e7f3ff 0%, #dbeafe 100%);
+    }
+    
+    .qa-question::after {
+      content: '▼';
+      font-size: 14px;
+      transition: transform 0.3s ease;
+    }
+    
+    .qa-question.active::after {
+      transform: rotate(180deg);
+    }
+    
+    .qa-answer {
+      padding: 0 25px;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      color: #555;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    
+    .qa-answer.show {
+      padding: 20px 25px;
+      max-height: 1000px;
+    }
+    
+    .qa-answer ul {
+      margin: 12px 0;
+      padding-left: 25px;
+    }
+    
+    .qa-answer li {
+      margin: 8px 0;
+    }
+    
+    /* Back to Top Button */
+    .back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 55px;
+      height: 55px;
+      background: linear-gradient(135deg, #1877f2 0%, #2948b1 100%);
       color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .back-to-top:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(24, 119, 242, 0.5);
+    }
+    
+    .back-to-top.show {
+      display: flex;
+    }
+    
+    /* Footer */
+    .footer {
+      background: #f8f9fa;
       padding: 30px;
       text-align: center;
+      border-top: 3px solid #1877f2;
+    }
+    
+    .footer p {
+      color: #666;
       font-size: 14px;
+      margin: 5px 0;
     }
-
-    .footer a {
-      color: #60a5fa;
-      text-decoration: none;
-      font-weight: 500;
+    
+    .footer .version {
+      color: #999;
+      font-size: 12px;
+      margin-top: 10px;
     }
-
-    .footer a:hover {
-      text-decoration: underline;
-    }
-
+    
+    /* Responsive */
     @media (max-width: 768px) {
       .header h1 {
         font-size: 28px;
       }
-
+      
+      .header p {
+        font-size: 16px;
+      }
+      
+      .content {
+        padding: 30px 20px;
+      }
+      
       .section-title {
         font-size: 24px;
       }
-
-      .content {
-        padding: 20px;
+      
+      .nav-links {
+        flex-direction: column;
       }
-
-      .flow-step {
-        padding-left: 60px;
+      
+      .nav-link {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .comparison-table {
+        font-size: 13px;
+      }
+      
+      .comparison-table th,
+      .comparison-table td {
+        padding: 12px 10px;
+      }
+      
+      .back-to-top {
+        width: 50px;
+        height: 50px;
+        bottom: 20px;
+        right: 20px;
       }
     }
-
-    .badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      margin: 0 5px;
+    
+    /* Scroll Animation */
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.6s ease;
     }
-
-    .badge.blue {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-
-    .badge.green {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .badge.yellow {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .badge.red {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .timeline {
-      position: relative;
-      padding-left: 40px;
-      margin: 30px 0;
-    }
-
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 15px;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background: linear-gradient(180deg, #1877f2 0%, #2948b1 100%);
-    }
-
-    .timeline-item {
-      position: relative;
-      margin: 20px 0;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .timeline-item::before {
-      content: '';
-      position: absolute;
-      left: -32px;
-      top: 25px;
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      background: #1877f2;
-      border: 3px solid white;
-      box-shadow: 0 0 0 3px #1877f2;
+    
+    .scroll-reveal.active {
+      opacity: 1;
+      transform: translateY(0);
     }
   </style>
 </head>
@@ -456,856 +517,688 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <div class="version">v1 - Oct 2025</div>
-      <h1>📋 คู่มือการใช้งาน</h1>
-      <p class="subtitle">RFI Requirement System + RFI Management System</p>
+      <div class="header-content">
+        <div class="header-icon">📖</div>
+        <h1>คู่มือการใช้งาน</h1>
+        <p>RFI Requirement System</p>
+      </div>
     </div>
-
+    
+    <!-- Navigation -->
+    <div class="nav">
+      <div class="nav-title">📑 สารบัญ</div>
+      <div class="nav-links">
+        <a href="#steps" class="nav-link">
+          <span>📝</span>
+          <span>ขั้นตอนการกรอกข้อมูล</span>
+        </a>
+        <a href="#team-selection" class="nav-link">
+          <span>👥</span>
+          <span>การเลือกทีม</span>
+        </a>
+        <a href="#booking-rules" class="nav-link">
+          <span>📋</span>
+          <span>เงื่อนไขการจอง</span>
+        </a>
+        <a href="#qa" class="nav-link">
+          <span>❓</span>
+          <span>คำถามที่พบบ่อย</span>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Content -->
     <div class="content">
-      <!-- ภาพรวมระบบ -->
-      <section class="section">
+      <!-- Section 1: ขั้นตอนการกรอกข้อมูล -->
+      <section id="steps" class="section scroll-reveal">
         <h2 class="section-title">
-          <span class="icon">🎯</span>
-          ภาพรวมระบบ
+          <span class="section-icon">📝</span>
+          ขั้นตอนการกรอกข้อมูล
         </h2>
         
-        <div class="info-card">
-          <h3 style="margin-bottom: 15px; color: #1877f2; font-size: 20px;">
-            🔷 RFI Requirement System คืออะไร?
-          </h3>
-          <p style="font-size: 16px; line-height: 1.8;">
-            <strong>RFI Requirement System</strong> เป็นระบบจองทีมงานสำหรับ <strong>RFI Work</strong> (Request for Information) 
-            ที่ช่วยให้ผู้ใช้สามารถจองทีมงานได้อย่างมีประสิทธิภาพ โดยระบบจะจัดทีมให้อัตโนมัติตาม:
-          </p>
-          <ul style="margin-top: 15px; padding-left: 30px; font-size: 16px;">
-            <li>✅ <strong>ประเภทงานที่เลือก</strong> (Work Type)</li>
-            <li>✅ <strong>ความว่างของทีม</strong> (Availability Check)</li>
-            <li>✅ <strong>Load Balance</strong> (กระจายงานให้เท่ากัน)</li>
-          </ul>
-        </div>
-
-        <h3 class="subsection-title">🎯 วัตถุประสงค์</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
-          <div class="success-card">
-            <div style="font-size: 24px; margin-bottom: 10px;">⚡</div>
-            <strong style="font-size: 18px; color: #065f46;">ลดความซับซ้อน</strong>
-            <p style="margin-top: 10px; font-size: 15px;">ไม่ต้องติดต่อหลายคน<br>จองผ่านระบบเดียว</p>
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">1</span>
+            เลือกประเภทการตรวจ (Inspection Type)
           </div>
-          <div class="success-card">
-            <div style="font-size: 24px; margin-bottom: 10px;">🛡️</div>
-            <strong style="font-size: 18px; color: #065f46;">ป้องกันซ้ำซ้อน</strong>
-            <p style="margin-top: 10px; font-size: 15px;">ระบบเช็คความว่าง<br>อัตโนมัติ</p>
-          </div>
-          <div class="success-card">
-            <div style="font-size: 24px; margin-bottom: 10px;">⚖️</div>
-            <strong style="font-size: 18px; color: #065f46;">กระจายภาระงาน</strong>
-            <p style="margin-top: 10px; font-size: 15px;">Load Balance<br>ให้ทีมได้งานเท่ากัน</p>
-          </div>
-          <div class="success-card">
-            <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
-            <strong style="font-size: 18px; color: #065f46;">บันทึกข้อมูล</strong>
-            <p style="margin-top: 10px; font-size: 15px;">เก็บประวัติการจอง<br>อย่างเป็นระบบ</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- เงื่อนไขการใช้งาน -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">⏰</span>
-          เงื่อนไขการใช้งาน
-        </h2>
-
-        <div class="error-card">
-          <h3 style="margin-bottom: 15px; color: #dc2626; font-size: 20px; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 28px;">⚠️</span>
-            ข้อกำหนดที่ต้องจำ (สำคัญมาก!)
-          </h3>
-          <div style="background: white; padding: 20px; border-radius: 10px; margin-top: 15px;">
-            <p style="font-size: 18px; font-weight: 600; color: #dc2626; margin-bottom: 10px;">
-              🚫 จองวันพรุ่งนี้ต้องจองก่อน 13:00 น.
-            </p>
-            <p style="font-size: 15px; color: #666;">
-              ถ้าเลยเวลานี้ ต้องเลือกวันถัดไป (ให้ทีมมีเวลาเตรียมเอกสารขอ Consult อนุมัติ)
-            </p>
-          </div>
-        </div>
-
-        <h3 class="subsection-title">📋 ตารางเงื่อนไขเวลา</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>เงื่อนไข</th>
-                <th>คำอธิบาย</th>
-                <th>ตัวอย่าง</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>ต้องจองวันพรุ่งนี้เป็นต้นไป</strong></td>
-                <td>ไม่สามารถจองย้อนหลังหรือวันเดียวกันได้</td>
-                <td>วันนี้ 24 ต.ค. → จองได้ตั้งแต่ 25 ต.ค.</td>
-              </tr>
-              <tr>
-                <td><strong>จองวันพรุ่งนี้: ต้องจองก่อน 13:00 น.</strong></td>
-                <td>⚠️ ถ้าเลยเวลานี้ ต้องเลือกวันถัดไป</td>
-                <td>วันนี้ 24 ต.ค. 14:00 → ❌ จองวันที่ 25 ไม่ได้</td>
-              </tr>
-              <tr>
-                <td><strong>เวลาทำการ: 09:00 - 20:00 น.</strong></td>
-                <td>นอกเวลานี้เลือกไม่ได้</td>
-                <td>08:30 ❌ | 09:00 ✅ | 20:00 ✅ | 20:30 ❌</td>
-              </tr>
-              <tr>
-                <td><strong>ช่วงเวลา: 30 นาที</strong></td>
-                <td>เลือกเวลาได้ทุก 30 นาที</td>
-                <td>09:00, 09:30, 10:00, 10:30, ...</td>
-              </tr>
-              <tr>
-                <td><strong>Buffer Time: ±30 นาที</strong></td>
-                <td>ระบบสำรองเวลา 30 นาทีก่อน-หลัง RFI</td>
-                <td>จอง 10:00-11:00 → บล็อก 09:30-11:30</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="warning-card">
-          <h3 style="margin-bottom: 15px; color: #92400e; font-size: 18px;">
-            💡 ทำไมต้องมี Buffer Time?
-          </h3>
-          <div style="background: white; padding: 15px; border-radius: 8px; margin-top: 10px;">
-            <p style="margin-bottom: 10px;"><strong>Buffer ±30 นาที</strong> ช่วยให้:</p>
-            <ul style="padding-left: 25px;">
-              <li>⏱️ มีเวลาเตรียมงาน/อุปกรณ์</li>
-              <li>🚗 มีเวลาเดินทางระหว่างงาน</li>
-              <li>🔧 มี Buffer สำหรับงานล่าช้า</li>
-              <li>📋 ป้องกันการจองทับซ้อน</li>
+          <div class="step-content">
+            <p><strong>มี 2 ประเภท:</strong></p>
+            <ul>
+              <li><strong>🏢 Internal Inspection:</strong> การตรวจสอบภายใน ไม่ต้องขออนุมัติ Consultant</li>
+              <li><strong>🤝 External Inspection:</strong> การตรวจสอบกับ Consultant ต้องขออนุมัติ</li>
             </ul>
-          </div>
-          <div class="code-block" style="margin-top: 15px;">
-<span class="comment">// ตัวอย่าง Buffer Time</span>
-<span class="keyword">RFI มีอยู่:</span> <span class="string">10:00-11:00</span>
-       ↓
-<span class="keyword">ระบบบล็อก:</span> <span class="string">09:30-11:30</span> <span class="comment">(±30 min)</span>
-       ↓
-<span class="keyword">จองใหม่ต้องอยู่นอกช่วงนี้:</span>
-- <span class="string">09:00-09:30</span> ✅ <span class="comment">(จบก่อน 09:30)</span>
-- <span class="string">11:30-12:00</span> ✅ <span class="comment">(เริ่มหลัง 11:30)</span>
-- <span class="string">09:30-10:30</span> ❌ <span class="comment">(ทับซ้อน)</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- การเลือกทีม -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">👥</span>
-          การเลือกทีมงาน
-        </h2>
-
-        <div class="info-card">
-          <h3 style="margin-bottom: 15px; color: #1877f2; font-size: 20px;">
-            💡 ระบบแนะนำทีมอัจฉริยะ (Smart Recommendation)
-          </h3>
-          <p style="font-size: 16px; margin-bottom: 15px;">
-            เมื่อเลือก <strong>Work Type</strong> ระบบจะวิเคราะห์และแนะนำทีมที่เหมาะสมที่สุดให้อัตโนมัติ
-          </p>
-          <div class="flow-container" style="background: white; padding: 20px;">
-            <div style="text-align: center; font-size: 15px; line-height: 2;">
-              <div style="background: #dbeafe; padding: 12px; border-radius: 8px; display: inline-block;">
-                👤 ผู้ใช้เลือก Work Type: <strong>"Soil Testing"</strong>
-              </div>
-              <div style="color: #1877f2; font-size: 20px; margin: 10px 0;">↓</div>
-              <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; display: inline-block;">
-                🔍 ระบบเช็คว่าทีมไหนรองรับงานนี้
-              </div>
-              <div style="color: #1877f2; font-size: 20px; margin: 10px 0;">↓</div>
-              <div style="background: #d1fae5; padding: 12px; border-radius: 8px; display: inline-block;">
-                ✅ แนะนำ: <strong>Lab</strong> (มีทีมรองรับ 2 ทีม)
+            <div class="info-box info">
+              <div class="info-box-title">💡 คำแนะนำ</div>
+              <div class="info-box-content">
+                เลือก <strong>Internal</strong> หากต้องการตรวจสอบภายในทีมเท่านั้น<br>
+                เลือก <strong>External</strong> หากต้องการให้ Consultant เข้าร่วม
               </div>
             </div>
           </div>
         </div>
-
-        <h3 class="subsection-title">🔷 การเลือกทีมแบบเดียว (Single Team)</h3>
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0;">
-          <div class="button-demo">
-            <span style="font-size: 20px;">🔍</span>
-            <span>Survey</span>
-          </div>
-          <div class="button-demo">
-            <span style="font-size: 20px;">🧪</span>
-            <span>Lab</span>
-          </div>
-          <div class="button-demo">
-            <span style="font-size: 20px;">📋</span>
-            <span>Inspector</span>
-          </div>
-        </div>
-
-        <div class="example-box">
-          <div class="example-title">
-            <span>🎯</span>
-            กระบวนการจัดทีมอัตโนมัติ
-          </div>
-          <div class="timeline">
-            <div class="timeline-item">
-              <strong>Step 1:</strong> เลือกทีมจากปุ่ม (เช่น Lab)
-            </div>
-            <div class="timeline-item">
-              <strong>Step 2:</strong> ระบบหาทีมที่รองรับงานที่เลือก (Work Type)
-            </div>
-            <div class="timeline-item">
-              <strong>Step 3:</strong> เช็คว่าทีมว่างในวันและเวลาที่เลือก
-            </div>
-            <div class="timeline-item">
-              <strong>Step 4:</strong> เรียง Workload จากน้อยไปมาก
-            </div>
-            <div class="timeline-item">
-              <strong>Step 5:</strong> จัดทีมที่มี Workload น้อยที่สุด ✅
-            </div>
-          </div>
-        </div>
-
-        <h3 class="subsection-title">👥 การเลือกทีมแบบหลายทีม (Multi-Work)</h3>
-        <div class="warning-card">
-          <h3 style="margin-bottom: 10px; color: #92400e;">
-            <strong>🤔 เมื่อไหร่ต้องใช้ Multi-Work?</strong>
-          </h3>
-          <ul style="padding-left: 25px; line-height: 2;">
-            <li>✅ งานต้องการหลายความเชี่ยวชาญ</li>
-            <li>✅ ต้องการทีม Survey + Lab พร้อมกัน</li>
-            <li>✅ งานซับซ้อนที่ต้องใช้หลายทีม</li>
-          </ul>
-        </div>
-
-        <div class="example-box">
-          <div class="example-title">
-            <span>📝</span>
-            วิธีใช้งาน Multi-Work
-          </div>
-          <div class="flow-container" style="background: #f8f9fa;">
-            <div class="flow-step" data-step="1">
-              กดปุ่ม <strong>"👥 งานรวม"</strong>
-            </div>
-            <div class="flow-arrow">↓</div>
-            <div class="flow-step" data-step="2">
-              เลือก Checkbox ทีมที่ต้องการ<br>
-              <small style="color: #666;">☑️ Survey + ☑️ Lab (เลือกได้หลายทีม)</small>
-            </div>
-            <div class="flow-arrow">↓</div>
-            <div class="flow-step" data-step="3">
-              ระบบหาชุดทีมที่ว่างพร้อมกัน<br>
-              <small style="color: #666;">Survey Team A + Lab Team B ✅</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="code-block">
-<span class="comment">// ตัวอย่างการจัดทีมแบบ Multi-Work</span>
-<span class="keyword">เลือก:</span> ☑️ Survey + ☑️ Lab
-         ↓
-<span class="keyword">ระบบหา:</span>
-- Survey Team ที่ว่าง: <span class="string">Survey Team A</span>
-- Lab Team ที่ว่าง:    <span class="string">Lab Team B</span>
-         ↓
-<span class="keyword">จัดทีมให้:</span> <span class="string">Survey Team A, Lab Team B</span> ✅
-        </div>
-      </section>
-
-      <!-- Flow การใช้งาน -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">🔄</span>
-          Flow การใช้งานทั้งหมด
-        </h2>
-
-        <div class="flow-container">
-          <div class="flow-step" data-step="1">
-            <strong>เปิดเว็บ</strong><br>
-            <small style="color: #666;">เข้าสู่ระบบด้วย Google Account</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="2">
-            <strong>เลือก Work Type</strong><br>
-            <small style="color: #666;">เช่น "Soil Testing", "Crown Wall Inspection"</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="3">
-            <strong>ระบบแนะนำทีม</strong><br>
-            <small style="color: #666;">💡 แสดงทีมที่เหมาะสมพร้อม Highlight ปุ่ม</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="4">
-            <strong>เลือกทีม</strong><br>
-            <small style="color: #666;">Single (ทีมเดียว) หรือ Multi (หลายทีม)</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="5">
-            <strong>เลือกวันที่</strong><br>
-            <small style="color: #666;">ต้องเป็นวันพรุ่งนี้เป็นต้นไป</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="6">
-            <strong>ระบบแสดงเวลาว่าง</strong><br>
-            <small style="color: #666;">เฉพาะช่วงเวลาที่มีทีมว่าง</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="7">
-            <strong>เลือกเวลาเริ่ม</strong><br>
-            <small style="color: #666;">เช่น 10:00 น.</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="8">
-            <strong>ระบบแสดงเวลาสิ้นสุด</strong><br>
-            <small style="color: #666;">Auto-select เวลาเริ่มต้น +1 ชั่วโมง (เช่น 11:00)</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="9">
-            <strong>กรอกรายละเอียด + สถานที่</strong><br>
-            <small style="color: #666;">ระบุให้ละเอียดเพื่อลดการติดต่อกลับ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="10">
-            <strong>กรอกชื่อ</strong><br>
-            <small style="color: #666;">ระบบ Auto-load จาก Email (แก้ไขได้)</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="11">
-            <strong>กด Submit</strong><br>
-            <small style="color: #666;">ระบบเริ่มประมวลผล...</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="12">
-            <strong>ระบบจัดทีมอัตโนมัติ</strong><br>
-            <small style="color: #666;">เลือกทีมที่ว่างและมี Workload น้อยที่สุด</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="13">
-            <strong>บันทึกลง Google Sheets</strong><br>
-            <small style="color: #666;">สร้าง RFI ID (8 ตัวอักษร)</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="14">
-            <strong>ส่งอีเมลแจ้งเตือน</strong><br>
-            <small style="color: #666;">ส่งไปหา: ทีม QC + ทีมงาน + ผู้ขอ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="15" style="border-left-color: #10b981; background: #ecfdf5;">
-            <strong style="color: #065f46;">✅ เสร็จสิ้น - แสดงผลสำเร็จ</strong><br>
-            <small style="color: #065f46;">RFI ID: ABC12345 | ทีม: Lab Team B</small>
-          </div>
-        </div>
-      </section>
-
-      <!-- RFI Management Workflow -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">🔄</span>
-          RFI Management System Workflow
-        </h2>
-
-        <div class="info-card">
-          <h3 style="margin-bottom: 15px; color: #1877f2; font-size: 20px;">
-            🎯 ภาพรวม RFI Management System
-          </h3>
-          <p style="font-size: 16px; line-height: 1.8;">
-            ระบบบริหารจัดการเอกสารและการตรวจสอบงานก่อสร้างแบบดิจิทัล ที่ครอบคลุมกระบวนการตั้งแต่
-            <strong>เปิด RFI → ตรวจสอบ → อนุมัติ → ปิดงาน</strong> อย่างเป็นระบบและโปร่งใส
-          </p>
-        </div>
-
-        <h3 class="subsection-title">📊 ขั้นตอนการดำเนินงาน RFI แบบครบวงจร</h3>
         
-        <div class="flow-container">
-          <div class="flow-step" data-step="1">
-            <strong>📧 User Request RFI</strong><br>
-            <small style="color: #666;">ผู้ใช้งานส่งคำขอ RFI ผ่านอีเมลถึงทีม QC</small>
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">2</span>
+            เลือกประเภทงาน (Work Type)
           </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="2">
-            <strong>📝 QC สร้าง RFI Request</strong><br>
-            <small style="color: #666;">ทีม QC บันทึกข้อมูลและสร้าง RFI ในระบบ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="3">
-            <strong>📅 ระบบสร้าง Calendar Event</strong><br>
-            <small style="color: #666;">ระบบจัดตารางตรวจใน Google Calendar อัตโนมัติ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="4">
-            <strong>📎 QC/Survey/Lab แนบเอกสาร Open RFI</strong><br>
-            <small style="color: #666;">แนบเอกสาร: RFI Cover Sheet, Survey Report, Lab Report</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="5">
-            <strong>✅ QC & Consult Review & Approve Open RFI</strong><br>
-            <small style="color: #666;">ตรวจสอบและอนุมัติเอกสาร Open RFI</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="6">
-            <strong>🔍 Inspector ลงพื้นที่ตรวจสอบ</strong><br>
-            <small style="color: #666;">Inspector ทำการตรวจสอบงานตามกำหนดการ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="7">
-            <strong style="color: #f59e0b;">⏸️ Inspector Postpone (ถ้าจำเป็น)</strong><br>
-            <small style="color: #92400e;">กรณีต้องเลื่อนการตรวจ → ระบบอัปเดต Calendar อัตโนมัติ</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="8">
-            <strong>📎 QC/Survey/Lab แนบเอกสาร Close RFI</strong><br>
-            <small style="color: #666;">แนบเอกสารผลการตรวจสอบและรายงานสรุป</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="9">
-            <strong>✅ QC & Consult Review & Approve Close RFI</strong><br>
-            <small style="color: #666;">ตรวจสอบและอนุมัติเอกสาร Close RFI</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="10">
-            <strong>📧 ระบบส่งอีเมลแจ้ง RFI Approved</strong><br>
-            <small style="color: #666;">แจ้งเตือนทุกฝ่ายว่า RFI ได้รับการอนุมัติแล้ว</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="11">
-            <strong>🖊️ QC แนบ Signed Hardcopy</strong><br>
-            <small style="color: #666;">อัปโหลดเอกสารต้นฉบับที่ลงนามแล้ว</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="12">
-            <strong>📧 ระบบส่ง Final Close Email</strong><br>
-            <small style="color: #666;">ส่งอีเมลแจ้งปิดงาน RFI อย่างสมบูรณ์</small>
-          </div>
-          <div class="flow-arrow">↓</div>
-          
-          <div class="flow-step" data-step="13" style="border-left-color: #10b981; background: #ecfdf5;">
-            <strong style="color: #065f46;">✅ RFI Closed Successfully</strong><br>
-            <small style="color: #065f46;">RFI ปิดงานสำเร็จ พร้อมเก็บเอกสารครบถ้วน</small>
+          <div class="step-content">
+            <p>เลือกประเภทงานที่ต้องการดำเนินการ เช่น:</p>
+            <ul>
+              <li>Soil Testing - การตรวจสอบดิน</li>
+              <li>Concrete Quality Check - การตรวจสอบคุณภาพคอนกรีต</li>
+              <li>Structural Inspection - การตรวจสอบโครงสร้าง</li>
+              <li>ฯลฯ</li>
+            </ul>
+            <div class="info-box success">
+              <div class="info-box-title">✨ ระบบอัจฉริยะ</div>
+              <div class="info-box-content">
+                เมื่อเลือกประเภทงาน ระบบจะ<strong>แนะนำทีมงานที่เหมาะสม</strong>ให้อัตโนมัติ<br>
+                และคำนวณระยะเวลาที่ต้องใช้ตามมาตรฐาน
+              </div>
+            </div>
           </div>
         </div>
-
-        <h3 class="subsection-title">🔧 ฟีเจอร์หลักของระบบ</h3>
         
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>หมวด</th>
-                <th>ฟังก์ชันหลัก</th>
-                <th>รายละเอียด</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>📄 Document Control</strong></td>
-                <td>RFI Cover Sheet, Survey & Lab Reports</td>
-                <td>แนบเอกสารทุกขั้นตอน (Open/Close RFI) พร้อมระบบจัดเก็บ</td>
-              </tr>
-              <tr>
-                <td><strong>⚙️ Workflow Automation</strong></td>
-                <td>Status Tracking</td>
-                <td>ระบบอัปเดตสถานะอัตโนมัติแบบ Real-Time ติดตามได้ทุกขั้นตอน</td>
-              </tr>
-              <tr>
-                <td><strong>📅 Calendar Integration</strong></td>
-                <td>Create / Cancel / Postpone Events</td>
-                <td>จัดตารางตรวจใน Google Calendar โดยอัตโนมัติ ป้องกันเวลาซ้ำซ้อน</td>
-              </tr>
-              <tr>
-                <td><strong>📧 Email Notification</strong></td>
-                <td>Smart Alerts</td>
-                <td>แจ้งเตือนสถานะ RFI ทุกครั้งผ่าน Email ถึงทุกฝ่ายที่เกี่ยวข้อง</td>
-              </tr>
-              <tr>
-                <td><strong>🔄 Revision Tracking</strong></td>
-                <td>Version Control</td>
-                <td>เก็บประวัติการแก้ไขทุกครั้ง ย้อนดูเวอร์ชันเดิมได้</td>
-              </tr>
-              <tr>
-                <td><strong>📊 KPI Dashboard</strong></td>
-                <td>Inspection Metrics</td>
-                <td>สรุปเวลาเฉลี่ย, Need More Info Rate, ปริมาณ RFI ต่อเดือน</td>
-              </tr>
-              <tr>
-                <td><strong>👥 Multi-Team Support</strong></td>
-                <td>QC / Survey / Lab / Inspector</td>
-                <td>รองรับหลายทีมตรวจและป้องกันเวลาซ้ำซ้อน</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">3</span>
+            เลือกทีมงาน (Team Category)
+          </div>
+          <div class="step-content">
+            <p><strong>เลือกหมวดทีมที่ต้องการ:</strong></p>
+            <ul>
+              <li><strong>🔍 Survey Team:</strong> ทีมสำรวจ</li>
+              <li><strong>🧪 Lab Team:</strong> ทีมห้องแล็บ</li>
+              <li><strong>📋 Inspector Team:</strong> ทีมตรวจสอบ</li>
+              <li><strong>👥 งานรวม:</strong> ใช้หลายทีมพร้อมกัน (เช่น Survey + Lab)</li>
+            </ul>
+            <div class="info-box info">
+              <div class="info-box-title">💡 ทีมที่แนะนำ</div>
+              <div class="info-box-content">
+                ระบบจะ<strong>ไฮไลต์ทีมที่แนะนำ</strong>ตามประเภทงานที่เลือก<br>
+                พร้อมแสดงจำนวนทีมที่พร้อมให้บริการ
+              </div>
+            </div>
+          </div>
         </div>
-
-        <h3 class="subsection-title">📈 ตัวชี้วัดความสำเร็จ (KPI)</h3>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
-          <div class="info-card">
-            <div style="font-size: 30px; text-align: center; margin-bottom: 10px;">⏱️</div>
-            <h4 style="text-align: center; color: #1877f2; font-size: 16px; margin-bottom: 8px;">
-              Average RFI Response Time
-            </h4>
-            <p style="text-align: center; font-size: 14px; color: #666;">
-              วัดเวลาเฉลี่ยในการตอบสนอง RFI
-            </p>
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">4</span>
+            เลือกวันที่และเวลา
           </div>
-
-          <div class="info-card">
-            <div style="font-size: 30px; text-align: center; margin-bottom: 10px;">🔁</div>
-            <h4 style="text-align: center; color: #1877f2; font-size: 16px; margin-bottom: 8px;">
-              Revision Frequency
-            </h4>
-            <p style="text-align: center; font-size: 14px; color: #666;">
-              ความถี่ในการแก้ไข / Need More Info Rate
-            </p>
-          </div>
-
-          <div class="info-card">
-            <div style="font-size: 30px; text-align: center; margin-bottom: 10px;">✅</div>
-            <h4 style="text-align: center; color: #1877f2; font-size: 16px; margin-bottom: 8px;">
-              RFI Approval Success Rate
-            </h4>
-            <p style="text-align: center; font-size: 14px; color: #666;">
-              อัตราการอนุมัติ RFI สำเร็จ
-            </p>
-          </div>
-
-          <div class="info-card">
-            <div style="font-size: 30px; text-align: center; margin-bottom: 10px;">📊</div>
-            <h4 style="text-align: center; color: #1877f2; font-size: 16px; margin-bottom: 8px;">
-              Open vs Closed RFI
-            </h4>
-            <p style="text-align: center; font-size: 14px; color: #666;">
-              สรุป RFI ที่เปิด-ปิด รายสัปดาห์/เดือน
-            </p>
-          </div>
-
-          <div class="info-card">
-            <div style="font-size: 30px; text-align: center; margin-bottom: 10px;">🧩</div>
-            <h4 style="text-align: center; color: #1877f2; font-size: 16px; margin-bottom: 8px;">
-              Team Performance
-            </h4>
-            <p style="text-align: center; font-size: 14px; color: #666;">
-              ประสิทธิภาพของแต่ละทีม (QC, Survey, Lab)
-            </p>
+          <div class="step-content">
+            <p><strong>กำหนดเวลาที่ต้องการ:</strong></p>
+            <ul>
+              <li><strong>วันที่:</strong> เลือกวันที่ต้องการให้ทำงาน</li>
+              <li><strong>เวลาเริ่มต้น:</strong> ระบบจะแสดงเฉพาะเวลาที่ทีมว่าง</li>
+              <li><strong>เวลาสิ้นสุด:</strong> คำนวณอัตโนมัติจากระยะเวลามาตรฐาน</li>
+            </ul>
+            <div class="info-box warning">
+              <div class="info-box-title">⚠️ ข้อจำกัด</div>
+              <div class="info-box-content">
+                <strong>เวลาทำการ:</strong> 09:00 - 20:00 น.<br>
+                <strong>ช่วงเวลา:</strong> ทุกๆ 30 นาที<br>
+                <strong>Lead Time:</strong> ขึ้นกับประเภทการตรวจ (ดูตาราง Booking Rules)
+              </div>
+            </div>
           </div>
         </div>
-
-        <h3 class="subsection-title">🎯 ประโยชน์ที่ได้รับ</h3>
         
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 30%;">ด้าน</th>
-                <th>ผลลัพธ์ที่ได้</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>⚡ Efficiency</strong></td>
-                <td>ลดเวลาและขั้นตอนการตรวจสอบ ไม่ต้องใช้กระดาษและค้นหาเอกสาร</td>
-              </tr>
-              <tr>
-                <td><strong>👁️ Transparency</strong></td>
-                <td>ติดตามสถานะและผู้รับผิดชอบได้ทุกขั้นตอน แบบ Real-Time</td>
-              </tr>
-              <tr>
-                <td><strong>🎯 Accuracy</strong></td>
-                <td>ลดการใช้เอกสารซ้ำและความผิดพลาดจากการสื่อสาร</td>
-              </tr>
-              <tr>
-                <td><strong>🔍 Traceability</strong></td>
-                <td>เก็บประวัติเอกสารและเวอร์ชันย้อนหลังครบถ้วน สืบค้นได้ง่าย</td>
-              </tr>
-              <tr>
-                <td><strong>🌱 Sustainability</strong></td>
-                <td>ลดการใช้กระดาษ สนับสนุนแนวทาง Green Project</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">5</span>
+            กรอกรายละเอียดและสถานที่
+          </div>
+          <div class="step-content">
+            <p><strong>รายละเอียด RFI:</strong></p>
+            <ul>
+              <li>ระบุขอบเขตงาน</li>
+              <li>วัตถุประสงค์</li>
+              <li>ข้อกำหนดพิเศษ (ถ้ามี)</li>
+              <li>อุปกรณ์ที่ต้องการ</li>
+            </ul>
+            <p><strong>สถานที่:</strong> ระบุตำแหน่งให้ละเอียด เช่น Crown Wall STA.0+050 to STA.0+060</p>
+            <div class="info-box success">
+              <div class="info-box-title">📍 ทำไมต้องระบุให้ละเอียด?</div>
+              <div class="info-box-content">
+                ข้อมูลที่ชัดเจนช่วยให้:<br>
+                • ทีมเข้าถึงสถานที่ได้รวดเร็ว<br>
+                • เตรียมอุปกรณ์ได้ถูกต้อง<br>
+                • ลดเวลาติดต่อกลับเพื่อแก้ไข
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div class="success-card">
-          <h3 style="margin-bottom: 15px; color: #065f46; font-size: 20px;">
-            🎉 สรุป: Paperless RFI Workflow
-          </h3>
-          <div style="background: white; padding: 20px; border-radius: 10px;">
-            <p style="font-size: 16px; line-height: 1.8; margin-bottom: 15px;">
-              RFI Management System ช่วยเปลี่ยนกระบวนการจัดการเอกสารแบบดั้งเดิมที่ใช้กระดาษ
-              ให้กลายเป็น <strong>Digital Workflow ที่โปร่งใส</strong> และ <strong>อัตโนมัติ</strong>
-            </p>
-            <ul style="padding-left: 25px; line-height: 2;">
-              <li>✅ ทุกขั้นตอนมีการแจ้งเตือนอัตโนมัติ</li>
-              <li>✅ ป้องกันความซ้ำซ้อนด้วย Calendar Integration</li>
-              <li>✅ เก็บประวัติและติดตามได้แบบ Real-Time</li>
-              <li>✅ วัดผลและปรับปรุงด้วย KPI Dashboard</li>
-              <li>✅ รองรับการทำงานร่วมกันหลายทีมในระบบเดียว</li>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">6</span>
+            แนบไฟล์ Location Layout
+          </div>
+          <div class="step-content">
+            <p><strong>📎 ไฟล์ที่รองรับ:</strong></p>
+            <ul>
+              <li>PDF (.pdf)</li>
+              <li>รูปภาพ (.png, .jpg, .jpeg, .gif)</li>
+            </ul>
+            <p><strong>ขนาดไฟล์:</strong> ไม่เกิน 10 MB</p>
+            <div class="info-box info">
+              <div class="info-box-title">💾 ระบบจัดเก็บอัตโนมัติ</div>
+              <div class="info-box-content">
+                ไฟล์จะถูกอัปโหลดไปยัง <strong>Google Drive</strong> อัตโนมัติ<br>
+                และสร้างลิงก์สำหรับทีมงานเข้าถึงได้ทันที
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">7</span>
+            ตรวจสอบและยืนยัน
+          </div>
+          <div class="step-content">
+            <p>ก่อนกดส่ง กรุณาตรวจสอบ:</p>
+            <ul>
+              <li>✅ ประเภทการตรวจถูกต้อง</li>
+              <li>✅ ทีมงานครบถ้วน</li>
+              <li>✅ วันเวลาถูกต้อง</li>
+              <li>✅ รายละเอียดครบถ้วน</li>
+              <li>✅ แนบไฟล์แล้ว</li>
+            </ul>
+            <p>กดปุ่ม <strong>"ส่ง RFI Request"</strong> เพื่อบันทึก</p>
+            <div class="info-box success">
+              <div class="info-box-title">🎉 หลังกดส่ง</div>
+              <div class="info-box-content">
+                ระบบจะ:<br>
+                • ✅ บันทึกข้อมูลลง Database<br>
+                • 📧 ส่งอีเมลแจ้งทีม QC และทีมงาน<br>
+                • 📅 สร้าง Calendar Event (สำหรับ Internal)<br>
+                • 🔔 แจ้งเตือนให้ทุกคนที่เกี่ยวข้อง
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section 2: การเลือกทีม -->
+      <section id="team-selection" class="section scroll-reveal">
+        <h2 class="section-title">
+          <span class="section-icon">👥</span>
+          อธิบายการเลือกทีมของระบบ
+        </h2>
+        
+        <div class="info-box info">
+          <div class="info-box-title">🤖 ระบบจัดทีมอัจฉริยะ (Smart Team Assignment)</div>
+          <div class="info-box-content">
+            ระบบใช้ <strong>Load Balancing Algorithm</strong> เพื่อแบ่งงานให้ทีมอย่างเท่าเทียม<br>
+            ไม่มีทีมใดโหลดงานหนักเกินไป และทำให้ทีมว่างได้รับงานด้วย
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">1</span>
+            ระบบตรวจสอบ Work Type Support
+          </div>
+          <div class="step-content">
+            <p>ระบบจะกรองเฉพาะ<strong>ทีมที่รองรับงานประเภทนั้น</strong>ได้เท่านั้น</p>
+            <ul>
+              <li>ทีม Universal (*): รองรับทุกประเภทงาน</li>
+              <li>ทีมเฉพาะทาง: รองรับเฉพาะงานที่ตั้งค่าไว้</li>
             </ul>
           </div>
         </div>
-      </section>
-
-      <!-- ตัวอย่างการใช้งาน -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">📝</span>
-          ตัวอย่างการใช้งานจริง
-        </h2>
-
-        <h3 class="subsection-title">✅ กรณีที่ 1: จองทีม Lab เดียว</h3>
-        <div class="example-box">
-          <div class="code-block">
-<span class="keyword">1. เลือก Work Type:</span> <span class="string">"Soil Testing"</span>
-   → ระบบแนะนำ: <span class="string">Lab</span> ✨
-
-<span class="keyword">2. กดปุ่ม:</span> 🧪 <span class="string">Lab</span>
-
-<span class="keyword">3. เลือกวันที่:</span> <span class="string">25 ต.ค. 2568</span>
-
-<span class="keyword">4. เลือกเวลาเริ่ม:</span> <span class="string">10:00</span>
-   → ระบบ Auto-select เวลาสิ้นสุด: <span class="string">11:00</span>
-
-<span class="keyword">5. กรอก:</span>
-   - รายละเอียด: <span class="string">"ทดสอบดินตัวอย่างจาก STA.0+100"</span>
-   - สถานที่: <span class="string">"Site Office, Zone A"</span>
-
-<span class="keyword">6. กด Submit</span>
-   → ระบบจัดทีม: <span class="string">Lab Team B</span> ✅
-   → RFI ID: <span class="string">ABC12345</span>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">2</span>
+            คำนวณ Workload แต่ละทีม
           </div>
-        </div>
-
-        <h3 class="subsection-title">✅ กรณีที่ 2: จองงานรวม (Survey + Lab)</h3>
-        <div class="example-box">
-          <div class="code-block">
-<span class="keyword">1. เลือก Work Type:</span> <span class="string">"Crown Wall Inspection"</span>
-   → ระบบแนะนำ: <span class="string">Survey, Inspector</span> ✨
-
-<span class="keyword">2. กดปุ่ม:</span> 👥 <span class="string">งานรวม</span>
-   → เลือก: ☑️ <span class="string">Survey</span> + ☑️ <span class="string">Lab</span>
-
-<span class="keyword">3. เลือกวันที่:</span> <span class="string">26 ต.ค. 2568</span>
-
-<span class="keyword">4. เลือกเวลาเริ่ม:</span> <span class="string">09:00</span>
-   → ระบบ Auto-select เวลาสิ้นสุด: <span class="string">10:00</span>
-
-<span class="keyword">5. กรอก:</span>
-   - รายละเอียด: <span class="string">"ตรวจสอบ Crown Wall พร้อมเก็บตัวอย่าง"</span>
-   - สถานที่: <span class="string">"Crown Wall STA.0+200 to STA.0+250"</span>
-
-<span class="keyword">6. กด Submit</span>
-   → ระบบจัดทีม: <span class="string">Survey Team A, Lab Team B</span> ✅
-   → RFI ID: <span class="string">XYZ67890</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- ข้อควรระวัง -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">⚠️</span>
-          ข้อควรระวัง
-        </h2>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-          <div class="error-card">
-            <h3 style="color: #dc2626; font-size: 18px; margin-bottom: 10px;">
-              ⏰ เรื่องเวลาจอง
-            </h3>
-            <ul style="padding-left: 20px; line-height: 1.8;">
-              <li>❌ <strong>ห้าม</strong> จองวันพรุ่งนี้หลัง 13:00 น.</li>
-              <li>✅ ควรจองล่วงหน้า 1-2 วัน</li>
-              <li>⚠️ จองวันเดียวกันไม่ได้</li>
-            </ul>
-          </div>
-
-          <div class="warning-card">
-            <h3 style="color: #92400e; font-size: 18px; margin-bottom: 10px;">
-              👥 การเลือกทีม
-            </h3>
-            <ul style="padding-left: 20px; line-height: 1.8;">
-              <li>💡 <strong>แนะนำ:</strong> ใช้ทีมที่ระบบแนะนำ</li>
-              <li>⚠️ ถ้าเลือกเอง: แน่ใจว่าทีมรองรับงานนั้น</li>
-              <li>✅ ตรวจสอบ Work_Types ของทีม</li>
-            </ul>
-          </div>
-
-          <div class="info-card">
-            <h3 style="color: #1877f2; font-size: 18px; margin-bottom: 10px;">
-              📝 รายละเอียด
-            </h3>
-            <ul style="padding-left: 20px; line-height: 1.8;">
-              <li>✅ ระบุให้ละเอียด → ลดการติดต่อกลับ</li>
-              <li>✅ ระบุสถานที่ชัดเจน → ทีมหาได้ง่าย</li>
-              <li>✅ ใส่ STA. ให้ครบถ้วน</li>
-            </ul>
-          </div>
-
-          <div class="success-card">
-            <h3 style="color: #065f46; font-size: 18px; margin-bottom: 10px;">
-              🛡️ Buffer Time
-            </h3>
-            <ul style="padding-left: 20px; line-height: 1.8;">
-              <li>📌 ระบบสำรอง ±30 นาทีอัตโนมัติ</li>
-              <li>📌 ไม่ต้องคำนวณเอง</li>
-              <li>✅ ป้องกันการจองซ้ำซ้อน</li>
+          <div class="step-content">
+            <p>ระบบนับจำนวนงานที่ทีมมีอยู่แล้วในวันที่เลือก:</p>
+            <ul>
+              <li>🟢 <strong>Workload น้อย:</strong> ทีมว่างพร้อมรับงาน</li>
+              <li>🟡 <strong>Workload ปานกลาง:</strong> ทีมมีงาน แต่ยังรับได้</li>
+              <li>🔴 <strong>Workload สูง:</strong> ทีมมีงานเต็ม</li>
             </ul>
           </div>
         </div>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">3</span>
+            เรียงทีมตาม Priority
+          </div>
+          <div class="step-content">
+            <p><strong>ลำดับความสำคัญ:</strong></p>
+            <ul>
+              <li><strong>1. Workload น้อยที่สุด:</strong> ให้ทีมที่ว่างที่สุดทำก่อน</li>
+              <li><strong>2. Round Robin:</strong> สลับเปลี่ยนทีมที่ Workload เท่ากัน</li>
+              <li><strong>3. Team Number:</strong> เรียงตามหมายเลขทีม (ถ้าจำเป็น)</li>
+            </ul>
+            <div class="info-box success">
+              <div class="info-box-title">🔄 Round Robin Algorithm</div>
+              <div class="info-box-content">
+                หากมีหลายทีมที่ Workload เท่ากัน ระบบจะ<strong>สลับเปลี่ยนกันเลือก</strong><br>
+                เพื่อให้ทุกทีมได้รับงานอย่าง<strong>เท่าเทียม</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">4</span>
+            ตรวจสอบความว่าง (Availability Check)
+          </div>
+          <div class="step-content">
+            <p>ระบบเช็คว่าทีมว่างในช่วงเวลาที่เลือกหรือไม่:</p>
+            <ul>
+              <li>✅ <strong>ไม่มี Overlap:</strong> เวลาไม่ทับซ้อน → เลือกทีมนี้</li>
+              <li>❌ <strong>มี Overlap:</strong> เวลาทับซ้อน → ข้ามทีมนี้</li>
+            </ul>
+            <div class="info-box warning">
+              <div class="info-box-title">⚠️ Status ที่ไม่นับเป็น Busy</div>
+              <div class="info-box-content">
+                ระบบจะไม่นับงานที่มี Status:<br>
+                • Cancel / Cancelled / ยกเลิก<br>
+                • Completed / เสร็จสิ้น<br>
+                • Closed / ปิดงาน<br>
+                • Rejected / ปฏิเสธ
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">5</span>
+            จัดทีมสำหรับงานรวม (Multi-Team)
+          </div>
+          <div class="step-content">
+            <p>หากเลือก<strong>งานรวม</strong> (Survey + Lab + Inspector):</p>
+            <ul>
+              <li>ระบบจะหา<strong>ชุดทีมที่ว่างพร้อมกันทั้งหมด</strong></li>
+              <li>เรียงตาม <strong>Total Workload</strong> ต่ำที่สุด</li>
+              <li>เลือกชุดที่<strong>Load Balance</strong> ที่สุด</li>
+            </ul>
+            <div class="info-box info">
+              <div class="info-box-title">💡 ตัวอย่าง</div>
+              <div class="info-box-content">
+                งาน: Survey + Lab<br>
+                วันที่: 2025-01-20<br>
+                เวลา: 14:00-16:00<br><br>
+                ระบบจะหา:<br>
+                • Survey Team ที่ว่าง (เช่น Survey A: Workload 2)<br>
+                • Lab Team ที่ว่าง (เช่น Lab B: Workload 1)<br>
+                → <strong>Total Workload = 3</strong> (ต่ำที่สุด) → เลือกชุดนี้!
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
-
-      <!-- Tips -->
-      <section class="section">
+      
+      <!-- Section 3: เงื่อนไขการจอง -->
+      <section id="booking-rules" class="section scroll-reveal">
         <h2 class="section-title">
-          <span class="icon">💡</span>
-          Tips การใช้งาน
+          <span class="section-icon">📋</span>
+          เงื่อนไขการจอง (Booking Rules)
         </h2>
-
-        <div class="tip-box">
-          <div class="tip-icon">💡</div>
-          <div>
-            <strong style="font-size: 18px; color: #92400e;">Tip #1: ใช้ Recommendation</strong>
-            <p style="margin-top: 8px; line-height: 1.8;">
-              เมื่อเลือก Work Type ระบบจะแนะนำทีมที่เหมาะสมและ Highlight ปุ่มให้ 
-              การเลือกตาม Recommendation จะได้ทีมที่รองรับงานแน่นอน
-            </p>
+        
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th class="feature">เงื่อนไข</th>
+              <th class="internal-col">🏢 Internal Inspection</th>
+              <th class="external-col">🤝 External Inspection</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="feature">📅 Lead Time</td>
+              <td class="internal-col"><strong>30 นาที</strong><br>(จองวันนี้ได้ ถ้าเหลือเวลา ≥30 นาที)</td>
+              <td class="external-col"><strong>≥ 1 วัน</strong><br>(ต้องจองล่วงหน้าอย่างน้อย 1 วัน)</td>
+            </tr>
+            <tr>
+              <td class="feature">📅 จองวันนี้</td>
+              <td class="internal-col">✅ <strong>จองได้</strong> (ถ้าจองก่อน 16:00 น.)</td>
+              <td class="external-col">❌ <strong>จองไม่ได้</strong></td>
+            </tr>
+            <tr>
+              <td class="feature">📅 จองพรุ่งนี้</td>
+              <td class="internal-col">✅ <strong>จองได้</strong> (ไม่มีข้อจำกัด)</td>
+              <td class="external-col">✅ <strong>จองได้</strong> (ต้องจองก่อน 13:00 น.)</td>
+            </tr>
+            <tr>
+              <td class="feature">⏰ เวลาทำการ</td>
+              <td class="internal-col" colspan="2" style="text-align: center;"><strong>09:00 - 20:00 น.</strong> (ทุกช่วง 30 นาที)</td>
+            </tr>
+            <tr>
+              <td class="feature">👥 จัดทีม</td>
+              <td class="internal-col" colspan="2" style="text-align: center;">ระบบจัดทีมอัตโนมัติ (Load Balanced)</td>
+            </tr>
+            <tr>
+              <td class="feature">📅 Calendar Event</td>
+              <td class="internal-col">✅ <strong>สร้างทันที</strong><br>(สีส้ม 🟠 + ส่ง invitation)</td>
+              <td class="external-col">⚠️ <strong>รอ QC สร้าง</strong><br>(หลังจากได้รับอนุมัติ)</td>
+            </tr>
+            <tr>
+              <td class="feature">✅ Approval</td>
+              <td class="internal-col">❌ <strong>ไม่ต้องขออนุมัติ</strong><br>(Consultant ไม่เข้าร่วม)</td>
+              <td class="external-col">✅ <strong>ต้องขออนุมัติ</strong><br>(Consultant ต้องอนุมัติ)</td>
+            </tr>
+            <tr>
+              <td class="feature">📧 Email Notification</td>
+              <td class="internal-col" colspan="2" style="text-align: center;">ส่งอัตโนมัติถึง QC + QC Reviewer + ทีมงาน + ผู้ขอ</td>
+            </tr>
+            <tr>
+              <td class="feature">📎 Location Layout</td>
+              <td class="internal-col" colspan="2" style="text-align: center;"><strong>บังคับแนบไฟล์</strong> (PDF หรือรูปภาพ, ไม่เกิน 10 MB)</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="info-box warning">
+          <div class="info-box-title">⚠️ กรณีพิเศษ: วันหยุด</div>
+          <div class="info-box-content">
+            <strong>📅 วันทำงานปกติ:</strong> วันจันทร์ - วันเสาร์<br>
+            <strong>📅 วันหยุด:</strong> วันอาทิตย์ และวันหยุดนักขัตฤกษ์<br><br>
+            <strong>🏢 Internal Inspection:</strong><br>
+            • จองวันหยุดได้ แต่ต้องจองก่อน 13:00 น. ของวันก่อนหยุด<br>
+            • หลัง 13:00 น. แล้ว → ห้ามจองวันหยุด<br><br>
+            <strong>🤝 External Inspection:</strong><br>
+            • ❌ <strong>ห้ามจองวันหยุด</strong> ทุกกรณี<br>
+            • ต้องจองวันทำการถัดไป (Lead Time +2 วัน)
           </div>
         </div>
-
-        <div class="tip-box">
-          <div class="tip-icon">⚡</div>
-          <div>
-            <strong style="font-size: 18px; color: #92400e;">Tip #2: จองล่วงหน้า</strong>
-            <p style="margin-top: 8px; line-height: 1.8;">
-              แนะนำจองล่วงหน้า 1-2 วัน เพื่อให้ทีมมีเวลาเตรียมงาน 
-              และหลีกเลี่ยงปัญหาไม่สามารถจองวันพรุ่งนี้ได้ (เลย 13:00 น.)
-            </p>
-          </div>
-        </div>
-
-        <div class="tip-box">
-          <div class="tip-icon">📝</div>
-          <div>
-            <strong style="font-size: 18px; color: #92400e;">Tip #3: ใส่รายละเอียดครบ</strong>
-            <p style="margin-top: 8px; line-height: 1.8;">
-              ระบุ: ประเภทงาน, ขอบเขต, วัตถุประสงค์, ข้อกำหนดพิเศษ, และสถานที่แบบละเอียด (STA.) 
-              จะช่วยให้ทีมเตรียมอุปกรณ์ได้ถูกต้องและเข้าถึงสถานที่ได้รวดเร็ว
-            </p>
-          </div>
-        </div>
-
-        <div class="tip-box">
-          <div class="tip-icon">🔍</div>
-          <div>
-            <strong style="font-size: 18px; color: #92400e;">Tip #4: ตรวจสอบก่อน Submit</strong>
-            <p style="margin-top: 8px; line-height: 1.8;">
-              เช็คให้แน่ใจว่า: วันที่ถูกต้อง, เวลาเหมาะสม, ทีมตรงกับงาน, รายละเอียดครบถ้วน 
-              เพื่อหลีกเลี่ยงการต้องแก้ไขภายหลัง
-            </p>
+        
+        <div class="info-box info">
+          <div class="info-box-title">📌 หมายเหตุสำคัญ</div>
+          <div class="info-box-content">
+            • <strong>ไฟล์ Location Layout:</strong> บังคับแนบทุกครั้ง เพื่อให้ทีมเข้าใจสถานที่ได้ชัดเจน<br>
+            • <strong>รายละเอียด RFI:</strong> ควรระบุให้ละเอียด เพื่อลดการติดต่อกลับ<br>
+            • <strong>สถานที่:</strong> ระบุตำแหน่งที่แม่นยำ (เช่น STA. Number)<br>
+            • <strong>Lead Time:</strong> ถ้าไม่เข้าเงื่อนไข ระบบจะแจ้งเตือนและแนะนำวันที่ที่จองได้
           </div>
         </div>
       </section>
-
-      <!-- Checklist -->
-      <section class="section">
+      
+      <!-- Section 4: Q&A -->
+      <section id="qa" class="section scroll-reveal">
         <h2 class="section-title">
-          <span class="icon">✅</span>
-          Checklist ก่อนใช้งาน
+          <span class="section-icon">❓</span>
+          คำถามที่พบบ่อย (Q&A)
         </h2>
-
-        <div class="success-card">
-          <ul class="checklist">
-            <li>Sheet "Resources" มีข้อมูลทีมครบ (Status = Activated)</li>
-            <li>Sheet "Work" มี Work_Category = "RFI Work"</li>
-            <li>Column "Work_Types" ในทีมถูกตั้งค่าแล้ว</li>
-            <li>User มีอีเมล Google (@gmail.com หรือ @company.com)</li>
-            <li>ทดสอบจองทีมเดียว (Single Team)</li>
-            <li>ทดสอบจองงานรวม (Multi-Work)</li>
-            <li>ทดสอบ Buffer Time (±30 นาที)</li>
-            <li>ทดสอบการแนะนำทีม (Recommendation)</li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Support -->
-      <section class="section">
-        <h2 class="section-title">
-          <span class="icon">📞</span>
-          ช่องทางสนับสนุน
-        </h2>
-
-        <div class="info-card">
-          <h3 style="margin-bottom: 15px; color: #1877f2; font-size: 18px;">
-            🆘 หากมีปัญหา
-          </h3>
-          <div style="background: white; padding: 20px; border-radius: 10px;">
-            <p style="margin-bottom: 15px; font-weight: 500;">ขั้นตอนการแก้ปัญหา:</p>
-            <ol style="padding-left: 25px; line-height: 2;">
-              <li>เช็ค Sheet "Resources" → ทีมมี Status = "Activated" หรือไม่</li>
-              <li>เช็ค Sheet "Work" → มี Work_Category = "RFI Work" หรือไม่</li>
-              <li>เช็ค Column "Work_Types" → ทีมรองรับงานที่เลือกหรือไม่</li>
-              <li>เช็ค Available Slots → มีเวลาว่างหรือไม่</li>
-              <li>ดู Error Logs → เปิด Google Sheets → แถบ "🔧 RFI System" → "📝 ดู Error Logs"</li>
-            </ol>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q1: ต่างกันยังไงระหว่าง Internal กับ External?
+          </div>
+          <div class="qa-answer">
+            <strong>🏢 Internal Inspection:</strong><br>
+            • การตรวจสอบภายในทีมเท่านั้น<br>
+            • ไม่ต้องขออนุมัติ Consultant<br>
+            • สร้าง Calendar Event ทันที (สีส้ม)<br>
+            • Lead Time แค่ 30 นาที<br>
+            • จองวันนี้ได้ (ถ้าเหลือเวลา)<br><br>
+            <strong>🤝 External Inspection:</strong><br>
+            • การตรวจสอบร่วมกับ Consultant<br>
+            • ต้องขออนุมัติก่อนดำเนินการ<br>
+            • รอ QC สร้าง Calendar Event<br>
+            • Lead Time อย่างน้อย 1 วัน<br>
+            • ไม่สามารถจองวันนี้ได้
           </div>
         </div>
-
-        <div class="warning-card">
-          <h3 style="margin-bottom: 15px; color: #92400e; font-size: 18px;">
-            🐛 พบ Bug หรือ Error?
-          </h3>
-          <p style="line-height: 1.8;">
-            แจ้งผู้ดูแลระบบ พร้อมแนบ:
-          </p>
-          <ul style="padding-left: 25px; line-height: 1.8; margin-top: 10px;">
-            <li>📸 Screenshot หน้าจอที่เกิดปัญหา</li>
-            <li>📋 RFI ID (ถ้ามี)</li>
-            <li>⏰ วันที่และเวลาที่เกิดปัญหา</li>
-            <li>📝 รายละเอียดการใช้งาน</li>
-          </ul>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q2: ทำไมต้องแนบไฟล์ Location Layout?
+          </div>
+          <div class="qa-answer">
+            ไฟล์ Location Layout ช่วยให้:<br>
+            • ✅ ทีมเข้าใจสถานที่ได้ชัดเจน<br>
+            • ✅ เตรียมอุปกรณ์ได้ถูกต้อง<br>
+            • ✅ ลดความผิดพลาดจากการสื่อสาร<br>
+            • ✅ ทีมเข้าถึงสถานที่ได้รวดเร็ว<br><br>
+            <strong>ไฟล์ที่รองรับ:</strong> PDF, PNG, JPG, JPEG, GIF (ไม่เกิน 10 MB)<br>
+            <strong>จัดเก็บ:</strong> อัปโหลดอัตโนมัติไปยัง Google Drive
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q3: ระบบเลือกทีมยังไง? ทำไมไม่ได้เลือกเอง?
+          </div>
+          <div class="qa-answer">
+            <strong>เลือกเองได้!</strong> แต่ระบบจะ<strong>แนะนำทีมที่เหมาะสม</strong>ให้<br><br>
+            <strong>ระบบใช้ Load Balancing Algorithm:</strong><br>
+            1. กรองเฉพาะทีมที่รองรับงานนั้น<br>
+            2. คำนวณ Workload แต่ละทีม<br>
+            3. เลือกทีมที่ Workload น้อยที่สุด<br>
+            4. สลับเปลี่ยนทีมที่ Workload เท่ากัน (Round Robin)<br>
+            5. เช็คความว่างในเวลาที่เลือก<br><br>
+            <strong>ประโยชน์:</strong><br>
+            • ✅ แบ่งงานให้ทุกทีมอย่างเท่าเทียม<br>
+            • ✅ ไม่มีทีมใดโหลดงานหนักเกินไป<br>
+            • ✅ ทีมที่ว่างจะได้รับงาน
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q4: จองวันนี้ได้หรือไม่?
+          </div>
+          <div class="qa-answer">
+            <strong>🏢 Internal Inspection:</strong><br>
+            ✅ <strong>จองวันนี้ได้!</strong> เงื่อนไข:<br>
+            • ต้องเหลือเวลาอย่างน้อย 30 นาที<br>
+            • จองก่อน 16:00 น. (หลังนี้ห้ามจองวันนี้)<br><br>
+            <strong>🤝 External Inspection:</strong><br>
+            ❌ <strong>จองวันนี้ไม่ได้</strong><br>
+            • ต้องจองล่วงหน้าอย่างน้อย 1 วัน<br>
+            • จองพรุ่งนี้ต้องจองก่อน 13:00 น.
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q5: จองวันหยุดได้ไหม?
+          </div>
+          <div class="qa-answer">
+            <strong>📅 วันทำงานปกติ:</strong> วันจันทร์ - วันเสาร์<br>
+            <strong>📅 วันหยุด:</strong> วันอาทิตย์ และวันหยุดนักขัตฤกษ์<br><br>
+            <strong>🏢 Internal Inspection:</strong><br>
+            ✅ <strong>จองได้!</strong> เงื่อนไข:<br>
+            • ต้องจองก่อน 13:00 น. ของวันก่อนหยุด<br>
+            • หลัง 13:00 น. → ห้ามจองวันหยุด<br><br>
+            <strong>ตัวอย่าง:</strong><br>
+            วันเสาร์เป็นวันหยุด<br>
+            • จองวันศุกร์ 10:00 น. → ✅ จองเสาร์ได้<br>
+            • จองวันศุกร์ 14:00 น. → ❌ จองเสาร์ไม่ได้<br><br>
+            <strong>🤝 External Inspection:</strong><br>
+            ❌ <strong>ห้ามจองวันหยุดทุกกรณี</strong><br>
+            • ต้องจองวันทำการถัดไป (Lead Time +2 วัน)
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q6: ระบบจะส่งอีเมลแจ้งใครบ้าง?
+          </div>
+          <div class="qa-answer">
+            ระบบจะส่งอีเมลแจ้งไปยัง:<br>
+            • 📧 <strong>QC + QC Reviewer:</strong> ตรวจสอบและดำเนินการ<br>
+            • 👥 <strong>ทีมงานที่ได้รับมอบหมาย:</strong> เตรียมพร้อมทำงาน<br>
+            • 👤 <strong>ผู้ขอ (Requester):</strong> ยืนยันการบันทึก<br><br>
+            <strong>อีเมลจะมีข้อมูล:</strong><br>
+            • RFI ID / Survey NO<br>
+            • รายละเอียดงาน<br>
+            • วันเวลา<br>
+            • สถานที่<br>
+            • ลิงก์ไฟล์ Location Layout<br>
+            • ขั้นตอนถัดไป
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q7: Calendar Event สีอะไร?
+          </div>
+          <div class="qa-answer">
+            <strong>🏢 Internal Inspection:</strong><br>
+            🟠 <strong>สีส้ม (Orange)</strong><br>
+            • ระบบสร้างทันทีหลังกดส่ง<br>
+            • ส่ง invitation ไปทุกคน<br>
+            • พร้อมใช้งานทันที<br><br>
+            <strong>🤝 External Inspection:</strong><br>
+            🔵 <strong>สีน้ำเงิน (Blue)</strong><br>
+            • QC จะสร้างให้หลังได้รับอนุมัติ<br>
+            • ส่ง invitation ไปทุกคนรวม Consultant
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q8: ถ้าเลือกเวลาแล้วไม่มีทีมว่าง?
+          </div>
+          <div class="qa-answer">
+            ระบบจะ:<br>
+            • ⚠️ แจ้งเตือนว่า "ไม่มีทีมว่าง"<br>
+            • 💡 แนะนำให้เลือกเวลาอื่น หรือวันอื่น<br>
+            • 📊 แสดงเหตุผล (เช่น ทีมมีงานเต็ม)<br><br>
+            <strong>วิธีแก้:</strong><br>
+            1. เลือกเวลาอื่นในวันเดียวกัน<br>
+            2. เลือกวันอื่น<br>
+            3. เลือกหมวดทีมอื่น (ถ้าทำได้)<br>
+            4. ติดต่อทีม QC เพื่อเปลี่ยนแปลงตารางงาน
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q9: งานรวม (Multi-Team) คืออะไร?
+          </div>
+          <div class="qa-answer">
+            <strong>งานรวม</strong> = ใช้หลายทีมพร้อมกัน<br><br>
+            <strong>ตัวอย่าง:</strong><br>
+            • Survey + Lab → ต้องการทั้ง 2 ทีมพร้อมกัน<br>
+            • Survey + Lab + Inspector → ต้องการทั้ง 3 ทีม<br><br>
+            <strong>ระบบจะหาชุดทีมที่:</strong><br>
+            • ✅ ว่างพร้อมกันทั้งหมด<br>
+            • ✅ Total Workload ต่ำที่สุด<br>
+            • ✅ Load Balance ที่สุด<br><br>
+            <strong>การใช้งาน:</strong><br>
+            1. คลิก "👥 งานรวม"<br>
+            2. เลือกทีมที่ต้องการ (เช็คบ็อกซ์)<br>
+            3. ระบบจะหาชุดทีมที่เหมาะสม
+          </div>
+        </div>
+        
+        <div class="qa-item">
+          <div class="qa-question">
+            Q10: ต้องการแก้ไข RFI ที่จองไปแล้วทำยังไง?
+          </div>
+          <div class="qa-answer">
+            <strong>ขั้นตอนการแก้ไข:</strong><br>
+            1. ติดต่อทีม QC หรือ QC Reviewer<br>
+            2. แจ้ง RFI ID ที่ต้องการแก้ไข<br>
+            3. ระบุรายละเอียดที่ต้องการเปลี่ยน<br>
+            4. ทีม QC จะดำเนินการแก้ไขให้<br><br>
+            <strong>สามารถแก้ไขได้:</strong><br>
+            • วันเวลา<br>
+            • ทีมงาน<br>
+            • รายละเอียด<br>
+            • สถานที่<br><br>
+            <strong>ไม่สามารถแก้ไขเอง</strong> เพราะต้องตรวจสอบความว่างของทีมใหม่
+          </div>
         </div>
       </section>
-
     </div>
-
+    
     <!-- Footer -->
     <div class="footer">
-      <p style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
-        📋 RFI Requirement System + RFI Management System
-      </p>
-      <p style="margin: 5px 0;">ระบบจัดการ Request for Information อัจฉริยะแบบครบวงจร</p>
-      <p style="margin: 5px 0;">Version 1 | October 2025</p>
-      <p style="margin-top: 15px; font-size: 13px; opacity: 0.8;">
-        Powered by Google Apps Script | Built with ❤️
+      <p><strong>RFI Requirement System</strong></p>
+      <p>ระบบบันทึก Request for Information อัจฉริยะ</p>
+      <p class="version">Version 1.0 | Powered by Google Apps Script</p>
+      <p style="margin-top: 15px; font-size: 13px;">
+        📧 ติดต่อสอบถาม: ทีม QC หรือ System Administrator<br>
+        📖 อัปเดตล่าสุด: พฤศจิกายน 2025
       </p>
     </div>
   </div>
+  
+  <!-- Back to Top Button -->
+  <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+    ↑
+  </button>
+  
+  <script>
+    // Scroll Reveal Animation
+    function reveal() {
+      var reveals = document.querySelectorAll('.scroll-reveal');
+      
+      for (var i = 0; i < reveals.length; i++) {
+        var windowHeight = window.innerHeight;
+        var elementTop = reveals[i].getBoundingClientRect().top;
+        var elementVisible = 150;
+        
+        if (elementTop < windowHeight - elementVisible) {
+          reveals[i].classList.add('active');
+        }
+      }
+    }
+    
+    window.addEventListener('scroll', reveal);
+    reveal(); // Initial check
+    
+    // Q&A Accordion
+    var qaQuestions = document.querySelectorAll('.qa-question');
+    
+    qaQuestions.forEach(function(question) {
+      question.addEventListener('click', function() {
+        this.classList.toggle('active');
+        var answer = this.nextElementSibling;
+        answer.classList.toggle('show');
+      });
+    });
+    
+    // Back to Top Button
+    var backToTopBtn = document.getElementById('backToTop');
+    
+    window.addEventListener('scroll', function() {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.add('show');
+      } else {
+        backToTopBtn.classList.remove('show');
+      }
+    });
+    
+    function scrollToTop() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+    
+    // Smooth Scroll for Navigation Links
+    document.querySelectorAll('.nav-link').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var targetId = this.getAttribute('href');
+        var targetElement = document.querySelector(targetId);
+        
+        if (targetElement) {
+          var offsetTop = targetElement.offsetTop - 80;
+          window.scrollTo({
+            top: offsetTop,
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>
