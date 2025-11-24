@@ -1904,7 +1904,7 @@ input[type="file"]::file-selector-button:hover {
       return { valid: true };
     }
     
-    function validateStep2() {
+function validateStep2() {
       var workType = document.getElementById('workType').value;
       var teamCategory = document.getElementById('teamCategory').value;
       
@@ -1920,6 +1920,46 @@ input[type="file"]::file-selector-button:hover {
           valid: false,
           message: 'กรุณาเลือกทีมงาน'
         };
+      }
+      
+      // ⭐ เช็คว่าเลือกทีมที่แนะนำหรือไม่
+      if (recommendedCategory && recommendedCategory.length > 0) {
+        var recommendedList = recommendedCategory.map(function(r) { 
+          return r.category; 
+        });
+        
+        // กรณีเลือกงานรวม - ต้องเลือกเฉพาะทีมที่อยู่ในคำแนะนำ
+        if (isMultiWork) {
+          var selectedTeams = selectedTeamCategory.split(',');
+          var invalidTeams = [];
+          
+          selectedTeams.forEach(function(team) {
+            if (!recommendedList.includes(team)) {
+              invalidTeams.push(team);
+            }
+          });
+          
+          if (invalidTeams.length > 0) {
+            return {
+              valid: false,
+              message: '⚠️ มีทีมที่เลือกไม่อยู่ในคำแนะนำ!\n\n' +
+                      'ทีมที่ไม่ถูกต้อง: ' + invalidTeams.join(', ') + 
+                      '\nทีมที่แนะนำ: ' + recommendedList.join(', ') + 
+                      '\n\n💡 กรุณาเลือกเฉพาะทีมที่อยู่ในคำแนะนำเท่านั้น'
+            };
+          }
+        } else {
+          // กรณีเลือกทีมเดียว - เช็คว่าตรงกับคำแนะนำหรือไม่
+          if (!recommendedList.includes(selectedTeamCategory)) {
+            return {
+              valid: false,
+              message: '⚠️ คุณไม่ได้เลือกทีมที่แนะนำ!\n\n' +
+                      'ทีมที่เลือก: ' + selectedTeamCategory + 
+                      '\nทีมที่แนะนำ: ' + recommendedList.join(', ') + 
+                      '\n\n💡 หากต้องการเลือกหลายทีม กรุณาเลือก "งานรวม"'
+            };
+          }
+        }
       }
       
       return { valid: true };
