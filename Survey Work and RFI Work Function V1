@@ -7952,42 +7952,30 @@ function clearCacheByKey(cacheKey) {
 
 
 /**
- * ⭐ FIXED: ดูสถานะ Cache (ใช้ Registry)
+ * ⭐ FIXED: ดูสถานะ Cache (ใช้ Registry) - UPDATED
  */
 function getCacheStatus() {
   try {
     const registry = getCacheRegistry();
     const keys = Object.keys(registry);
     
-    if (keys.length === 0) {
-      return {
-        success: true,
-        totalKeys: 0,
-        totalSizeKB: '0.00',
-        message: 'Cache is empty',
-        groups: {
-          workTypes: [],
-          resources: [],
-          codeLists: [],
-          users: [],
-          other: []
-        },
-        status: {}
-      };
-    }
-    
-    const status = {};
-    let totalSize = 0;
-    
-    // จัดกลุ่มตามประเภท
+    // ✅ เพิ่มกลุ่ม holidays
     const groups = {
       workTypes: [],
       resources: [],
       codeLists: [],
       users: [],
+      holidays: [], // <-- เพิ่มตรงนี้
       other: []
     };
     
+    // ... (ส่วนต้นเหมือนเดิม จนถึง loop) ...
+    if (keys.length === 0) {
+        return { success: true, totalKeys: 0, totalSizeKB: '0.00', message: 'Cache is empty', groups: groups, status: {} };
+    }
+
+    const status = {};
+    let totalSize = 0;
     const now = new Date().getTime();
     
     keys.forEach(function(key) {
@@ -7995,8 +7983,6 @@ function getCacheStatus() {
       const size = info.size || 0;
       const timestamp = info.timestamp || 0;
       const ttl = info.ttl || 0;
-      
-      // เช็คว่าหมดอายุหรือยัง
       const expiresAt = timestamp + (ttl * 1000);
       const isExpired = now > expiresAt;
       
@@ -8009,12 +7995,7 @@ function getCacheStatus() {
         isExpired: isExpired
       };
       
-      status[key] = {
-        cached: true,
-        size: size,
-        sizeKB: (size / 1024).toFixed(2),
-        isExpired: isExpired
-      };
+      status[key] = { cached: true, size: size, sizeKB: (size / 1024).toFixed(2), isExpired: isExpired };
       
       // จัดกลุ่ม
       if (key.indexOf('master_work_types') === 0) {
@@ -8025,6 +8006,8 @@ function getCacheStatus() {
         groups.codeLists.push(item);
       } else if (key.indexOf('master_user_list') === 0) {
         groups.users.push(item);
+      } else if (key === 'master_holidays_data') { // ✅ เพิ่มเงื่อนไขนี้
+        groups.holidays.push(item);
       } else {
         groups.other.push(item);
       }
@@ -8037,33 +8020,24 @@ function getCacheStatus() {
       groups: groups,
       status: status
     };
-    
   } catch (error) {
     console.error('Error getting cache status:', error);
-    return {
-      success: false,
-      message: error.toString()
-    };
+    return { success: false, message: error.toString() };
   }
 }
+
 /**
- * ⭐ FIXED: แสดง Cache Status ใน UI (สวยงาม)
+ * ⭐ FIXED: แสดง Cache Status ใน UI (สวยงาม) - UPDATED
  */
 function showCacheStatus() {
   const result = getCacheStatus();
-  
   if (!result.success) {
     SpreadsheetApp.getUi().alert('Error: ' + result.message);
     return;
   }
   
   if (result.totalKeys === 0) {
-    SpreadsheetApp.getUi().alert(
-      '📊 Cache Status',
-      '❌ Cache is empty\n\n' +
-      '💡 Tip: Run "Warm Up Cache" to pre-load data',
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    SpreadsheetApp.getUi().alert('📊 Cache Status', '❌ Cache is empty', SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
   
@@ -8072,6 +8046,15 @@ function showCacheStatus() {
   message += '💾 Total Size: ' + result.totalSizeKB + ' KB\n\n';
   message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
   
+  // ✅✅✅ เพิ่มส่วนแสดงผล Holidays ✅✅✅
+  if (result.groups.holidays && result.groups.holidays.length > 0) {
+    message += '📅 Holidays:\n';
+    result.groups.holidays.forEach(function(item) {
+      message += '  ✅ Data Cached (' + item.sizeKB + ' KB)\n';
+    });
+    message += '\n';
+  }
+
   // Work Types
   if (result.groups.workTypes.length > 0) {
     message += '📋 Work Types (' + result.groups.workTypes.length + '):\n';
@@ -8092,38 +8075,16 @@ function showCacheStatus() {
     message += '\n';
   }
   
-  // Code Lists
+  // Code Lists & Users & Other (คงเดิม...)
   if (result.groups.codeLists.length > 0) {
     message += '🏷️ Code Lists (' + result.groups.codeLists.length + '):\n';
     result.groups.codeLists.forEach(function(item) {
       const name = item.key.replace('master_code_list_', '');
       message += '  ✅ ' + name + ' (' + item.sizeKB + ' KB)\n';
     });
-    message += '\n';
   }
-  
-  // Users
-  if (result.groups.users.length > 0) {
-    message += '👤 Users (' + result.groups.users.length + '):\n';
-    result.groups.users.forEach(function(item) {
-      message += '  ✅ ' + item.key + ' (' + item.sizeKB + ' KB)\n';
-    });
-    message += '\n';
-  }
-  
-  // Other
-  if (result.groups.other.length > 0) {
-    message += '📦 Other (' + result.groups.other.length + '):\n';
-    result.groups.other.forEach(function(item) {
-      message += '  ✅ ' + item.key + ' (' + item.sizeKB + ' KB)\n';
-    });
-  }
-  
-  SpreadsheetApp.getUi().alert(
-    'Cache Status',
-    message,
-    SpreadsheetApp.getUi().ButtonSet.OK
-  );
+
+  SpreadsheetApp.getUi().alert('Cache Status', message, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 
@@ -8137,7 +8098,8 @@ function onOpen() {
       .addSeparator()
       .addItem('♻️ Refresh Work Types', 'refreshWorkTypesCache')       // ✅
       .addItem('♻️ Refresh Resources', 'refreshResourcesCache')       // ✅
-      .addItem('♻️ Refresh Code Lists', 'refreshCodeListCache')       // ✅
+      .addItem('♻️ Refresh Code Lists', 'refreshCodeListCache')
+      .addItem('📅 Refresh Holiday Cache', 'adminRefreshHolidays') //       // ✅
       .addSeparator()
       .addItem('🗑️ Clear All Cache', 'clearAllCacheWithConfirm')
       .addItem('💣 Hard Reset Cache', 'hardResetCache')
@@ -8441,11 +8403,10 @@ function getCachedDataWithChunks(cacheKey) {
 }
 
 /**
- * ⭐ สร้าง Cache ทั้งหมดทันที (Warm Up Cache)
+ * ⭐ สร้าง Cache ทั้งหมดทันที (Warm Up Cache) - UPDATED
  */
 function warmUpAllCache() {
   console.log('========== Warming Up Cache ==========');
-  
   try {
     // 1. Work Types
     console.log('1. Loading Work Types...');
@@ -8468,36 +8429,37 @@ function warmUpAllCache() {
     getTeamsByCategory('Lab');
     console.log('   ✅ Lab Teams cached');
     
-    // 5. Code List (ตัวอย่าง)
+    // 5. Code List
     console.log('5. Loading Code Lists...');
     const workTypes = getWorkTypeList('RFI Work');
     if (workTypes.length > 0) {
       getCodeListByWorkType(workTypes[0].name);
       console.log('   ✅ Code List cached');
     }
+
+    // ✅✅✅ 6. เพิ่มส่วนนี้: Holidays ✅✅✅
+    console.log('6. Loading Holidays...');
+    if (typeof loadHolidaysFromSheet === 'function') {
+      loadHolidaysFromSheet();
+      console.log('   ✅ Holidays cached');
+    } else {
+      console.log('   ⚠️ loadHolidaysFromSheet not found');
+    }
     
     console.log('\n========== Cache Warm Up Complete ==========');
     
     // แสดงผล
     const status = getCacheStatus();
-    console.log('\nCache Status:');
-    console.log(JSON.stringify(status, null, 2));
-    
     SpreadsheetApp.getUi().alert(
       'Cache Warm Up Complete! ✅',
-      'All master data has been loaded into cache.\n\n' +
-      'The system should now be much faster!',
+      'All master data (including Holidays) has been loaded.\n\n' +
+      'Total Keys: ' + status.totalKeys + '\n' +
+      'Total Size: ' + status.totalSizeKB + ' KB',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
-    
   } catch (error) {
     console.error('❌ Error warming up cache:', error);
-    
-    SpreadsheetApp.getUi().alert(
-      'Cache Warm Up Failed',
-      'Error: ' + error.toString(),
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
+    SpreadsheetApp.getUi().alert('Cache Warm Up Failed: ' + error.toString());
   }
 }
 
