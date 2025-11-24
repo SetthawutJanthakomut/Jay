@@ -1076,114 +1076,238 @@ input[type="file"]::file-selector-button:hover {
       transform: none;
     }
     
-    /* Step Summary Card */
-    .summary-card {
-      background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%);
-      border-left: 4px solid #1877f2;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
     
-    .summary-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1877f2;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .summary-item {
-      display: flex;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(24, 119, 242, 0.1);
-    }
-    
-    .summary-item:last-child {
-      border-bottom: none;
-    }
-    
+
+<!-- ========================================
+     STEP 5: CONFIRMATION SUMMARY
+     ======================================== -->
+
+<!-- CSS Section -->
+<style>
+  /* Summary Card Container */
+  .summary-card {
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  /* Summary Section (แต่ละหมวด) */
+  .summary-section {
+    margin-bottom: 20px;
+  }
+  
+  .summary-section:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Summary Section Title */
+  .summary-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1877f2;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  /* Summary Item Row */
+  .summary-item {
+    display: flex;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .summary-item:last-child {
+    border-bottom: none;
+  }
+  
+  /* Summary Label (ชื่อฟิลด์) */
+  .summary-label {
+    font-size: 14px;
+    color: #6b7280;
+    min-width: 140px;
+    font-weight: 500;
+  }
+  
+  /* Summary Value (ค่าข้อมูล) */
+  .summary-value {
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 400;
+    flex: 1;
+  }
+  
+  /* Highlight Important Values */
+  .summary-value.highlight {
+    color: #1877f2;
+    font-weight: 600;
+  }
+  
+  /* Edit Link */
+  .edit-link {
+    color: #3b82f6;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    margin-left: auto;
+  }
+  
+  .edit-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+  
+  /* Description Item (แสดงแบบ column) */
+  .summary-item.description-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .summary-item.description-item .summary-label {
+    margin-bottom: 8px;
+  }
+  
+  /* Description Display Box */
+  .summary-value[id="summaryDescription"] {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 14px;
+    color: #444;
+    background: #ffffff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.6;
+    width: 100%;
+  }
+  
+  /* Custom Scrollbar for Description */
+  .summary-value[id="summaryDescription"]::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .summary-value[id="summaryDescription"]::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+  }
+  
+  .summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #1877f2 0%, #2948b1 100%);
+    border-radius: 4px;
+  }
+  
+  .summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #2948b1 0%, #3b5bdb 100%);
+  }
+  
+  /* Submit Button Container */
+  .submit-progress-container {
+    position: relative;
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  /* Submit Button */
+  .submit-progress-container button[type="submit"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    width: 100%;
+    background: linear-gradient(135deg, #1877f2 0%, #2948b1 50%, #3b5bdb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
+  }
+  
+  .submit-progress-container button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(24, 119, 242, 0.4);
+  }
+  
+  .submit-progress-container button[type="submit"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .submit-progress-container button[type="submit"] span:first-child {
+    font-size: 18px;
+  }
+  
+  /* Submit Progress Bar */
+  .submit-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    border-radius: 0 0 10px 10px;
+    transition: width 0.5s ease;
+    width: 0%;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  }
+  
+  /* Submit Step Text */
+  .submit-step-text {
+    display: none;
+    text-align: center;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #1877f2;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  .submit-step-text.show {
+    display: block;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
     .summary-label {
-      font-weight: 500;
-      color: #666;
-      min-width: 140px;
+      min-width: 100px;
+      font-size: 13px;
     }
     
     .summary-value {
-      color: #333;
-      font-weight: 500;
+      font-size: 13px;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
-      .progress-steps {
-        padding: 0 10px;
-      }
-      
-      .step-circle {
-        width: 35px;
-        height: 35px;
-        font-size: 16px;
-      }
-      
-      .step-label {
-        font-size: 10px;
-        max-width: 60px;
-      }
-      
-      .step-title {
-        font-size: 20px;
-      }
-      
-      .step-navigation {
-        flex-direction: column;
-      }
+    .summary-section-title {
+      font-size: 15px;
     }
-/* ⭐ เพิ่ม CSS สำหรับ Summary Description */
-.summary-value[id="summaryDescription"] {
-  max-height: 150px;
-  overflow-y: auto;
-  font-size: 14px;
-  color: #444;
-  background: #f8f9fa;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border-left: 3px solid #1877f2;
-  white-space: pre-wrap; /* ⭐ รักษา line break */
-  word-wrap: break-word; /* ⭐ ตัดคำยาวๆ */
-  line-height: 1.6;
-  font-family: 'Kanit', sans-serif;
-}
+  }
+  
+  @media (max-width: 480px) {
+    .summary-item {
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .summary-label {
+      min-width: auto;
+    }
+    
+    .edit-link {
+      font-size: 12px;
+    }
+  }
 
-.summary-value[id="summaryDescription"]::-webkit-scrollbar {
-  width: 8px;
-}
-
-.summary-value[id="summaryDescription"]::-webkit-scrollbar-track {
-  background: #e4e6eb;
-  border-radius: 4px;
-}
-
-.summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #1877f2 0%, #2948b1 100%);
-  border-radius: 4px;
-}
-
-.summary-value[id="summaryDescription"]::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #2948b1 0%, #3b5bdb 100%);
-}
-
-/* ⭐ ปรับ Summary Item สำหรับ Description */
-.summary-item.description-item {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.summary-item.description-item .summary-label {
-  margin-bottom: 8px;
-}
   </style>
 </head>
 <body>
@@ -1458,71 +1582,96 @@ input[type="file"]::file-selector-button:hover {
         </div>
       </div>
 
-      <!-- ========== STEP 5: Confirmation ========== -->
       <div class="step-content" data-step="5">
-        <div class="step-header">
-          <div class="step-title">✅ ยืนยันข้อมูล</div>
-          <div class="step-subtitle">กรุณาตรวจสอบข้อมูลก่อนส่ง</div>
-        </div>
+  <div class="step-header">
+    <div class="step-title">✅ ยืนยันข้อมูล</div>
+    <div class="step-subtitle">กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนส่งคำขอ</div>
+  </div>
 
-        <div class="summary-card">
-          <div class="summary-title">
-            <span>📋</span>
-            <span>สรุปข้อมูล RFI Request</span>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">ประเภทการตรวจ:</div>
-            <div class="summary-value" id="summaryInspectionType">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">ประเภทงาน:</div>
-            <div class="summary-value" id="summaryWorkType">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">ทีมงาน:</div>
-            <div class="summary-value" id="summaryTeam">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">วันที่:</div>
-            <div class="summary-value" id="summaryDate">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">เวลา:</div>
-            <div class="summary-value" id="summaryTime">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">สถานที่:</div>
-            <div class="summary-value" id="summaryLocation">-</div>
-          </div>
-          
- <div class="summary-item description-item">
-  <div class="summary-label">รายละเอียด RFI:</div>
-  <div class="summary-value" id="summaryDescription" 
-       style="white-space: pre-wrap; line-height: 1.6; width: 100%;">-</div>
-</div>
-          <div class="summary-item">
-            <div class="summary-label">ไฟล์แนบ:</div>
-            <div class="summary-value" id="summaryFile">-</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">ผู้ขอ:</div>
-            <div class="summary-value" id="summaryRequester">-</div>
-          </div>
-        </div>
-
-        <div class="submit-progress-container">
-          <button type="submit" id="submitBtn">ส่ง RFI Request</button>
-          <div class="submit-progress-bar" id="submitProgressBar"></div>
-        </div>
-        <div class="submit-step-text" id="submitStepText"></div>
+  <div class="summary-card">
+    <!-- Section 1: Inspection Type & Work Type & Team -->
+    <div class="summary-section">
+      <div class="summary-section-title">
+        <span>🏢</span>
+        <span>ประเภทการตรวจและทีมงาน</span>
+        <a href="#" class="edit-link" onclick="event.preventDefault(); goToStep(1);">แก้ไข</a>
       </div>
+      <div class="summary-item">
+        <div class="summary-label">ประเภทการตรวจ:</div>
+        <div class="summary-value highlight" id="summaryInspectionType">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">ประเภทงาน:</div>
+        <div class="summary-value" id="summaryWorkType">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">ทีมงาน:</div>
+        <div class="summary-value" id="summaryTeam">-</div>
+      </div>
+    </div>
+
+    <!-- Section 2: Date & Time -->
+    <div class="summary-section">
+      <div class="summary-section-title">
+        <span>📅</span>
+        <span>วันที่และเวลา</span>
+        <a href="#" class="edit-link" onclick="event.preventDefault(); goToStep(3);">แก้ไข</a>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">วันที่:</div>
+        <div class="summary-value highlight" id="summaryDate">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">เวลา:</div>
+        <div class="summary-value" id="summaryTime">-</div>
+      </div>
+    </div>
+
+    <!-- Section 3: Work Details -->
+    <div class="summary-section">
+      <div class="summary-section-title">
+        <span>📝</span>
+        <span>รายละเอียดงาน</span>
+        <a href="#" class="edit-link" onclick="event.preventDefault(); goToStep(4);">แก้ไข</a>
+      </div>
+      <div class="summary-item description-item">
+        <div class="summary-label">รายละเอียด RFI:</div>
+        <div class="summary-value" id="summaryDescription">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">สถานที่:</div>
+        <div class="summary-value" id="summaryLocation">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">ไฟล์แนบ:</div>
+        <div class="summary-value" id="summaryFile">-</div>
+      </div>
+    </div>
+
+    <!-- Section 4: Requester Info -->
+    <div class="summary-section">
+      <div class="summary-section-title">
+        <span>👤</span>
+        <span>ข้อมูลผู้ขอ</span>
+        <a href="#" class="edit-link" onclick="event.preventDefault(); goToStep(4);">แก้ไข</a>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">ผู้ขอ:</div>
+        <div class="summary-value" id="summaryRequester">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Button -->
+  <div class="submit-progress-container">
+    <button type="submit" id="submitBtn">
+      <span>✓</span>
+      <span>ยืนยันและส่งคำขอ</span>
+    </button>
+    <div class="submit-progress-bar" id="submitProgressBar"></div>
+  </div>
+  <div class="submit-step-text" id="submitStepText"></div>
+</div>
 
       <!-- Navigation Buttons -->
       <div class="step-navigation" id="stepNavigation">
@@ -1819,10 +1968,10 @@ input[type="file"]::file-selector-button:hover {
         };
       }
       
-      if (description.length < 20) {
+      if (description.length < 10) {
         return {
           valid: false,
-          message: 'รายละเอียดควรมีอย่างน้อย 20 ตัวอักษร'
+          message: 'รายละเอียดควรมีอย่างน้อย 10 ตัวอักษร'
         };
       }
       
@@ -1860,21 +2009,25 @@ input[type="file"]::file-selector-button:hover {
     // ========== Update Summary ==========
     
 function updateSummary() {
-  // Inspection Type
+  console.log('📋 Updating summary...');
+  
+  // 1. Inspection Type
   var inspectionType = document.getElementById('inspectionType').value;
-  var inspectionText = inspectionType === 'internal' ? '🏢 Internal Inspection' : '🤝 External Inspection';
+  var inspectionText = inspectionType === 'internal' 
+    ? '🏢 Internal Inspection' 
+    : '🤝 External Inspection';
   document.getElementById('summaryInspectionType').textContent = inspectionText;
   
-  // Work Type
+  // 2. Work Type
   var workTypeSelect = document.getElementById('workType');
   var workTypeText = workTypeSelect.options[workTypeSelect.selectedIndex]?.text || '-';
   document.getElementById('summaryWorkType').textContent = workTypeText;
   
-  // Team
+  // 3. Team Category
   var teamCategory = selectedTeamCategory || '-';
   document.getElementById('summaryTeam').textContent = teamCategory.replace(/,/g, ', ');
   
-  // Date
+  // 4. Date (แปลงเป็นภาษาไทย)
   var requestDate = document.getElementById('requestDate').value;
   if (requestDate) {
     var dateObj = new Date(requestDate + 'T00:00:00');
@@ -1884,46 +2037,57 @@ function updateSummary() {
       day: 'numeric'
     });
     document.getElementById('summaryDate').textContent = dateText;
+  } else {
+    document.getElementById('summaryDate').textContent = '-';
   }
   
-  // Time
+  // 5. Time
   var startTime = document.getElementById('startTime').value;
   var endTime = document.getElementById('endTime').value;
   if (startTime && endTime) {
     document.getElementById('summaryTime').textContent = startTime + ' - ' + endTime + ' น.';
+  } else {
+    document.getElementById('summaryTime').textContent = '-';
   }
   
-  // Location
+  // 6. Location
   var location = document.getElementById('location').value || '-';
   document.getElementById('summaryLocation').textContent = location;
   
-  // ⭐ เพิ่มส่วนนี้ - Description
+  // 7. Description (แสดงเต็มทั้งหมด + Scrollable)
   var description = document.getElementById('description').value.trim() || '-';
   var summaryDescriptionElement = document.getElementById('summaryDescription');
   
   if (summaryDescriptionElement) {
-    // ✅ แสดงเต็มทั้งหมด ไม่ตัด
     summaryDescriptionElement.textContent = description;
     
-    // ⭐ เพิ่ม hint ถ้าข้อความยาว
+    // เพิ่ม Tooltip ถ้าข้อความยาว
     if (description.length > 200) {
       summaryDescriptionElement.title = 'เลื่อนลงเพื่อดูรายละเอียดเพิ่มเติม';
     }
   }
   
-  // File
+  // 8. File (แสดงชื่อไฟล์ + ขนาด)
   var fileInput = document.getElementById('locationLayoutFile');
   if (fileInput.files && fileInput.files.length > 0) {
     var file = fileInput.files[0];
-    document.getElementById('summaryFile').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+    document.getElementById('summaryFile').textContent = 
+      file.name + ' (' + formatFileSize(file.size) + ')';
+  } else {
+    document.getElementById('summaryFile').textContent = '-';
   }
   
-  // Requester
+  // 9. Requester (ชื่อ + อีเมล)
   var requesterName = document.getElementById('requesterName').value;
   var requesterEmail = document.getElementById('requesterEmail').value;
   if (requesterName && requesterEmail) {
-    document.getElementById('summaryRequester').textContent = requesterName + ' (' + requesterEmail + ')';
+    document.getElementById('summaryRequester').textContent = 
+      requesterName + ' (' + requesterEmail + ')';
+  } else {
+    document.getElementById('summaryRequester').textContent = '-';
   }
+  
+  console.log('✅ Summary updated successfully');
 }
     var selectedTeamCategory = null;
     var isMultiWork = false;
