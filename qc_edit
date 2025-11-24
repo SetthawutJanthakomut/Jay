@@ -402,6 +402,17 @@ textarea:disabled {
 .limited-edit-warning li {
     margin: 5px 0;
 }
+
+/* ⭐ เพิ่ม Status Badge สำหรับ Status ใหม่ */
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-revised {
+    background: #dbeafe;
+    color: #1e40af;
+}
     </style>
 </head>
 
@@ -1027,253 +1038,280 @@ google.script.run
             }
         }
 
-        function loadRFIList() {
-            var container = document.getElementById('rfiTableContainer');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>';
+function loadRFIList() {
+    var container = document.getElementById('rfiTableContainer');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>';
 
-            google.script.run
-                .withSuccessHandler(function(rfiList) {
-                    if (!rfiList || rfiList.length === 0) {
-                        container.innerHTML = '<div class="empty-state"><h3>ไม่พบรายการ RFI</h3><p>ไม่มี RFI ที่สถานะ Draft หรือ RFI Request Submitted</p></div>';
-                        return;
-                    }
+    google.script.run
+        .withSuccessHandler(function(rfiList) {
+            if (!rfiList || rfiList.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>ไม่พบรายการ RFI</h3><p>ไม่มี RFI ที่สถานะที่แก้ไขได้</p></div>';
+                return;
+            }
 
-                    var html = '<table><thead><tr>';
-                    html += '<th>RFI NO</th><th>รายละเอียด</th><th>สถานที่</th><th>วันที่</th>';
-                    html += '<th>เวลา</th><th>ทีมงาน</th><th>สถานะ</th><th>จัดการ</th>';
-                    html += '</tr></thead><tbody>';
+            var html = '<table><thead><tr>';
+            html += '<th>RFI NO</th><th>รายละเอียด</th><th>สถานที่</th><th>วันที่</th>';
+            html += '<th>เวลา</th><th>ทีมงาน</th><th>Type</th><th>สถานะ</th><th>จัดการ</th>'; // ✅ เพิ่ม Type
+            html += '</tr></thead><tbody>';
 
-                    for (var i = 0; i < rfiList.length; i++) {
-                        var rfi = rfiList[i];
-                        var statusClass = 'status-submitted'; // default
-if (rfi.status === 'Draft') {
-    statusClass = 'status-draft';
-} else if (rfi.status === 'Waiting for Revised Attachment') {
-    statusClass = 'status-waiting';
-} else if (rfi.status === 'Pending QC Review') {
-    statusClass = 'status-pending';
+            for (var i = 0; i < rfiList.length; i++) {
+                var rfi = rfiList[i];
+                
+                // ✅ เพิ่ม Status Badge สำหรับ Status ใหม่
+                var statusClass = 'status-submitted';
+                if (rfi.status === 'Draft') {
+                    statusClass = 'status-draft';
+                } else if (rfi.status === 'Waiting for Revised Attachment') {
+                    statusClass = 'status-waiting';
+                } else if (rfi.status === 'Pending QC Review') {
+                    statusClass = 'status-pending';
+                } else if (rfi.status === 'Rejected by Consult – Revise Required') {
+                    statusClass = 'status-rejected';
+                } else if (rfi.status === 'Revised Attachment Submitted – Pending QC Review') {
+                    statusClass = 'status-revised';
+                }
+                
+                var desc = rfi.description || '';
+
+                html += '<tr>';
+                html += '<td><strong>' + (rfi.rfiNo || 'N/A') + '</strong></td>';
+                html += '<td>' + desc.substring(0, 30) + (desc.length > 30 ? '...' : '') + '</td>';
+                html += '<td>' + (rfi.location || '') + '</td>';
+                html += '<td>' + (rfi.requestDate || '') + '</td>';
+                html += '<td>' + (rfi.startTime || '') + '-' + (rfi.endTime || '') + '</td>';
+                html += '<td>' + (rfi.assignedInspector || '') + '</td>';
+                html += '<td>' + (rfi.type || 'N/A') + '</td>'; // ✅ เพิ่ม Type column
+                html += '<td><span class="status-badge ' + statusClass + '">' + rfi.status + '</span></td>';
+                html += '<td><button class="btn-edit" onclick="editRFI(\'' + rfi.id + '\')">✏️ แก้ไข</button></td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            showMessage('โหลดข้อมูลสำเร็จ: ' + rfiList.length + ' รายการ', 'success', 3000);
+        })
+        .withFailureHandler(function(error) {
+            container.innerHTML = '<div class="empty-state"><h3>เกิดข้อผิดพลาด</h3><p>' + (error.message || error) + '</p></div>';
+            showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
+        })
+        .getRFIListForQC();
 }
-                        var desc = rfi.description || '';
-
-                        html += '<tr>';
-                        html += '<td><strong>' + (rfi.rfiNo || 'N/A') + '</strong></td>';
-                        html += '<td>' + desc.substring(0, 30) + (desc.length > 30 ? '...' : '') + '</td>';
-                        html += '<td>' + (rfi.location || '') + '</td>';
-                        html += '<td>' + (rfi.requestDate || '') + '</td>';
-                        html += '<td>' + (rfi.startTime || '') + '-' + (rfi.endTime || '') + '</td>';
-                        html += '<td>' + (rfi.assignedInspector || '') + '</td>';
-                        html += '<td><span class="status-badge ' + statusClass + '">' + rfi.status + '</span></td>';
-                        html += '<td><button class="btn-edit" onclick="editRFI(\'' + rfi.id + '\')">✏️ แก้ไข</button></td>';
-                        html += '</tr>';
-                    }
-
-                    html += '</tbody></table>';
-                    container.innerHTML = html;
-                    showMessage('โหลดข้อมูลสำเร็จ: ' + rfiList.length + ' รายการ', 'success', 3000);
-                })
-                .withFailureHandler(function(error) {
-                    container.innerHTML = '<div class="empty-state"><h3>เกิดข้อผิดพลาด</h3><p>' + (error.message || error) + '</p></div>';
-                    showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
-                })
-                .getRFIListForQC();
-        }
 
         function editRFI(rfiId) {
-            document.getElementById('rfiTableContainer').style.display = 'none';
-            document.querySelector('.btn-primary').style.display = 'none';
-            document.getElementById('editView').style.display = 'block';
+    document.getElementById('rfiTableContainer').style.display = 'none';
+    document.querySelector('.btn-primary').style.display = 'none';
+    document.getElementById('editView').style.display = 'block';
 
-            google.script.run
-                .withSuccessHandler(function(rfi) {
-                    if (!rfi) {
-                        alert('ไม่พบข้อมูล RFI');
-                        cancelEdit();
-                        return;
+    google.script.run
+        .withSuccessHandler(function(rfi) {
+            if (!rfi) {
+                alert('ไม่พบข้อมูล RFI');
+                cancelEdit();
+                return;
+            }
+
+            originalAssignedTeams = (rfi.assignedInspector || '').split(',').map(function(t) {
+                return t.trim();
+            }).filter(function(t) {
+                return t;
+            });
+
+            document.getElementById('editRFINo').textContent = rfi.rfiNo || 'N/A';
+            document.getElementById('editRfiId').value = rfi.id;
+            document.getElementById('editOriginalStatus').value = rfi.status;
+            
+            // ⭐⭐⭐ เพิ่มส่วนนี้ - เช็คเงื่อนไข Limited Edit Mode
+            var isLimitedEdit = false;
+            
+            // ✅ เช็คเงื่อนไข: Type = "Open RFI" AND Status ตามที่กำหนด
+            if (rfi.type === 'Open RFI') {
+                var limitedStatuses = [
+                    'Waiting for Revised Attachment',
+                    'Pending QC Review',
+                    'Rejected by Consult – Revise Required',
+                    'Revised Attachment Submitted – Pending QC Review'
+                ];
+                
+                isLimitedEdit = limitedStatuses.indexOf(rfi.status) !== -1;
+            }
+            
+            console.log('📋 Type:', rfi.type);
+            console.log('📋 Status:', rfi.status);
+            console.log('🔒 Is Limited Edit?', isLimitedEdit);
+            
+            // ✅ เปิดใช้งาน Limited Edit Mode (ถ้าตรงเงื่อนไข)
+            if (isLimitedEdit) {
+                enableLimitedEditMode(rfi.status, rfi.type);
+            } else {
+                disableLimitedEditMode();
+            }
+            // ⭐⭐⭐ จบส่วนที่เพิ่ม
+
+            document.getElementById('editDescription').value = rfi.description || '';
+            document.getElementById('editLocation').value = rfi.location || '';
+            document.getElementById('editRequestDate').value = rfi.requestDate || '';
+
+            populateTimeDropdown('editStartTime', rfi.startTime || '', false);
+            populateTimeDropdown('editEndTime', rfi.endTime || '', true);
+
+            if (rfi.startTime) {
+                filterEndTimeOptions();
+            }
+
+            var requesterNameDisplay = document.getElementById('editRequesterNameDisplay');
+            var requesterEmailDisplay = document.getElementById('editRequesterEmailDisplay');
+
+            if (requesterNameDisplay) {
+                requesterNameDisplay.textContent = rfi.requesterName || '-';
+            }
+            if (requesterEmailDisplay) {
+                requesterEmailDisplay.textContent = rfi.requesterEmail || '-';
+            }
+
+            document.getElementById('editRequesterName').value = rfi.requesterName || '';
+            document.getElementById('editRequesterEmail').value = rfi.requesterEmail || '';
+            document.getElementById('editRequireSurveyReport').value = rfi.requireSurveyReport || 'None';
+            document.getElementById('editRequireLabReport').value = rfi.requireLabReport || 'None';
+
+            // ✅ Work Type + ITP Loading
+            var workTypeSelect = document.getElementById('editWorkType');
+            var workTypeNote = document.getElementById('workTypeNote');
+            var editWorkTypeNote = document.getElementById('editWorkTypeNote');
+            var editInfoNote = document.getElementById('editInfoNote');
+
+            if (rfi.status === 'RFI Request Submitted') {
+                workTypeSelect.disabled = false;
+                workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+
+                for (var i = 0; i < allWorkTypes.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = allWorkTypes[i].name;
+                    option.textContent = allWorkTypes[i].qcType + ' ' + allWorkTypes[i].name + ' (' + allWorkTypes[i].duration + ' นาที)';
+
+                    option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
+                    option.setAttribute('data-qctype', allWorkTypes[i].qcType || '999');
+                    option.setAttribute('data-duration', allWorkTypes[i].duration || 60);
+                    option.setAttribute('data-note', allWorkTypes[i].note || '');
+
+                    if (allWorkTypes[i].name === rfi.workType) {
+                        option.selected = true;
+
+                        var currentNote = allWorkTypes[i].note || '';
+                        if (editWorkTypeNote && currentNote.trim() !== '') {
+                            editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + currentNote;
+                            editWorkTypeNote.style.display = 'block';
+                        }
                     }
 
-                    originalAssignedTeams = (rfi.assignedInspector || '').split(',').map(function(t) {
-                        return t.trim();
-                    }).filter(function(t) {
-                        return t;
-                    });
+                    workTypeSelect.appendChild(option);
+                }
 
-                    document.getElementById('editRFINo').textContent = rfi.rfiNo || 'N/A';
-                    document.getElementById('editRfiId').value = rfi.id;
-                    document.getElementById('editOriginalStatus').value = rfi.status;
-                            // ⭐ เช็ค Limited Edit Mode
-        var isLimitedEdit = (rfi.status === 'Waiting for Revised Attachment' || 
-                            rfi.status === 'Pending QC Review');
-        
-        if (isLimitedEdit) {
-            enableLimitedEditMode(rfi.status);
-        } else {
-            disableLimitedEditMode();
-        }
-                    document.getElementById('editDescription').value = rfi.description || '';
-                    document.getElementById('editLocation').value = rfi.location || '';
-                    document.getElementById('editRequestDate').value = rfi.requestDate || '';
+                workTypeSelect.addEventListener('change', function() {
+                    var selectedOption = this.options[this.selectedIndex];
+                    var note = selectedOption.getAttribute('data-note');
 
-                    populateTimeDropdown('editStartTime', rfi.startTime || '', false);
-                    populateTimeDropdown('editEndTime', rfi.endTime || '', true);
-
-                    if (rfi.startTime) {
-                        filterEndTimeOptions();
+                    if (editWorkTypeNote) {
+                        if (note && note.trim() !== '') {
+                            editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + note;
+                            editWorkTypeNote.style.display = 'block';
+                        } else {
+                            editWorkTypeNote.style.display = 'none';
+                        }
                     }
 
-                    var requesterNameDisplay = document.getElementById('editRequesterNameDisplay');
-                    var requesterEmailDisplay = document.getElementById('editRequesterEmailDisplay');
-
-                    if (requesterNameDisplay) {
-                        requesterNameDisplay.textContent = rfi.requesterName || '-';
+                    var selectedWorkType = this.value;
+                    if (selectedWorkType) {
+                        console.log('🔄 Work Type changed:', selectedWorkType);
+                        loadCodeListForWorkType(selectedWorkType);
+                    } else {
+                        document.getElementById('editITPSelect').innerHTML = '<option value="">-- เลือก Work Type ก่อน --</option>';
+                        document.getElementById('editITPSelect').disabled = true;
+                        clearCodeFields();
                     }
-                    if (requesterEmailDisplay) {
-                        requesterEmailDisplay.textContent = rfi.requesterEmail || '-';
+                });
+
+                workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้';
+                workTypeNote.style.color = '#28a745';
+                editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้</strong>';
+                editInfoNote.style.color = '#28a745';
+
+            } else {
+                workTypeSelect.disabled = true;
+                workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
+
+                for (var j = 0; j < allWorkTypes.length; j++) {
+                    if (allWorkTypes[j].name === rfi.workType) {
+                        var draftNote = allWorkTypes[j].note || '';
+                        if (editWorkTypeNote && draftNote.trim() !== '') {
+                            editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + draftNote;
+                            editWorkTypeNote.style.display = 'block';
+                        }
+                        break;
                     }
+                }
 
-                    document.getElementById('editRequesterName').value = rfi.requesterName || '';
-                    document.getElementById('editRequesterEmail').value = rfi.requesterEmail || '';
-                    document.getElementById('editRequireSurveyReport').value = rfi.requireSurveyReport || 'None';
-                    document.getElementById('editRequireLabReport').value = rfi.requireLabReport || 'None';
+                workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้';
+                workTypeNote.style.color = '#856404';
+                editInfoNote.innerHTML = '<strong>⚠️ ไม่สามารถแก้ไข Work Type ได้</strong>';
+                editInfoNote.style.color = '#856404';
+            }
 
-                    // ✅ ⭐ วางโค้ดใหม่ตรงนี้ (Work Type + ITP Loading)
-                    var workTypeSelect = document.getElementById('editWorkType');
-                    var workTypeNote = document.getElementById('workTypeNote');
-                    var editWorkTypeNote = document.getElementById('editWorkTypeNote');
-                    var editInfoNote = document.getElementById('editInfoNote');
+            // ✅ โหลด ITP ทันที
+            if (rfi.workType) {
+                console.log('📋 Auto-loading ITP for:', rfi.workType);
 
-                    if (rfi.status === 'RFI Request Submitted') {
-                        workTypeSelect.disabled = false;
-                        workTypeSelect.innerHTML = '<option value="">-- เลือกประเภทงาน --</option>';
+                google.script.run
+                    .withSuccessHandler(function(codes) {
+                        codeListByWorkType = codes || [];
+                        console.log('✅ Loaded', codeListByWorkType.length, 'codes');
 
-                        for (var i = 0; i < allWorkTypes.length; i++) {
-                            var option = document.createElement('option');
-                            option.value = allWorkTypes[i].name;
-                            option.textContent = allWorkTypes[i].qcType + ' ' + allWorkTypes[i].name + ' (' + allWorkTypes[i].duration + ' นาที)';
+                        var itpSelect = document.getElementById('editITPSelect');
 
-                            option.setAttribute('data-sequence', allWorkTypes[i].sequence || '010');
-                            option.setAttribute('data-qctype', allWorkTypes[i].qcType || '999');
-                            option.setAttribute('data-duration', allWorkTypes[i].duration || 60);
-                            option.setAttribute('data-note', allWorkTypes[i].note || '');
-
-                            if (allWorkTypes[i].name === rfi.workType) {
-                                option.selected = true;
-
-                                var currentNote = allWorkTypes[i].note || '';
-                                if (editWorkTypeNote && currentNote.trim() !== '') {
-                                    editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + currentNote;
-                                    editWorkTypeNote.style.display = 'block';
-                                }
-                            }
-
-                            workTypeSelect.appendChild(option);
+                        if (codeListByWorkType.length === 0) {
+                            itpSelect.innerHTML = '<option value="">-- ไม่พบข้อมูล ITP --</option>';
+                            itpSelect.disabled = true;
+                            return;
                         }
 
-                        workTypeSelect.addEventListener('change', function() {
-                            var selectedOption = this.options[this.selectedIndex];
-                            var note = selectedOption.getAttribute('data-note');
+                        itpSelect.innerHTML = '<option value="">-- เลือก ITP --</option>';
 
-                            if (editWorkTypeNote) {
-                                if (note && note.trim() !== '') {
-                                    editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + note;
-                                    editWorkTypeNote.style.display = 'block';
-                                } else {
-                                    editWorkTypeNote.style.display = 'none';
-                                }
-                            }
-
-                            var selectedWorkType = this.value;
-                            if (selectedWorkType) {
-                                console.log('🔄 Work Type changed:', selectedWorkType);
-                                loadCodeListForWorkType(selectedWorkType);
-                            } else {
-                                document.getElementById('editITPSelect').innerHTML = '<option value="">-- เลือก Work Type ก่อน --</option>';
-                                document.getElementById('editITPSelect').disabled = true;
-                                clearCodeFields();
-                            }
+                        codeListByWorkType.forEach(function(code, index) {
+                            var option = document.createElement('option');
+                            option.value = index;
+                            option.textContent = code.displayText;
+                            option.setAttribute('data-itp', code.itp);
+                            option.setAttribute('data-qccode', code.qcCode);
+                            option.setAttribute('data-item', code.item);
+                            option.setAttribute('data-description', code.descriptionCode);
+                            itpSelect.appendChild(option);
                         });
 
-                        workTypeNote.textContent = '✅ สามารถเปลี่ยน Work Type ได้';
-                        workTypeNote.style.color = '#28a745';
-                        editInfoNote.innerHTML = '<strong>✅ สามารถแก้ไข Work Type ได้</strong>';
-                        editInfoNote.style.color = '#28a745';
+                        itpSelect.disabled = false;
 
-                    } else {
-                        workTypeSelect.disabled = true;
-                        workTypeSelect.innerHTML = '<option value="' + (rfi.workType || '') + '">' + (rfi.workType || 'N/A') + '</option>';
-
-                        for (var j = 0; j < allWorkTypes.length; j++) {
-                            if (allWorkTypes[j].name === rfi.workType) {
-                                var draftNote = allWorkTypes[j].note || '';
-                                if (editWorkTypeNote && draftNote.trim() !== '') {
-                                    editWorkTypeNote.innerHTML = '<strong>หมายเหตุ:</strong> ' + draftNote;
-                                    editWorkTypeNote.style.display = 'block';
-                                }
-                                break;
+                        setTimeout(function() {
+                            if (rfi.itp && rfi.qcCode && rfi.item) {
+                                setITPFromSavedData(rfi.itp, rfi.qcCode, rfi.item);
                             }
-                        }
+                            document.getElementById('editTagNumber').value = rfi.tagNumber || '';
+                        }, 100);
+                        
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('Error:', error);
+                    })
+                    .getCodeListByWorkType(rfi.workType);
+            }
 
-                        workTypeNote.textContent = '⚠️ ไม่สามารถแก้ไข Work Type ได้';
-                        workTypeNote.style.color = '#856404';
-                        editInfoNote.innerHTML = '<strong>⚠️ ไม่สามารถแก้ไข Work Type ได้</strong>';
-                        editInfoNote.style.color = '#856404';
-                    }
-
-                    // ✅ ⭐ โหลด ITP ทันที
-                    if (rfi.workType) {
-                        console.log('📋 Auto-loading ITP for:', rfi.workType);
-
-                        google.script.run
-                            .withSuccessHandler(function(codes) {
-                                codeListByWorkType = codes || [];
-                                console.log('✅ Loaded', codeListByWorkType.length, 'codes');
-
-                                var itpSelect = document.getElementById('editITPSelect');
-
-                                if (codeListByWorkType.length === 0) {
-                                    itpSelect.innerHTML = '<option value="">-- ไม่พบข้อมูล ITP --</option>';
-                                    itpSelect.disabled = true;
-                                    return;
-                                }
-
-                                itpSelect.innerHTML = '<option value="">-- เลือก ITP --</option>';
-
-                                codeListByWorkType.forEach(function(code, index) {
-                                    var option = document.createElement('option');
-                                    option.value = index;
-                                    option.textContent = code.displayText;
-                                    option.setAttribute('data-itp', code.itp);
-                                    option.setAttribute('data-qccode', code.qcCode);
-                                    option.setAttribute('data-item', code.item);
-                                    option.setAttribute('data-description', code.descriptionCode);
-                                    itpSelect.appendChild(option);
-                                });
-
-                                itpSelect.disabled = false;
-
-                                setTimeout(function() {
-                                    if (rfi.itp && rfi.qcCode && rfi.item) {
-                                        setITPFromSavedData(rfi.itp, rfi.qcCode, rfi.item);
-                                    }
-                                    document.getElementById('editTagNumber').value = rfi.tagNumber || '';
-                                }, 100);
-                                
-                            })
-                            .withFailureHandler(function(error) {
-                                console.error('Error:', error);
-                            })
-                            .getCodeListByWorkType(rfi.workType);
-                    }
-
-                    if (rfi.requestDate && rfi.startTime) {
-                        loadAvailableTeamsForEdit(rfi.requestDate, rfi.startTime, rfi.endTime, rfi.id);
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    alert('เกิดข้อผิดพลาด: ' + (error.message || error));
-                    cancelEdit();
-                })
-                .getRFIById(rfiId);
-        }
+            if (rfi.requestDate && rfi.startTime) {
+                loadAvailableTeamsForEdit(rfi.requestDate, rfi.startTime, rfi.endTime, rfi.id);
+            }
+        })
+        .withFailureHandler(function(error) {
+            alert('เกิดข้อผิดพลาด: ' + (error.message || error));
+            cancelEdit();
+        })
+        .getRFIById(rfiId);
+}
 
         function cancelEdit() {
             document.getElementById('rfiTableContainer').style.display = 'block';
@@ -1713,16 +1751,19 @@ function deleteSelectedITP() {
 }
 
 /**
- * ⭐ เปิดใช้งาน Limited Edit Mode
+ * ⭐ อัปเดต: เปิดใช้งาน Limited Edit Mode
  */
-function enableLimitedEditMode(status) {
-    console.log('🔒 Enabling Limited Edit Mode for status:', status);
+function enableLimitedEditMode(status, type) {
+    console.log('🔒 Enabling Limited Edit Mode');
+    console.log('   Type:', type);
+    console.log('   Status:', status);
     
     // ✅ แสดง Warning
     var editInfoNote = document.getElementById('editInfoNote');
     if (editInfoNote) {
         editInfoNote.innerHTML = '<div class="limited-edit-warning">' +
             '<strong>⚠️ โหมดแก้ไขแบบจำกัด (Limited Edit Mode)</strong><br>' +
+            'Type: <strong>' + type + '</strong><br>' +
             'Status: <strong>' + status + '</strong><br><br>' +
             '✅ สามารถแก้ไขได้เฉพาะ:<br>' +
             '<ul>' +
@@ -1758,10 +1799,7 @@ function enableLimitedEditMode(status) {
     if (labReport) labReport.disabled = true;
     
     // ✅ Enable ฟิลด์ที่แก้ไขได้
-    // ITP/QC Code (เลือกได้)
     document.getElementById('editITPSelect').disabled = false;
-    
-    // TAG NUMBER, Description, Location (กรอกได้)
     document.getElementById('editTagNumber').disabled = false;
     document.getElementById('editDescription').disabled = false;
     document.getElementById('editLocation').disabled = false;
