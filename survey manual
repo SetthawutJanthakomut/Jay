@@ -1,904 +1,1278 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คู่มือการใช้งาน Survey Work Requirement System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คู่มือการใช้งาน Survey Work System - User Role</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 25%, #4ade80 50%, #22c55e 75%, #16a34a 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(22, 163, 74, 0.3);
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 3px solid #ecfdf5;
+    }
+    
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+    }
+    
+    .header-icon span {
+      font-size: 42px;
+    }
+    
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      font-size: 18px;
+      color: #666;
+      font-weight: 400;
+    }
+    
+    .role-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      color: white;
+      padding: 8px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 15px;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+    }
 
-        body {
-            font-family: 'Kanit', sans-serif;
-            line-height: 1.8;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: #333;
-            padding: 20px;
-        }
+    /* Table of Contents */
+    .toc {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border: 2px solid #16a34a;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 40px;
+    }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
+    .toc-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #16a34a;
+      margin-bottom: 20px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
 
-        .header {
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
-            color: white;
-            padding: 50px 40px;
-            text-align: center;
-        }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
 
-        .header h1 {
-            font-size: 42px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
+    .toc-item {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
 
-        .header .icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            display: block;
-        }
+    .toc-item:hover {
+      border-color: #16a34a;
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.2);
+    }
 
-        .header p {
-            font-size: 18px;
-            opacity: 0.95;
-            font-weight: 300;
-        }
+    .toc-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
 
-        .content {
-            padding: 50px 40px;
-        }
+    .toc-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.4;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+      scroll-margin-top: 20px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 15px 20px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-left: 5px solid #16a34a;
+      border-radius: 10px;
+    }
+    
+    .section-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+    
+    .section-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #16a34a;
+    }
+    
+    .content {
+      padding: 0 20px;
+      line-height: 1.8;
+      color: #333;
+    }
+    
+    .step {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+    
+    .step:hover {
+      border-color: #16a34a;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.1);
+      transform: translateX(5px);
+    }
+    
+    .step-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #16a34a;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .step-icon {
+      font-size: 24px;
+    }
+    
+    .step-content {
+      color: #555;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    
+    .info-box {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-left: 5px solid #3b82f6;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    
+    .info-box.warning {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-left-color: #f59e0b;
+    }
+    
+    .info-box.success {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-left-color: #16a34a;
+    }
+    
+    .info-box.error {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-left-color: #dc2626;
+    }
+    
+    .info-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .info-content {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    ul li {
+      padding: 10px 0 10px 35px;
+      position: relative;
+      line-height: 1.6;
+    }
+    
+    ul li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #16a34a;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    
+    .highlight {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    
+    .code {
+      background: #f3f4f6;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #dc2626;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .qa-item {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+    
+    .qa-item:hover {
+      border-color: #16a34a;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.1);
+    }
+    
+    .question {
+      font-size: 17px;
+      font-weight: 600;
+      color: #16a34a;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .question-icon {
+      flex-shrink: 0;
+      font-size: 22px;
+    }
+    
+    .answer {
+      color: #555;
+      font-size: 15px;
+      line-height: 1.7;
+      padding-left: 32px;
+    }
+    
+    .back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 55px;
+      height: 55px;
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .back-to-top:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px rgba(22, 163, 74, 0.5);
+    }
+    
+    .back-to-top.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 20px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #e5e7eb;
+      color: #333;
+      font-size: 14px;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:hover {
+      background: #f9fafb;
+    }
+    
+    .footer {
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .footer-title {
+      font-weight: 600;
+      color: #16a34a;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 25px;
+      }
+      
+      h1 {
+        font-size: 28px;
+      }
+      
+      .section-title {
+        font-size: 20px;
+      }
+      
+      .back-to-top {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
 
-        .section {
-            margin-bottom: 50px;
-        }
-
-        .section h2 {
-            color: #16a34a;
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #16a34a;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .section h3 {
-            color: #22c55e;
-            font-size: 24px;
-            font-weight: 600;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .info-box {
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            border-left: 5px solid #16a34a;
-            padding: 25px;
-            margin: 25px 0;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.1);
-        }
-
-        .info-box strong {
-            color: #16a34a;
-            font-size: 18px;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border-left: 5px solid #f59e0b;
-            padding: 25px;
-            margin: 25px 0;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1);
-        }
-
-        .warning-box strong {
-            color: #92400e;
-            font-size: 18px;
-        }
-
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }
-
-        .feature-card {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 15px;
-            padding: 25px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(22, 163, 74, 0.15);
-            border-color: #16a34a;
-        }
-
-        .feature-card h4 {
-            color: #16a34a;
-            font-size: 20px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .step-list {
-            counter-reset: step-counter;
-            list-style: none;
-            padding: 0;
-        }
-
-        .step-list li {
-            counter-increment: step-counter;
-            position: relative;
-            padding: 20px 20px 20px 80px;
-            margin-bottom: 20px;
-            background: #f9fafb;
-            border-radius: 12px;
-            border-left: 4px solid #16a34a;
-            transition: all 0.3s ease;
-        }
-
-        .step-list li:hover {
-            background: #ecfdf5;
-            transform: translateX(5px);
-        }
-
-        .step-list li::before {
-            content: counter(step-counter);
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 20px;
-            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
-        }
-
-        .step-list strong {
-            color: #16a34a;
-            font-size: 18px;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .condition-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 25px 0;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-
-        .condition-table thead {
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-            color: white;
-        }
-
-        .condition-table th {
-            padding: 18px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .condition-table td {
-            padding: 15px 18px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .condition-table tbody tr:hover {
-            background: #ecfdf5;
-        }
-
-        .condition-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .highlight {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 3px 8px;
-            border-radius: 5px;
-            font-weight: 500;
-            color: #92400e;
-        }
-
-        .code-block {
-            background: #1f2937;
-            color: #10b981;
-            padding: 20px;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            overflow-x: auto;
-            margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .flowchart {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 30px;
-            margin: 30px 0;
-            text-align: center;
-        }
-
-        .flowchart-step {
-            display: inline-block;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            border: 2px solid #16a34a;
-            border-radius: 12px;
-            padding: 15px 25px;
-            margin: 10px;
-            font-weight: 500;
-            color: #065f46;
-            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.1);
-        }
-
-        .arrow {
-            display: inline-block;
-            font-size: 24px;
-            color: #16a34a;
-            margin: 0 10px;
-        }
-
-        .footer {
-            background: #f9fafb;
-            padding: 40px;
-            text-align: center;
-            border-top: 3px solid #16a34a;
-        }
-
-        .footer p {
-            color: #6b7280;
-            font-size: 14px;
-            margin: 5px 0;
-        }
-
-        .badge {
-            display: inline-block;
-            background: #16a34a;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .icon-large {
-            font-size: 40px;
-            vertical-align: middle;
-        }
-
-        ul.bullet-list {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        ul.bullet-list li {
-            padding-left: 35px;
-            position: relative;
-            margin-bottom: 12px;
-            line-height: 1.6;
-        }
-
-        ul.bullet-list li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #16a34a;
-            font-weight: 700;
-            font-size: 20px;
-        }
-
-        @media print {
-            body {
-                background: white;
-            }
-            .container {
-                box-shadow: none;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
-
-            .header h1 {
-                font-size: 28px;
-            }
-
-            .section h2 {
-                font-size: 24px;
-            }
-
-            .feature-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .step-list li {
-                padding-left: 70px;
-            }
-        }
-    </style>
+      .toc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #16a34a 0%, #22c55e 100%);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #15803d 0%, #16a34a 100%);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <span class="icon">🗺️</span>
-            <h1>คู่มือการใช้งาน Survey Work Requirement System</h1>
-            <p>ระบบจองงาน Survey Work อัตโนมัติพร้อมการจัดทีมแบบ Smart</p>
-        </div>
-
-        <!-- Content -->
-        <div class="content">
-            
-            <!-- Section 1: ภาพรวมระบบ -->
-            <div class="section">
-                <h2><span class="icon-large">📋</span> ภาพรวมระบบ</h2>
-                
-                <div class="info-box">
-                    <strong>🎯 วัตถุประสงค์:</strong><br>
-                    ระบบ Survey Work Requirement System ถูกออกแบบมาเพื่อให้ผู้ใช้สามารถจองงาน Survey ได้อย่างสะดวก รวดเร็ว และมีประสิทธิภาพ โดยระบบจะจัดทีมงาน Survey ให้อัตโนมัติตามความพร้อมของแต่ละทีม
-                </div>
-
-                <h3>✨ คุณสมบัติเด่น</h3>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <h4>🤖 จัดทีมอัตโนมัติ</h4>
-                        <p>ระบบจะเลือกทีม Survey ที่มี Workload น้อยที่สุดและว่างในเวลาที่เลือกโดยอัตโนมัติ</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>⚖️ Load Balancing</h4>
-                        <p>กระจายงานให้ทีมต่างๆ อย่างเท่าเทียมเพื่อป้องกันภาระงานมากเกินไป</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>🔄 Round Robin</h4>
-                        <p>หมุนเวียนการจัดทีมเมื่อมีหลายทีมที่มี Workload เท่ากัน</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>🔍 Work Type Filter</h4>
-                        <p>กรองทีมตามประเภทงานที่รองรับ (Work_Types)</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>📧 แจ้งเตือนอัตโนมัติ</h4>
-                        <p>ส่งอีเมลแจ้งไปยังทีม Survey และผู้ขออัตโนมัติ</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>📅 Calendar Integration</h4>
-                        <p>สร้าง Google Calendar Event พร้อม Invitation อัตโนมัติ</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 2: เงื่อนไขการใช้งาน -->
-            <div class="section">
-                <h2><span class="icon-large">⚙️</span> เงื่อนไขการใช้งาน</h2>
-
-                <table class="condition-table">
-                    <thead>
-                        <tr>
-                            <th>หัวข้อ</th>
-                            <th>รายละเอียด</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>📅 วันที่จอง</strong></td>
-                            <td>ควรจองล่วงหน้าอย่างน้อย <span class="highlight">1 วัน</span> (สามารถจองวันเดียวกันได้)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>⏰ เวลาล่วงหน้า</strong></td>
-                            <td>ต้องจองล่วงหน้าอย่างน้อย <span class="highlight">30 นาที</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>🕒 เวลาทำการ</strong></td>
-                            <td>09:00 - 20:00 น. (เลือกเวลาเริ่มต้นได้ถึง 19:00 น.)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>⏱️ ระยะเวลางาน</strong></td>
-                            <td>
-                                • ขั้นต่ำ: <span class="highlight">30 นาที</span><br>
-                                • สูงสุด: <span class="highlight">8 ชั่วโมง</span> (ต่อ 1 Request)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>📍 ช่วงเวลาจอง</strong></td>
-                            <td>จองเป็นช่วงละ <span class="highlight">30 นาที</span> (09:00, 09:30, 10:00, ...)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>👥 ทีมงาน</strong></td>
-                            <td>เฉพาะทีม Survey Teams (Sub_Type = "Survey")</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🔐 สิทธิ์ใช้งาน</strong></td>
-                            <td>ต้องเป็น User ที่มี Role = "Requester" และ Status = "Activated"</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="warning-box">
-                    <strong>⚠️ ข้อจำกัด:</strong><br>
-                    • ไม่สามารถจองย้อนหลังได้<br>
-                    • ไม่สามารถจองเกิน 20:00 น.<br>
-                    • หากไม่มีทีมว่าง ระบบจะแจ้งเตือนและแนะนำให้เลือกเวลาอื่น
-                </div>
-            </div>
-
-            <!-- Section 3: ขั้นตอนการใช้งาน -->
-            <div class="section">
-                <h2><span class="icon-large">📝</span> ขั้นตอนการใช้งาน</h2>
-
-                <ul class="step-list">
-                    <li>
-                        <strong>เลือกวันที่ต้องการ</strong>
-                        <p>เลือกวันที่ต้องการให้ทีม Survey มาทำงาน (ต้องเป็นพรุ่งนี้เป็นต้นไป)</p>
-                    </li>
-                    <li>
-                        <strong>เลือกประเภทงาน (Work Type)</strong>
-                        <p>เลือกประเภทงาน Survey ที่ต้องการ (เช่น "ซ่อมเครื่องมือสำรวจ")</p>
-                        <div class="info-box" style="margin-top: 10px;">
-                            💡 <strong>หมายเหตุ:</strong> ระบบจะกรองเฉพาะทีมที่รองรับงานนี้เท่านั้น
-                        </div>
-                    </li>
-                    <li>
-                        <strong>เลือกเวลาเริ่มต้น</strong>
-                        <p>ระบบจะแสดงเฉพาะเวลาที่มีทีมว่างเท่านั้น</p>
-                    </li>
-                    <li>
-                        <strong>เลือกเวลาสิ้นสุด</strong>
-                        <p>ระบบจะตั้งค่าเริ่มต้นเป็น +1 ชั่วโมง (สามารถเปลี่ยนได้)</p>
-                    </li>
-                    <li>
-                        <strong>กรอกรายละเอียดงาน</strong>
-                        <p>อธิบายรายละเอียดงาน Survey ที่ต้องการให้ชัดเจน</p>
-                    </li>
-                    <li>
-                        <strong>กรอกสถานที่</strong>
-                        <p>ระบุสถานที่ที่ต้องการให้ทีม Survey ไปทำงาน</p>
-                    </li>
-                    <li>
-                        <strong>ตรวจสอบชื่อและอีเมล</strong>
-                        <p>ระบบจะดึงข้อมูลจากบัญชี Google ของคุณอัตโนมัติ</p>
-                    </li>
-                    <li>
-                        <strong>ส่ง Request</strong>
-                        <p>กดปุ่ม "ส่ง Survey Work Request" และรอระบบประมวลผล</p>
-                    </li>
-                </ul>
-
-                <div class="info-box">
-                    <strong>✅ หลังส่ง Request:</strong><br>
-                    • ระบบจัดทีม Survey อัตโนมัติ<br>
-                    • สร้าง Survey NO (เช่น SW-0001)<br>
-                    • ส่งอีเมลแจ้งไปยังทีม Survey และผู้ขอ<br>
-                    • สร้าง Google Calendar Event พร้อม Invitation<br>
-                    • บันทึกข้อมูลลง Google Sheets
-                </div>
-            </div>
-
-            <!-- Section 4: ระบบเลือกทีม -->
-            <div class="section">
-                <h2><span class="icon-large">🎯</span> วิธีการเลือกทีมอัตโนมัติ</h2>
-
-                <h3>🔍 ขั้นตอนการเลือกทีม (Team Assignment Logic)</h3>
-
-                <div class="flowchart">
-                    <div class="flowchart-step">1️⃣ กรอง Work Type</div>
-                    <span class="arrow">→</span>
-                    <div class="flowchart-step">2️⃣ เช็คความว่าง</div>
-                    <span class="arrow">→</span>
-                    <div class="flowchart-step">3️⃣ คำนวณ Workload</div>
-                    <span class="arrow">→</span>
-                    <div class="flowchart-step">4️⃣ เลือกทีมที่เหมาะสม</div>
-                </div>
-
-                <h3>📊 กฎการเลือกทีม</h3>
-
-                <ol class="step-list">
-                    <li>
-                        <strong>กรอง Work Type</strong>
-                        <p>ระบบจะดึงเฉพาะทีมที่รองรับงานที่เลือก:</p>
-                        <ul class="bullet-list" style="margin-top: 10px;">
-                            <li>ทีมที่มี Work_Types = <span class="highlight">"*"</span> (Universal Team - ทำได้ทุกงาน)</li>
-                            <li>ทีมที่มี Work_Types ตรงกับงานที่เลือก (เช่น "ซ่อมเครื่องมือสำรวจ")</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>เช็คความว่าง</strong>
-                        <p>ตรวจสอบว่าทีมว่างในวันและเวลาที่เลือกหรือไม่:</p>
-                        <ul class="bullet-list" style="margin-top: 10px;">
-                            <li>ไม่มีการจองทับซ้อน (ไม่มี Buffer สำหรับ Survey Work)</li>
-                            <li>ข้าม Status ที่ไม่ใช้ทีม (Completed, Cancelled, etc.)</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>คำนวณ Workload</strong>
-                        <p>นับจำนวนงานที่ทีมมีในวันนั้น (ทั้ง RFI และ Survey)</p>
-                    </li>
-                    <li>
-                        <strong>เลือกทีมที่เหมาะสม</strong>
-                        <p>เลือกทีมตามลำดับความสำคัญ:</p>
-                        <div class="info-box" style="margin-top: 10px;">
-                            <strong>1️⃣ ทีมที่มี Workload น้อยที่สุด</strong><br>
-                            เช่น Survey Team A (0 งาน) vs Survey Team B (2 งาน) → เลือก Team A
-                        </div>
-                        <div class="info-box">
-                            <strong>2️⃣ หาก Workload เท่ากัน → ใช้ Round Robin</strong><br>
-                            หมุนเวียนการเลือกทีมเพื่อความเป็นธรรม<br>
-                            เช่น ครั้งที่ 1 → Team A, ครั้งที่ 2 → Team B, ครั้งที่ 3 → Team A
-                        </div>
-                        <div class="info-box">
-                            <strong>3️⃣ หาก Team No. ซ้ำกัน → Random</strong><br>
-                            สุ่มเลือก 1 ทีมจากทีมที่มี Team No. เท่ากัน
-                        </div>
-                    </li>
-                </ol>
-
-                <h3>🔧 ตัวอย่างการทำงาน</h3>
-
-                <div class="code-block">
-<strong>สถานการณ์:</strong> จองงาน "ซ่อมเครื่องมือสำรวจ" วันที่ 25 ม.ค. 2568 เวลา 14:00-15:00
-
-<strong>ขั้นตอน:</strong>
-1. 🔍 กรอง Work Type
-   Survey Team A - Work_Types: "*" → ✅ รองรับ
-   Survey Team B - Work_Types: "ซ่อมเครื่องมือสำรวจ" → ✅ รองรับ
-
-2. 🕐 เช็คความว่าง
-   Survey Team A - 14:00-15:00 → ✅ ว่าง
-   Survey Team B - 14:00-15:00 → ✅ ว่าง
-
-3. 📊 คำนวณ Workload (25 ม.ค.)
-   Survey Team A - Workload: 0 งาน
-   Survey Team B - Workload: 2 งาน
-
-4. 🎯 เลือกทีม
-   → <strong style="color: #16a34a;">เลือก Survey Team A</strong> (เพราะมี Workload น้อยกว่า)
-                </div>
-            </div>
-
-            <!-- Section 5: เวลาเริ่มต้น-สิ้นสุด -->
-            <div class="section">
-                <h2><span class="icon-large">⏰</span> เวลาเริ่มต้นและสิ้นสุด</h2>
-
-                <h3>📅 Available Time Slots (เวลาที่เลือกได้)</h3>
-
-                <div class="info-box">
-                    <strong>วิธีคำนวณ:</strong><br>
-                    1. ระบบสร้าง Time Slots ทุก 30 นาที (09:00, 09:30, 10:00, ...)<br>
-                    2. กรองเวลาที่ผ่านไปแล้ว + 30 นาที<br>
-                    3. เช็คว่ามีทีมว่างในช่วงเวลานั้นหรือไม่<br>
-                    4. แสดงเฉพาะเวลาที่มีทีมว่าง
-                </div>
-
-                <h3>⏱️ เวลาสิ้นสุด (End Time)</h3>
-
-                <ul class="bullet-list">
-                    <li><strong>Default:</strong> เวลาเริ่มต้น + 1 ชั่วโมง</li>
-                    <li><strong>ปรับได้:</strong> เลือกเวลาสิ้นสุดอื่นได้ตามความต้องการ</li>
-                    <li><strong>จำกัด:</strong> ไม่เกิน 20:00 น.</li>
-                    <li><strong>ตรวจสอบ:</strong> ระบบจะแสดงเฉพาะเวลาที่ทีมยังว่าง</li>
-                </ul>
-
-                <div class="warning-box">
-                    <strong>⚠️ หมายเหตุ:</strong><br>
-                    • หากเลือกเวลาสิ้นสุดนาน → ระบบจะเช็คว่าทีมว่างตลอดช่วงนั้นหรือไม่<br>
-                    • หากระหว่างทางมีการจองอื่น → เวลาสิ้นสุดที่เลือกได้จะถูกจำกัด
-                </div>
-
-                <h3>🚫 ไม่มี Buffer (Survey Work)</h3>
-
-                <div class="info-box">
-                    <strong>ความแตกต่างจาก RFI Work:</strong><br>
-                    • RFI Work: มี Buffer ±30 นาที (เช่น จอง 14:00-15:00 → Block 13:30-15:30)<br>
-                    • <span class="highlight">Survey Work: ไม่มี Buffer</span> → Block แค่เวลาที่เลือกจริงๆ (14:00-15:00)
-                </div>
-            </div>
-
-            <!-- Section 6: ฟังก์ชันสำคัญ -->
-            <div class="section">
-                <h2><span class="icon-large">⚙️</span> ฟังก์ชันสำคัญในระบบ</h2>
-
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <h4>📋 getWorkTypeList()</h4>
-                        <p><strong>หน้าที่:</strong> ดึงรายการประเภทงานจาก Sheet "Work"</p>
-                        <p><strong>กรอง:</strong> Work_Category = "Survey Work"</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>👥 getSurveyTeams()</h4>
-                        <p><strong>หน้าที่:</strong> ดึงทีม Survey ทั้งหมดที่ Active</p>
-                        <p><strong>เงื่อนไข:</strong> Sub_Type = "Survey", Status = "Activated"</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>🔍 teamSupportsWorkType()</h4>
-                        <p><strong>หน้าที่:</strong> เช็คว่าทีมรองรับงานนี้หรือไม่</p>
-                        <p><strong>รองรับ:</strong> Work_Types = "*" หรือตรงกับงาน</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>🕐 isSurveyTeamAvailable()</h4>
-                        <p><strong>หน้าที่:</strong> เช็คว่าทีมว่างในเวลานั้นหรือไม่</p>
-                        <p><strong>เงื่อนไข:</strong> ไม่ทับซ้อน + ข้าม Status Inactive</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>📊 getTeamWorkload()</h4>
-                        <p><strong>หน้าที่:</strong> นับจำนวนงานที่ทีมมีในวันนั้น</p>
-                        <p><strong>รวม:</strong> RFI Work + Survey Work</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>⚖️ sortTeamsByWorkload()</h4>
-                        <p><strong>หน้าที่:</strong> เรียงทีมตาม Workload</p>
-                        <p><strong>Logic:</strong> น้อยกว่า → Round Robin → Random</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>🤖 assignSurveyTeamAutomatically()</h4>
-                        <p><strong>หน้าที่:</strong> จัดทีมอัตโนมัติ</p>
-                        <p><strong>ส่งกลับ:</strong> ชื่อทีม, Workload, Work Type</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>📅 getSurveyAvailableTimeSlots()</h4>
-                        <p><strong>หน้าที่:</strong> ดึง Time Slots ที่มีทีมว่าง</p>
-                        <p><strong>ช่วง:</strong> 09:00-19:00 (ทุก 30 นาที)</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>⏱️ getSurveyAvailableEndTimes()</h4>
-                        <p><strong>หน้าที่:</strong> ดึงเวลาสิ้นสุดที่เป็นไปได้</p>
-                        <p><strong>จำกัด:</strong> ไม่เกิน 20:00, ทีมต้องว่างตลอด</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>💾 saveSurveyWorkRequirement()</h4>
-                        <p><strong>หน้าที่:</strong> บันทึก Survey Work Request</p>
-                        <p><strong>ทำ:</strong> Validate → จัดทีม → บันทึก → แจ้งเตือน</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>📧 sendSurveyWorkNotificationEmail()</h4>
-                        <p><strong>หน้าที่:</strong> ส่งอีเมลแจ้งเตือน</p>
-                        <p><strong>ส่งถึง:</strong> Survey Team + ทีมที่ได้รับมอบหมาย + ผู้ขอ</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <h4>📅 createSurveyWorkCalendarEvent()</h4>
-                        <p><strong>หน้าที่:</strong> สร้าง Google Calendar Event</p>
-                        <p><strong>ส่ง:</strong> Invitation ไปยังทุกคนที่เกี่ยวข้อง</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 7: การตั้งค่าระบบ -->
-            <div class="section">
-                <h2><span class="icon-large">🔧</span> การตั้งค่าระบบ (สำหรับ Admin)</h2>
-
-                <h3>📋 Sheet "Work" (Work_Category)</h3>
-                <table class="condition-table">
-                    <thead>
-                        <tr>
-                            <th>Column</th>
-                            <th>รายละเอียด</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>A: ID_Work</strong></td>
-                            <td>รหัสงาน (ไม่ใช้)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>B: Name_Work</strong></td>
-                            <td>ชื่องาน (ใช้แสดงใน dropdown)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>C: Work_Category</strong></td>
-                            <td>หมวดงาน: <span class="highlight">"Survey Work"</span> หรือ "RFI Work"</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="info-box">
-                    <strong>💡 ตัวอย่าง:</strong><br>
-                    • ซ่อมเครื่องมือสำรวจ → Survey Work<br>
-                    • วัดระดับความสูง → Survey Work<br>
-                    • Survey ภูมิประเทศ → Survey Work
-                </div>
-
-                <h3>👥 Sheet "Resources" (Work_Types)</h3>
-                <table class="condition-table">
-                    <thead>
-                        <tr>
-                            <th>Column</th>
-                            <th>รายละเอียด</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>A: Resource_ID</strong></td>
-                            <td>รหัสทีม (เช่น T001)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>B: Resource_Name</strong></td>
-                            <td>ชื่อทีม (เช่น Survey Team A)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>C: Sub_Type</strong></td>
-                            <td>ประเภททีม: <span class="highlight">"Survey"</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>D: Team No.</strong></td>
-                            <td>ลำดับทีม (ใช้เรียง)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>E: Status</strong></td>
-                            <td>สถานะ: <span class="highlight">"Activated"</span> หรือ "Deactivated"</td>
-                        </tr>
-                        <tr>
-                            <td><strong>F: Contact_Email</strong></td>
-                            <td>อีเมลทีม (สำหรับส่งแจ้งเตือน)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>I: Work_Types</strong></td>
-                            <td>งานที่รองรับ: <span class="highlight">"*"</span> = ทุกงาน หรือ "งาน1,งาน2,..."</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="warning-box">
-                    <strong>⚠️ หมายเหตุ:</strong><br>
-                    • Work_Types = "*" → ทีมนี้ทำได้ทุกงาน (Universal Team)<br>
-                    • Work_Types = "ซ่อมเครื่องมือสำรวจ,วัดระดับ" → ทำได้เฉพาะงานที่ระบุ<br>
-                    • คั่นหลายงานด้วย <span class="highlight">comma (,)</span> โดยไม่ต้องเว้นวรรค
-                </div>
-            </div>
-
-            <!-- Section 8: คำถามที่พบบ่อย -->
-            <div class="section">
-                <h2><span class="icon-large">❓</span> คำถามที่พบบ่อย (FAQ)</h2>
-
-                <div class="feature-card">
-                    <h4>Q: ทำไมไม่มี Time Slots ให้เลือก?</h4>
-                    <p><strong>A:</strong> เพราะ:</p>
-                    <ul class="bullet-list">
-                        <li>เลือกวันที่ย้อนหลังหรือวันนี้</li>
-                        <li>ไม่มีทีม Survey ที่รองรับงานที่เลือก</li>
-                        <li>ทีมไม่ว่างในวันนั้นเลย</li>
-                    </ul>
-                </div>
-
-                <div class="feature-card">
-                    <h4>Q: ทำไมไม่สามารถเลือกเวลาบางช่วงได้?</h4>
-                    <p><strong>A:</strong> เพราะ:</p>
-                    <ul class="bullet-list">
-                        <li>ทีมทั้งหมดมีงานในช่วงเวลานั้น</li>
-                        <li>เวลาผ่านไปแล้วเกิน 30 นาที</li>
-                        <li>เป็นเวลานอกเวลาทำการ (09:00-20:00)</li>
-                    </ul>
-                </div>
-
-                <div class="feature-card">
-                    <h4>Q: ระบบเลือกทีมอย่างไร?</h4>
-                    <p><strong>A:</strong> ระบบเลือกตามลำดับ:</p>
-                    <ul class="bullet-list">
-                        <li>1. ทีมที่รองรับงานนี้</li>
-                        <li>2. ทีมที่ว่างในเวลานั้น</li>
-                        <li>3. ทีมที่มี Workload น้อยที่สุด</li>
-                        <li>4. หากเท่ากัน → Round Robin หรือ Random</li>
-                    </ul>
-                </div>
-
-                <div class="feature-card">
-                    <h4>Q: จะรู้ได้อย่างไรว่าทีมรับงาน?</h4>
-                    <p><strong>A:</strong> หลังส่ง Request:</p>
-                    <ul class="bullet-list">
-                        <li>ได้รับอีเมลแจ้งเตือนทันที</li>
-                        <li>ได้รับ Calendar Invitation</li>
-                        <li>สามารถดูในระบบ (RFI_List sheet)</li>
-                    </ul>
-                </div>
-
-                <div class="feature-card">
-                    <h4>Q: สามารถยกเลิกหรือแก้ไขได้หรือไม่?</h4>
-                    <p><strong>A:</strong> ติดต่อทีม QC เพื่อ:</p>
-                    <ul class="bullet-list">
-                        <li>ยกเลิก Survey Work Request</li>
-                        <li>แก้ไขเวลาหรือรายละเอียด</li>
-                        <li>เปลี่ยนทีมงาน</li>
-                    </ul>
-                </div>
-
-                <div class="feature-card">
-                    <h4>Q: Buffer Time คืออะไร?</h4>
-                    <p><strong>A:</strong> Survey Work <span class="highlight">ไม่มี Buffer</span></p>
-                    <ul class="bullet-list">
-                        <li>จอง 14:00-15:00 → Block แค่ 14:00-15:00</li>
-                        <li>สามารถจองติดกัน 13:00-14:00 และ 14:00-15:00 ได้</li>
-                        <li>(แตกต่างจาก RFI Work ที่มี Buffer ±30 นาที)</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Section 9: ข้อควรระวัง -->
-            <div class="section">
-                <h2><span class="icon-large">⚠️</span> ข้อควรระวัง</h2>
-
-                <div class="warning-box">
-                    <strong>🚫 ห้าม:</strong><br>
-                    • จองย้อนหลังหรือวันเดียวกัน<br>
-                    • จองน้อยกว่า 30 นาทีล่วงหน้า<br>
-                    • จองนอกเวลาทำการ (09:00-20:00)<br>
-                    • ใช้อีเมลที่ไม่ได้ลงทะเบียนในระบบ
-                </div>
-
-                <div class="info-box">
-                    <strong>✅ ควร:</strong><br>
-                    • จองล่วงหน้าอย่างน้อย 1 วัน<br>
-                    • ระบุรายละเอียดงานให้ชัดเจน<br>
-                    • ตรวจสอบอีเมลหลังส่ง Request<br>
-                    • ตอบรับ Calendar Invitation<br>
-                    • ติดต่อทีม Survey หากต้องการเปลี่ยนแปลง
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>Survey Work Requirement System</strong></p>
-            <p>Version 1.0 | Last Updated: October 2025</p>
-            <p>© 2025 Survey Work Management System</p>
-            <p style="margin-top: 15px; color: #16a34a;">
-                <strong>📧 ติดต่อ:</strong> Survey Team | 
-                <strong>📞 โทร:</strong> 0894557048 | 
-            </p>
-        </div>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">
+        <span>🗺️</span>
+      </div>
+      <h1>คู่มือการใช้งาน Survey Work System</h1>
+      <p class="subtitle">สำหรับผู้ใช้งานทั่วไป (User Role)</p>
+      <div class="role-badge">👤 User Role</div>
     </div>
+
+    <!-- Table of Contents -->
+    <div class="toc">
+      <div class="toc-title">
+        <span>📚</span>
+        <span>สารบัญ</span>
+      </div>
+      <div class="toc-grid">
+        <div class="toc-item" onclick="scrollToSection('section1')">
+          <div class="toc-number">1</div>
+          <div class="toc-text">ขั้นตอนการกรอกข้อมูล</div>
+        </div>
+        <div class="toc-item" onclick="scrollToSection('section2')">
+          <div class="toc-number">2</div>
+          <div class="toc-text">ระบบจัดทีม Survey อัตโนมัติ</div>
+        </div>
+        <div class="toc-item" onclick="scrollToSection('section3')">
+          <div class="toc-number">3</div>
+          <div class="toc-text">เงื่อนไขการจอง Survey Work</div>
+        </div>
+        <div class="toc-item" onclick="scrollToSection('section4')">
+          <div class="toc-number">4</div>
+          <div class="toc-text">คำถามที่พบบ่อย (Q&A)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: ขั้นตอนการกรอกข้อมูล -->
+    <div class="section" id="section1">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <div class="section-title">ขั้นตอนการกรอกข้อมูล</div>
+      </div>
+      <div class="content">
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">📅</span>
+            <span>ขั้นตอนที่ 1: เลือกวันที่ต้องการ</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li>คลิกที่ช่อง <span class="highlight">วันที่ต้องการ</span></li>
+              <li>เลือกวันที่จาก Calendar Picker</li>
+              <li><strong>ข้อจำกัด:</strong> สามารถเลือกได้ตั้งแต่วันพรุ่งนี้เป็นต้นไป</li>
+              <li><strong>กรณีพิเศษ:</strong> หากต้องการจองวันนี้ ต้องจองก่อน <span class="highlight">16:00 น.</span> เท่านั้น</li>
+            </ul>
+            
+            <div class="info-box warning">
+              <div class="info-title">⚠️ สำคัญ: เงื่อนไขการจองวันนี้</div>
+              <div class="info-content">
+                • จองก่อน 16:00 น. = จองได้ ✅<br>
+                • จองหลัง 16:00 น. = จองไม่ได้ ❌<br>
+                • ระบบจะแจ้งเตือนอัตโนมัติหากเลยเวลา
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">🔧</span>
+            <span>ขั้นตอนที่ 2: เลือกประเภทงาน Survey</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li>ระบบจะโหลดรายการประเภทงาน Survey ทั้งหมด</li>
+              <li>แต่ละประเภทงานจะแสดง <span class="highlight">ระยะเวลาโดยประมาณ</span> เช่น "(60 นาที)"</li>
+              <li>เลือกประเภทงานที่ต้องการจาก Dropdown</li>
+              <li>เมื่อเลือกแล้ว ระบบจะคำนวณเวลาสิ้นสุดอัตโนมัติ</li>
+            </ul>
+            
+            <div class="info-box">
+              <div class="info-title">💡 ตัวอย่างประเภทงาน Survey</div>
+              <div class="info-content">
+                • Core Rock (90 นาที)<br>
+                • Soil Testing (60 นาที)<br>
+                • Survey Layout (120 นาที)<br>
+                • และอื่น ๆ ตามที่ระบบกำหนด
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">⏰</span>
+            <span>ขั้นตอนที่ 3: เลือกเวลาเริ่มต้นและสิ้นสุด</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li><strong>เลือกเวลาเริ่มต้น:</strong> ระบบจะแสดงเฉพาะเวลาที่มีทีมว่าง</li>
+              <li>ช่วงเวลาที่เลือกได้: <span class="highlight">09:00 - 19:30 น.</span></li>
+              <li>เวลาสิ้นสุดสูงสุด: <span class="highlight">20:00 น.</span></li>
+              <li><strong>เวลาสิ้นสุด:</strong> ระบบจะแนะนำเวลาสิ้นสุดตาม Duration ของประเภทงาน</li>
+              <li>คุณสามารถปรับเวลาสิ้นสุดได้ตามต้องการ (แต่ต้องไม่น้อยกว่า Duration ขั้นต่ำ)</li>
+            </ul>
+            
+            <div class="info-box success">
+              <div class="info-title">✅ ระบบจะแสดงเฉพาะเวลาที่พร้อมใช้งาน</div>
+              <div class="info-content">
+                ระบบจะตรวจสอบ:<br>
+                • ทีม Survey ว่างหรือไม่<br>
+                • ไม่ทับซ้อนกับงานอื่น<br>
+                • อยู่ในช่วงเวลาทำการ (09:00-20:00 น.)<br>
+                • ห่างจากเวลาปัจจุบันอย่างน้อย 30 นาที
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">📝</span>
+            <span>ขั้นตอนที่ 4: กรอกรายละเอียดและสถานที่</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li><strong>รายละเอียด Survey Work:</strong> อธิบายลักษณะงานที่ต้องการให้ชัดเจน</li>
+              <li><strong>สถานที่:</strong> ระบุสถานที่ทำงาน Survey (เช่น ชั้น, พื้นที่, โซน)</li>
+              <li>ควรกรอกข้อมูลให้ละเอียดเพื่อให้ทีม Survey เตรียมตัวได้ถูกต้อง</li>
+            </ul>
+            
+            <div class="info-box">
+              <div class="info-title">💡 ตัวอย่างการกรอกรายละเอียด</div>
+              <div class="info-content">
+                <strong>รายละเอียด:</strong> "Survey Layout สำหรับ Foundation โครงสร้างอาคาร B ชั้น 2"<br>
+                <strong>สถานที่:</strong> "Site B, ชั้น 2, พื้นที่ Foundation Grid A-D"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">📎</span>
+            <span>ขั้นตอนที่ 5: แนบไฟล์ Location Layout (ถ้ามี)</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li>คลิกปุ่ม <span class="highlight">Choose File</span> เพื่อแนบไฟล์</li>
+              <li><strong>ประเภทไฟล์ที่รองรับ:</strong> PDF, PNG, JPG, JPEG, GIF</li>
+              <li><strong>ขนาดไฟล์สูงสุด:</strong> 10 MB</li>
+              <li>ไฟล์จะถูกอัปโหลดไป Google Drive อัตโนมัติ</li>
+              <li>สามารถลบไฟล์และเลือกใหม่ได้โดยคลิกปุ่ม 🗑️</li>
+            </ul>
+            
+            <div class="info-box warning">
+              <div class="info-title">⚠️ หมายเหตุ</div>
+              <div class="info-content">
+                • การแนบไฟล์ <strong>ไม่บังคับ</strong> แต่แนะนำให้แนบเพื่อความชัดเจน<br>
+                • ไฟล์จะถูกเก็บไว้ใน Google Drive และส่งให้ทีม Survey<br>
+                • ตั้งชื่อไฟล์ที่มีความหมาย เช่น "Layout_Building_B_Floor_2.pdf"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">👤</span>
+            <span>ขั้นตอนที่ 6: ตรวจสอบข้อมูลผู้ขอ</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li><strong>อีเมลผู้ขอ:</strong> ระบบดึงอัตโนมัติจากบัญชี Google ของคุณ (ไม่สามารถแก้ไข)</li>
+              <li><strong>ชื่อผู้ขอ:</strong> ระบบจะค้นหาชื่อจากฐานข้อมูล</li>
+              <li>หากพบข้อมูล: สามารถแก้ไขชื่อได้</li>
+              <li>หากไม่พบข้อมูล: ต้องกรอกชื่อ-นามสกุล (ระบบจะบันทึกในฐานข้อมูล)</li>
+            </ul>
+            
+            <div class="info-box success">
+              <div class="info-title">✅ การตรวจสอบสิทธิ์</div>
+              <div class="info-content">
+                • ระบบตรวจสอบว่าคุณมีสิทธิ์ใช้งานหรือไม่<br>
+                • Status ต้องเป็น "Activated" เท่านั้น<br>
+                • หากไม่มีสิทธิ์ ให้ติดต่อผู้ดูแลระบบ
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">✅</span>
+            <span>ขั้นตอนที่ 7: ส่งคำขอ</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li>ตรวจสอบข้อมูลทั้งหมดให้ถูกต้องครบถ้วน</li>
+              <li>คลิกปุ่ม <span class="highlight">ส่ง Survey Work Request</span></li>
+              <li>ระบบจะแสดง Confirmation Dialog สรุปข้อมูลทั้งหมด</li>
+              <li>คลิก <span class="code">OK</span> เพื่อยืนยัน หรือ <span class="code">Cancel</span> เพื่อยกเลิก</li>
+            </ul>
+            
+            <div class="info-box">
+              <div class="info-title">ℹ️ ระบบจะดำเนินการ 6 ขั้นตอน</div>
+              <div class="info-content">
+                1️⃣ ตรวจสอบข้อมูล<br>
+                2️⃣ ตรวจสอบผู้ใช้<br>
+                3️⃣ จัดทีม Survey อัตโนมัติ<br>
+                4️⃣ อัปโหลดไฟล์ (ถ้ามี)<br>
+                5️⃣ บันทึกข้อมูล<br>
+                6️⃣ สร้าง Calendar Event และส่งอีเมลแจ้งเตือน
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: อธิบายการเลือกทีมของระบบ -->
+    <div class="section" id="section2">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <div class="section-title">ระบบจัดทีม Survey อัตโนมัติ</div>
+      </div>
+      <div class="content">
+        <p style="margin-bottom: 20px;">
+          ระบบจะจัดทีม Survey ให้อัตโนมัติโดยใช้ <span class="highlight">Load Balancing Algorithm</span> 
+          เพื่อกระจายภาระงานให้ทีมอย่างเท่าเทียม
+        </p>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">🎯</span>
+            <span>หลักการเลือกทีม</span>
+          </div>
+          <div class="step-content">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th>
+                    <th>เงื่อนไข</th>
+                    <th>คำอธิบาย</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Team No.</td>
+                    <td>จัดลำดับความสำคัญของทีม (เลขน้อย = ความสำคัญสูง)</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Workload</td>
+                    <td>จำนวนงานที่ทีมรับผิดชอบในวันนั้น (น้อย = โอกาสถูกเลือกสูง)</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>Availability</td>
+                    <td>ทีมต้องว่างในช่วงเวลาที่เลือก (ไม่ทับซ้อนกับงานอื่น)</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>Work Type Support</td>
+                    <td>ทีมต้องรองรับประเภทงานที่เลือก</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">⚖️</span>
+            <span>Load Balancing (การกระจายภาระงาน)</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li><strong>ระบบนับจำนวนงาน:</strong> นับงานที่แต่ละทีมมีในวันนั้น</li>
+              <li><strong>เลือกทีมที่ Workload น้อยที่สุด:</strong> เพื่อกระจายภาระงาน</li>
+              <li><strong>Round Robin:</strong> หากมีหลายทีมที่ Workload เท่ากัน จะสลับกันรับงาน</li>
+              <li><strong>Random Selection:</strong> หาก Team No. ซ้ำกัน จะสุ่มเลือก</li>
+            </ul>
+            
+            <div class="info-box success">
+              <div class="info-title">✅ ประโยชน์ของระบบ Load Balancing</div>
+              <div class="info-content">
+                • ทีมไม่มีคนใดโดนมอบหมายงานมากเกินไป<br>
+                • การทำงานมีประสิทธิภาพสูงสุด<br>
+                • ทีมทุกคนได้รับงานอย่างเท่าเทียม<br>
+                • ลดความผิดพลาดจากการทำงานมากเกินไป
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">🔍</span>
+            <span>ตัวอย่างการทำงานของระบบ</span>
+          </div>
+          <div class="step-content">
+            <p><strong>สถานการณ์:</strong> มี 3 ทีม Survey ที่รองรับงาน "Core Rock"</p>
+            
+            <div class="table-wrapper" style="margin: 15px 0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ทีม</th>
+                    <th>Team No.</th>
+                    <th>Workload (งาน/วัน)</th>
+                    <th>ว่าง?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Survey Team A</td>
+                    <td>1</td>
+                    <td>3 งาน</td>
+                    <td>❌ ไม่ว่าง</td>
+                  </tr>
+                  <tr style="background: #ecfdf5;">
+                    <td><strong>Survey Team B</strong></td>
+                    <td>2</td>
+                    <td>2 งาน</td>
+                    <td>✅ ว่าง</td>
+                  </tr>
+                  <tr>
+                    <td>Survey Team C</td>
+                    <td>3</td>
+                    <td>2 งาน</td>
+                    <td>✅ ว่าง</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <p style="margin-top: 15px;">
+              <strong>ผลลัพธ์:</strong> ระบบจะเลือก <span class="highlight">Survey Team B</span> เพราะ:
+            </p>
+            <ul>
+              <li>Team No. น้อยกว่า Team C (2 < 3)</li>
+              <li>Workload เท่ากับ Team C (2 งาน)</li>
+              <li>ว่างในช่วงเวลาที่เลือก ✅</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">🔧</span>
+            <span>Work Type Support (การรองรับประเภทงาน)</span>
+          </div>
+          <div class="step-content">
+            <p>แต่ละทีมสามารถกำหนดได้ว่ารองรับงานประเภทใดบ้าง:</p>
+            
+            <ul style="margin-top: 15px;">
+              <li><strong>"*"</strong> = ทำได้ทุกงาน (Universal Team)</li>
+              <li><strong>"Core Rock, Soil Testing"</strong> = ทำได้เฉพาะงานที่ระบุ</li>
+              <li>ระบบจะกรองเฉพาะทีมที่รองรับงานที่เลือกเท่านั้น</li>
+            </ul>
+            
+            <div class="info-box">
+              <div class="info-title">💡 ตัวอย่าง</div>
+              <div class="info-content">
+                หากคุณเลือกงาน <strong>"Core Rock"</strong><br>
+                ระบบจะแสดงเฉพาะทีมที่มี:<br>
+                • Work_Types = "*" (ทำได้ทุกงาน)<br>
+                • หรือ Work_Types = "Core Rock, ..." (ระบุชัดเจน)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: เงื่อนไขการจอง -->
+    <div class="section" id="section3">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <div class="section-title">เงื่อนไขการจอง Survey Work</div>
+      </div>
+      <div class="content">
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">⏰</span>
+            <span>เงื่อนไขเวลา</span>
+          </div>
+          <div class="step-content">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40%;">เงื่อนไข</th>
+                    <th>รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>เวลาทำการ</strong></td>
+                    <td>09:00 - 20:00 น. เท่านั้น</td>
+                  </tr>
+                  <tr>
+                    <td><strong>จองล่วงหน้า</strong></td>
+                    <td>อย่างน้อย 30 นาที</td>
+                  </tr>
+                  <tr>
+                    <td><strong>จองวันนี้</strong></td>
+                    <td>ได้ ถ้าจองก่อน <span class="highlight">16:00 น.</span> เท่านั้น ⭐</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Duration ขั้นต่ำ</strong></td>
+                    <td>ตามประเภทงานที่เลือก (เช่น 60, 90, 120 นาที)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">📅</span>
+            <span>กฎการจองวันหยุด (User Role)</span>
+          </div>
+          <div class="step-content">
+            <div class="info-box warning">
+              <div class="info-title">⭐ เงื่อนไขการจองวันหยุดสำหรับ User Role</div>
+              <div class="info-content">
+                <strong>User Role สามารถจองวันหยุดได้ แต่มีเงื่อนไข:</strong><br><br>
+                
+                ✅ <strong>จองก่อน 13:00 น. ของวันก่อนหยุด</strong><br>
+                &nbsp;&nbsp;&nbsp;• สามารถจองวันหยุดได้ปกติ<br>
+                &nbsp;&nbsp;&nbsp;• ระบบจะแจ้งเตือนว่าพรุ่งนี้เป็นวันหยุด<br>
+                &nbsp;&nbsp;&nbsp;• แสดงเวลาที่เหลือสำหรับการจอง<br><br>
+                
+                ❌ <strong>จองหลัง 13:00 น. แล้ว</strong><br>
+                &nbsp;&nbsp;&nbsp;• <strong>ห้ามจองวันหยุด</strong><br>
+                &nbsp;&nbsp;&nbsp;• ระบบจะบล็อกวันหยุดอัตโนมัติ<br>
+                &nbsp;&nbsp;&nbsp;• กรุณารอจนถึงวันทำการถัดไป
+              </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px;">
+              <div class="info-title">📊 ตัวอย่างสถานการณ์</div>
+              <div class="info-content">
+                <strong>สถานการณ์ที่ 1:</strong> วันนี้วันพฤหัสบดี เวลา 12:00 น. (พรุ่งนี้เป็นวันหยุด)<br>
+                <strong>ผลลัพธ์:</strong> ✅ จองวันหยุดได้ (เหลือเวลาอีก 1 ชั่วโมง)<br><br>
+                
+                <strong>สถานการณ์ที่ 2:</strong> วันนี้วันพฤหัสบดี เวลา 14:00 น. (พรุ่งนี้เป็นวันหยุด)<br>
+                <strong>ผลลัพธ์:</strong> ❌ ห้ามจองวันหยุด (เลยเวลา 13:00 น. แล้ว)<br><br>
+                
+                <strong>สถานการณ์ที่ 3:</strong> พรุ่งนี้หยุด 3 วันติดต่อกัน<br>
+                <strong>ผลลัพธ์:</strong> ระบบจะแจ้งเตือนว่าหยุดติดต่อกัน 3 วัน
+              </div>
+            </div>
+
+            <div class="info-box success" style="margin-top: 20px;">
+              <div class="info-title">💡 เคล็ดลับ</div>
+              <div class="info-content">
+                • หากต้องการจองวันหยุด ควรจองก่อน 13:00 น. ของวันก่อนหยุด<br>
+                • ระบบจะแจ้งเตือนเวลาที่เหลือให้ทราบ<br>
+                • หากจำเป็นต้องจองหลัง 13:00 น. กรุณาติดต่อ Survey Role หรือ Admin<br>
+                • ตรวจสอบวันหยุดล่วงหน้าจาก Calendar
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">🚫</span>
+            <span>ข้อจำกัดอื่น ๆ</span>
+          </div>
+          <div class="step-content">
+            <ul>
+              <li><strong>ทีมต้องว่าง:</strong> ระบบแสดงเฉพาะเวลาที่มีทีมพร้อมให้บริการ</li>
+              <li><strong>ไม่ทับซ้อนกับงานอื่น:</strong> ทีม Survey จะไม่ถูกมอบหมายงานซ้อนทับกัน</li>
+              <li><strong>ไม่สามารถเลือกวันที่ผ่านไปแล้ว:</strong> ระบบบล็อกวันที่ย้อนหลัง</li>
+              <li><strong>เวลาสิ้นสุดไม่เกิน 20:00 น.:</strong> เพื่อให้ทีมมีเวลาเดินทางกลับ</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-icon">📎</span>
+            <span>เงื่อนไขไฟล์แนบ</span>
+          </div>
+          <div class="step-content">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>เงื่อนไข</th>
+                    <th>รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>ประเภทไฟล์</strong></td>
+                    <td>PDF, PNG, JPG, JPEG, GIF</td>
+                  </tr>
+                  <tr>
+                    <td><strong>ขนาดไฟล์สูงสุด</strong></td>
+                    <td>10 MB</td>
+                  </tr>
+                  <tr>
+                    <td><strong>การแนบไฟล์</strong></td>
+                    <td>ไม่บังคับ (แต่แนะนำให้แนบ)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>จัดเก็บ</strong></td>
+                    <td>Google Drive (โฟลเดอร์ Location Layout)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>การตั้งชื่อ</strong></td>
+                    <td>ระบบจะตั้งชื่ออัตโนมัติเป็น "SW_[ID]_LocationLayout.[ext]"</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Q&A -->
+    <div class="section" id="section4">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <div class="section-title">คำถามที่พบบ่อย (Q&A)</div>
+      </div>
+      <div class="content">
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ทำไมไม่มีเวลาให้เลือก?</span>
+          </div>
+          <div class="answer">
+            เหตุผลที่เป็นไปได้:<br>
+            • ทีม Survey ไม่ว่างในช่วงเวลานั้น<br>
+            • วันที่เลือกเป็นวันหยุด และเลย 13:00 น. แล้ว<br>
+            • เลือกวันที่ที่ผ่านไปแล้ว<br>
+            • เลยเวลา 16:00 น. แล้ว (สำหรับการจองวันนี้)<br>
+            <strong>วิธีแก้:</strong> ลองเลือกวันอื่น หรือเวลาอื่น
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>สามารถจองวันหยุดได้หรือไม่?</span>
+          </div>
+          <div class="answer">
+            <strong>User Role: จองได้ แต่มีเงื่อนไข ⭐</strong><br><br>
+            
+            ✅ <strong>จองก่อน 13:00 น. ของวันก่อนหยุด</strong><br>
+            &nbsp;&nbsp;&nbsp;• สามารถจองวันหยุดได้ปกติ<br>
+            &nbsp;&nbsp;&nbsp;• ระบบจะแจ้งเตือนและนับเวลาถอยหลัง<br><br>
+            
+            ❌ <strong>จองหลัง 13:00 น.</strong><br>
+            &nbsp;&nbsp;&nbsp;• ห้ามจองวันหยุด<br>
+            &nbsp;&nbsp;&nbsp;• ระบบจะบล็อกอัตโนมัติ<br><br>
+            
+            <strong>ข้อแนะนำ:</strong><br>
+            • จองล่วงหน้าก่อน 13:00 น. เพื่อความมั่นใจ<br>
+            • หากจำเป็นต้องจองหลัง 13:00 น. ติดต่อ Survey Role หรือ Admin
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ทีมจะถูกเลือกอย่างไร?</span>
+          </div>
+          <div class="answer">
+            ระบบจะเลือกทีมโดยอัตโนมัติตามหลักการ:<br>
+            1. Team No. น้อยที่สุด (ความสำคัญสูง)<br>
+            2. Workload น้อยที่สุด (กระจายภาระงาน)<br>
+            3. ว่างในช่วงเวลาที่เลือก<br>
+            4. รองรับประเภทงานที่เลือก<br>
+            <strong>ผลลัพธ์:</strong> คุณจะได้ทีมที่เหมาะสมที่สุดโดยอัตโนมัติ
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>หลังจากส่งคำขอแล้วจะเกิดอะไรขึ้น?</span>
+          </div>
+          <div class="answer">
+            ระบบจะดำเนินการดังนี้:<br>
+            1️⃣ บันทึกข้อมูลลงฐานข้อมูล<br>
+            2️⃣ จัดทีม Survey อัตโนมัติ<br>
+            3️⃣ อัปโหลดไฟล์ไป Google Drive (ถ้ามี)<br>
+            4️⃣ สร้าง Calendar Event (สีเขียว)<br>
+            5️⃣ ส่งอีเมลแจ้งไปยัง:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;• ทีม Survey ที่ได้รับมอบหมาย<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;• คุณ (ผู้ขอ)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;• Survey Reviewer<br>
+            6️⃣ คุณจะได้รับข้อความยืนยันพร้อม Survey NO.
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>Survey NO. คืออะไร?</span>
+          </div>
+          <div class="answer">
+            <strong>Survey NO.</strong> คือรหัสอ้างอิงงาน Survey เช่น <span class="code">SW-0001</span><br><br>
+            ประกอบด้วย:<br>
+            • <strong>SW</strong> = Survey Work<br>
+            • <strong>0001</strong> = Running Number ลำดับที่<br><br>
+            <strong>ประโยชน์:</strong> ใช้อ้างอิงเมื่อติดต่อทีม Survey หรือตรวจสอบสถานะงาน
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ต้องการแก้ไขหรือยกเลิกงานที่จองแล้วต้องทำอย่างไร?</span>
+          </div>
+          <div class="answer">
+            <strong>User Role ไม่สามารถแก้ไขหรือยกเลิกเองได้</strong><br><br>
+            กรุณาติดต่อ:<br>
+            • Survey Role<br>
+            • QC หรือ QC Reviewer<br>
+            • Admin<br><br>
+            โดยแจ้ง <strong>Survey NO.</strong> ที่ต้องการแก้ไข/ยกเลิก
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>จะทราบได้อย่างไรว่าทีมรับงานแล้ว?</span>
+          </div>
+          <div class="answer">
+            คุณจะได้รับการแจ้งเตือน 3 ช่องทาง:<br>
+            1️⃣ <strong>หน้าเว็บ:</strong> แสดงข้อความยืนยันพร้อม Survey NO.<br>
+            2️⃣ <strong>อีเมล:</strong> ส่งไปยังอีเมลของคุณพร้อมรายละเอียดครบถ้วน<br>
+            3️⃣ <strong>Google Calendar:</strong> Event จะปรากฏใน Calendar<br><br>
+            <strong>สถานะเริ่มต้น:</strong> "Survey Work Request Submitted"
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ทำไมต้องแนบไฟล์ Location Layout?</span>
+          </div>
+          <div class="answer">
+            <strong>ไม่บังคับ</strong> แต่แนะนำให้แนบเพราะ:<br>
+            • ทีม Survey จะเตรียมตัวได้ถูกต้อง<br>
+            • ทราบตำแหน่งที่ต้อง Survey แน่นอน<br>
+            • ลดความผิดพลาดในการทำงาน<br>
+            • ประหยัดเวลาในการสื่อสาร<br><br>
+            <strong>ประเภทไฟล์ที่แนะนำ:</strong><br>
+            • PDF Drawing<br>
+            • รูปภาพ Layout<br>
+            • แผนผังแสดงตำแหน่ง
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ข้อมูลจะถูกเก็บไว้นานแค่ไหน?</span>
+          </div>
+          <div class="answer">
+            <strong>ข้อมูลจะถูกเก็บถาวร</strong> ในระบบ RFI_List Sheet<br><br>
+            ประกอบด้วย:<br>
+            • Survey NO. และรายละเอียดงาน<br>
+            • วันเวลาที่จอง<br>
+            • ทีมที่ได้รับมอบหมาย<br>
+            • ไฟล์ที่แนบ (เก็บใน Google Drive)<br>
+            • สถานะงาน (ตลอดอายุโครงการ)<br><br>
+            <strong>วัตถุประสงค์:</strong> ตรวจสอบย้อนหลัง และรายงานสถิติ
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="question">
+            <span class="question-icon">❓</span>
+            <span>ถ้าฟอร์มมีปัญหาหรือใช้งานไม่ได้ต้องทำอย่างไร?</span>
+          </div>
+          <div class="answer">
+            <strong>ขั้นตอนแก้ปัญหา:</strong><br>
+            1. ลอง Refresh หน้าเว็บ (F5 หรือ Ctrl+R)<br>
+            2. ลอง Login ใหม่ด้วย Google Account<br>
+            3. ลองใช้ Browser อื่น (แนะนำ Chrome)<br>
+            4. ตรวจสอบว่ามี Internet connection<br>
+            5. ตรวจสอบว่า Google Account ของคุณมีสิทธิ์ใช้งาน<br><br>
+            <strong>ยังไม่ได้?</strong> กรุณาติดต่อ:<br>
+            • QC หรือ QC Reviewer<br>
+            • Survey Role<br>
+            • Admin / IT Support<br><br>
+            พร้อมแจ้ง:<br>
+            • ข้อความ Error (ถ้ามี)<br>
+            • Browser ที่ใช้<br>
+            • Screenshot หน้าจอ (ถ้าเป็นไปได้)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-title">📞 ติดต่อสอบถาม</div>
+      <p>หากมีข้อสงสัยเพิ่มเติม กรุณาติดต่อ:</p>
+      <p><strong>Survey Team</strong> | <strong>QC Reviewer</strong> | <strong>Admin</strong></p>
+      <p style="margin-top: 20px; color: #999; font-size: 13px;">
+        Survey Work Requirement System - User Manual v1.1<br>
+        ระบบจัดการจอง Survey Work อัตโนมัติ
+      </p>
+    </div>
+  </div>
+
+  <!-- Back to Top Button -->
+  <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+    ↑
+  </button>
+
+  <script>
+    // Back to Top Button
+    window.onscroll = function() {
+      var backToTopBtn = document.getElementById('backToTop');
+      if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+        backToTopBtn.classList.add('show');
+      } else {
+        backToTopBtn.classList.remove('show');
+      }
+    };
+
+    function scrollToTop() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    // Scroll to Section
+    function scrollToSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        const offsetTop = section.offsetTop - 20;
+        window.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+
+    // Smooth Scroll for Internal Links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Animate on Scroll
+    function animateOnScroll() {
+      const elements = document.querySelectorAll('.step, .qa-item');
+      
+      elements.forEach(element => {
+        const elementTop = element.getBoundingClientRect().top;
+        const windowHeight = window.innerHeight;
+        
+        if (elementTop < windowHeight - 100) {
+          element.style.opacity = '1';
+          element.style.transform = 'translateY(0)';
+        }
+      });
+    }
+
+    // Set initial state for animation
+    document.querySelectorAll('.step, .qa-item').forEach(element => {
+      element.style.opacity = '0';
+      element.style.transform = 'translateY(20px)';
+      element.style.transition = 'all 0.5s ease-out';
+    });
+
+    window.addEventListener('scroll', animateOnScroll);
+    window.addEventListener('load', animateOnScroll);
+  </script>
 </body>
 </html>
